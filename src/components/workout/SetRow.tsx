@@ -29,10 +29,14 @@ export function SetRow({
   roundBadge,
   isSupersetRow,
 }: SetRowProps) {
-  const { toggleSetCompletion, updateSet } = useWorkoutStore();
+  const { activeWorkoutId, workouts, toggleSetCompletion, updateSet } = useWorkoutStore();
   const { defaultRestSeconds, soundEnabled, hapticsEnabled } = useSettingsStore();
 
+  const currentWorkout = workouts.find((w) => w.id === workoutId);
+  const isActive = activeWorkoutId === workoutId && currentWorkout?.status === "in_progress";
+
   const handleToggle = () => {
+    if (!isActive) return;
     toggleSetCompletion(
       workoutId,
       supersetId,
@@ -166,13 +170,17 @@ export function SetRow({
           <Button
             size="sm"
             variant={set.completed ? "default" : "outline"}
+            disabled={!isActive}
             className={cn(
               "h-7 sm:h-8 px-2.5 sm:px-3 rounded-lg text-xs font-bold transition-all ml-auto sm:ml-1",
               set.completed
                 ? "bg-emerald-500 text-slate-950 hover:bg-emerald-400"
+                : !isActive
+                ? "opacity-35 cursor-not-allowed border-white/10 text-slate-500 hover:bg-transparent"
                 : "border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
             )}
             onClick={handleToggle}
+            title={!isActive ? "Сначала нажмите «Начать тренировку»" : undefined}
           >
             {set.completed ? (
               <div className="flex items-center gap-1">
