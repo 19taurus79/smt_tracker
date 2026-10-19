@@ -31,6 +31,7 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
     activeWorkoutId,
     workouts,
     workoutElapsedSeconds,
+    pauseStopwatch,
     finishWorkout,
   } = useWorkoutStore();
   const { weightIncrementKg, soundEnabled, hapticsEnabled } = useSettingsStore();
@@ -38,12 +39,24 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
   const [notes, setNotes] = useState("");
   // Proposed increments per exercise ID: { [exerciseId]: incrementKg }
   const [exerciseIncrements, setExerciseIncrements] = useState<Record<string, number>>({});
+  // Фиксируем время в момент открытия модалки, чтобы мощность не падала во время редактирования
+  const [frozenDuration, setFrozenDuration] = useState<number>(0);
 
+  useEffect(() => {
+    if (open) {
+      pauseStopwatch();
+      setFrozenDuration(workoutElapsedSeconds || 1);
+    } else {
+      setFrozenDuration(0);
+    }
+  }, [open]);
+
+  const effectiveDuration = frozenDuration > 0 ? frozenDuration : (workoutElapsedSeconds || 1);
   const currentWorkout = workouts.find((w) => w.id === activeWorkoutId);
   const tonnage = currentWorkout
     ? calculateWorkoutTonnage(currentWorkout.supersets)
     : 0;
-  const power = calculateWorkoutPower(tonnage, workoutElapsedSeconds);
+  const power = calculateWorkoutPower(tonnage, effectiveDuration);
 
   // Check if current workout is the last one in the microcycle (e.g. 9, 18, 27, 36)
   const isEndOfMicrocycle = currentWorkout ? currentWorkout.workoutNumber % 9 === 0 : false;
@@ -111,7 +124,14 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
   };
 
   const handleComplete = () => {
-    finishWorkout(notes, exerciseIncrements, weightIncrementKg, soundEnabled, hapticsEnabled);
+    finishWorkout(
+      notes,
+      exerciseIncrements,
+      weightIncrementKg,
+      soundEnabled,
+      hapticsEnabled,
+      effectiveDuration
+    );
     onOpenChange(false);
     onFinished();
   };
@@ -151,7 +171,7 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
             <Clock className="h-5 w-5 text-cyan-400 mb-1" />
             <span className="text-[11px] text-slate-400 font-medium">Время</span>
             <span className="text-base font-black text-white">
-              {formatTime(workoutElapsedSeconds)}
+              {formatTime(effectiveDuration)}
             </span>
           </div>
 
@@ -261,14 +281,14 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
         </div>
       </div>
 
-      <div className="pt-2 flex flex-col gap-2">
+      <div className="pt-2 flex flex-col gap-2 shrink-0">
         <Button
           variant="accent"
           size="lg"
-          className="w-full font-bold"
+          className="w-full font-bold text-xs sm:text-sm px-3 py-3 flex items-center justify-center gap-2 text-center leading-snug"
           onClick={handleComplete}
         >
-          <CheckCircle className="h-5 w-5 mr-2" />
+          <CheckCircle className="h-4 w-4 shrink-0" />
           <span>Применить выбранные веса и сохранить</span>
         </Button>
       </div>

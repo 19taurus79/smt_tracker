@@ -305,20 +305,20 @@ export function SupersetCard({ workoutId, superset }: SupersetCardProps) {
                       )
                     }
                     className={cn(
-                      "w-full font-bold text-xs h-9 transition-all",
+                      "w-full font-bold text-xs min-h-9 py-1.5 px-2 transition-all leading-tight text-center",
                       isRoundDone
                         ? "bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/50"
                         : "bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 shadow-md shadow-emerald-500/20"
                     )}
                   >
                     {isRoundDone ? (
-                      <span className="flex items-center gap-1.5">
-                        <Check className="h-4 w-4" />
+                      <span className="flex items-center justify-center gap-1.5">
+                        <Check className="h-3.5 w-3.5 shrink-0" />
                         <span>Круг {roundNum} выполнен (нажмите для отмены)</span>
                       </span>
                     ) : (
-                      <span className="flex items-center gap-1.5">
-                        <Check className="h-4 w-4" />
+                      <span className="flex items-center justify-center gap-1.5">
+                        <Check className="h-3.5 w-3.5 shrink-0" />
                         <span>Завершить Круг {roundNum} (1А + 1Б) → Отдых {defaultRestSeconds}с</span>
                       </span>
                     )}

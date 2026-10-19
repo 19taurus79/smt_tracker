@@ -79,11 +79,11 @@ export function WarmupModal() {
         <Button
           variant="accent"
           size="lg"
-          className="w-full flex items-center justify-center gap-2 font-bold"
+          className="w-full flex items-center justify-center gap-2 font-bold px-3 py-3 text-xs sm:text-sm text-center leading-snug"
           onClick={completeWarmupAndStart}
         >
-          <span>Разминка окончена → Начать тренировку</span>
-          <ArrowRight className="h-5 w-5" />
+          <span>Завершить разминку и начать тренировку</span>
+          <ArrowRight className="h-4 w-4 shrink-0" />
         </Button>
       </div>
     </Dialog>

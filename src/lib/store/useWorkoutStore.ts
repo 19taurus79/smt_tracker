@@ -89,7 +89,8 @@ interface WorkoutState {
     exerciseIncrements?: Record<string, number>,
     weightStep?: number,
     soundEnabled?: boolean,
-    hapticsEnabled?: boolean
+    hapticsEnabled?: boolean,
+    overrideDurationSeconds?: number
   ) => { tonnage: number; power: number; progressed: boolean };
 
   cancelWorkout: () => void;
@@ -380,7 +381,8 @@ export const useWorkoutStore = create<WorkoutState>()(
         exerciseIncrements,
         weightStep = 2.5,
         soundEnabled = true,
-        hapticsEnabled = true
+        hapticsEnabled = true,
+        overrideDurationSeconds
       ) => {
         const { activeWorkoutId, workouts, workoutElapsedSeconds } = get();
         if (!activeWorkoutId) return { tonnage: 0, power: 0, progressed: false };
@@ -388,8 +390,13 @@ export const useWorkoutStore = create<WorkoutState>()(
         const currentWorkout = workouts.find((w) => w.id === activeWorkoutId);
         if (!currentWorkout) return { tonnage: 0, power: 0, progressed: false };
 
+        const effectiveDuration =
+          overrideDurationSeconds !== undefined && overrideDurationSeconds > 0
+            ? overrideDurationSeconds
+            : workoutElapsedSeconds;
+
         const tonnage = calculateWorkoutTonnage(currentWorkout.supersets);
-        const power = calculateWorkoutPower(tonnage, workoutElapsedSeconds);
+        const power = calculateWorkoutPower(tonnage, effectiveDuration);
 
         // Проверяем, все ли подходы успешно закрыты
         let allSetsCompleted = true;
@@ -410,7 +417,7 @@ export const useWorkoutStore = create<WorkoutState>()(
               ...w,
               status: "completed" as const,
               completedAt: new Date().toISOString(),
-              durationSeconds: workoutElapsedSeconds,
+              durationSeconds: effectiveDuration,
               tonnageKg: tonnage,
               powerKgPerMin: power,
               notes: notes || w.notes,

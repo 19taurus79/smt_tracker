@@ -38,6 +38,11 @@ export default function WorkoutPage() {
   const [isFinishModalOpen, setIsFinishModalOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
+  const handleOpenFinishModal = () => {
+    pauseStopwatch();
+    setIsFinishModalOpen(true);
+  };
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -92,12 +97,12 @@ export default function WorkoutPage() {
     <div className="space-y-4 animate-in fade-in duration-200">
       {/* Sticky Compact Workout Dashboard Header */}
       <div className="rounded-xl sm:rounded-2xl border border-white/10 bg-slate-900/90 p-2.5 sm:p-4 backdrop-blur-xl shadow-xl sticky top-14 sm:top-16 z-30">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between gap-1.5 sm:gap-2">
+          <div className="flex items-center gap-1.5">
             {/* Stopwatch pill */}
-            <div className="flex items-center gap-1.5 rounded-lg bg-slate-950 px-2.5 py-1 border border-white/10">
+            <div className="flex items-center gap-1.5 rounded-lg bg-slate-950 px-2 sm:px-2.5 py-1 border border-white/10 shrink-0">
               <Timer className="h-3.5 w-3.5 text-emerald-400 animate-pulse shrink-0" />
-              <span className="font-mono text-sm sm:text-base font-black text-white">
+              <span className="font-mono text-xs sm:text-base font-black text-white">
                 {formatTime(workoutElapsedSeconds)}
               </span>
             </div>
@@ -107,7 +112,7 @@ export default function WorkoutPage() {
               <Button
                 variant="outline"
                 size="icon"
-                className="h-8 w-8 rounded-lg"
+                className="h-8 w-8 rounded-lg shrink-0"
                 onClick={() =>
                   isStopwatchRunning ? pauseStopwatch() : resumeStopwatch()
                 }
@@ -122,14 +127,14 @@ export default function WorkoutPage() {
             )}
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 shrink-0">
             <Button
               variant="outline"
               size="sm"
               onClick={openWarmupModal}
-              className="h-8 px-2.5 text-xs font-semibold border-amber-500/30 text-amber-300 hover:bg-amber-500/10"
+              className="h-8 px-2 sm:px-2.5 text-[11px] sm:text-xs font-semibold border-amber-500/30 text-amber-300 hover:bg-amber-500/10"
             >
-              <Flame className="h-3.5 w-3.5 mr-1 text-amber-400" />
+              <Flame className="h-3.5 w-3.5 mr-1 text-amber-400 shrink-0" />
               <span>Разминка</span>
             </Button>
 
@@ -137,10 +142,10 @@ export default function WorkoutPage() {
               <Button
                 variant="accent"
                 size="sm"
-                className="h-8 px-3 text-xs font-bold"
-                onClick={() => setIsFinishModalOpen(true)}
+                className="h-8 px-2.5 sm:px-3 text-[11px] sm:text-xs font-bold"
+                onClick={handleOpenFinishModal}
               >
-                <CheckCircle className="h-3.5 w-3.5 mr-1" />
+                <CheckCircle className="h-3.5 w-3.5 mr-1 shrink-0" />
                 <span>Завершить</span>
               </Button>
             )}
@@ -209,14 +214,14 @@ export default function WorkoutPage() {
 
       {/* Bottom Completion Action */}
       {!isCompleted && (
-        <div className="pt-2 pb-6 flex flex-col sm:flex-row gap-2.5">
+        <div className="pt-2 pb-6 flex flex-col gap-2.5">
           <Button
             variant="accent"
             size="lg"
-            className="flex-1 font-black text-sm sm:text-base shadow-xl shadow-emerald-500/25 h-12"
-            onClick={() => setIsFinishModalOpen(true)}
+            className="w-full font-black text-xs sm:text-sm px-3 py-3 shadow-xl shadow-emerald-500/25 flex items-center justify-center gap-2 text-center leading-snug"
+            onClick={handleOpenFinishModal}
           >
-            <Trophy className="h-5 w-5 mr-2" />
+            <Trophy className="h-4 w-4 shrink-0" />
             <span>Завершить тренировку и рассчитать мощность</span>
           </Button>
 

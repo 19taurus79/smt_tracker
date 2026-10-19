@@ -13,7 +13,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       <button
         ref={ref}
         className={cn(
-          "inline-flex items-center justify-center whitespace-nowrap rounded-xl text-sm font-semibold transition-all active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 disabled:pointer-events-none disabled:opacity-50 select-none cursor-pointer",
+          "inline-flex items-center justify-center rounded-xl font-semibold transition-all active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/50 disabled:pointer-events-none disabled:opacity-50 select-none cursor-pointer max-w-full text-center leading-snug box-border",
           {
             "bg-emerald-600 text-white shadow-lg shadow-emerald-600/20 hover:bg-emerald-500":
               variant === "default",
@@ -29,10 +29,10 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
               variant === "accent",
           },
           {
-            "h-11 px-4 py-2": size === "default",
-            "h-9 px-3 text-xs rounded-lg": size === "sm",
-            "h-13 px-8 text-base rounded-2xl": size === "lg",
-            "h-10 w-10 p-0 rounded-xl": size === "icon",
+            "min-h-10 px-3.5 py-2 text-xs sm:text-sm": size === "default",
+            "h-8 px-2.5 py-1 text-xs rounded-lg": size === "sm",
+            "min-h-12 px-3 sm:px-6 py-2.5 text-xs sm:text-sm rounded-2xl": size === "lg",
+            "h-9 w-9 p-0 rounded-xl shrink-0": size === "icon",
           },
           className
         )}
