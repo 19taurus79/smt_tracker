@@ -1,0 +1,426 @@
+import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
+import {
+  ExerciseDefinition,
+  WorkoutSession,
+  WarmupItem,
+} from "@/types/smt";
+import {
+  generateFullProgram,
+  DEFAULT_EXERCISES,
+  DEFAULT_WARMUP_LIST,
+} from "../smt/generator";
+import {
+  calculateWorkoutTonnage,
+  calculateWorkoutPower,
+  roundToWeightStep,
+} from "../smt/calculator";
+import { getDemoProgram } from "../mock/demoData";
+import { soundPlayer } from "../audio/sound";
+import { triggerHaptic } from "../tma/telegram";
+
+interface WorkoutState {
+  exercises: ExerciseDefinition[];
+  workouts: WorkoutSession[];
+  activeWorkoutId: string | null;
+  workoutElapsedSeconds: number;
+  isStopwatchRunning: boolean;
+  
+  // Разминка
+  isWarmupModalOpen: boolean;
+  warmupItems: WarmupItem[];
+  
+  // Таймер отдыха
+  isRestTimerActive: boolean;
+  restTimerSeconds: number;
+  restTimerMaxSeconds: number;
+
+  // Флаг гидратации для SSR Next.js
+  hasHydrated: boolean;
+  setHasHydrated: (val: boolean) => void;
+
+  // Actions
+  initializeProgram: (exercises: ExerciseDefinition[], weightStep?: number) => void;
+  updateExercise1RM: (exerciseId: string, oneRepMax: number) => void;
+  startWorkout: (workoutId: string) => void;
+  pauseStopwatch: () => void;
+  resumeStopwatch: () => void;
+  tickStopwatch: () => void;
+  
+  openWarmupModal: () => void;
+  closeWarmupModal: () => void;
+  toggleWarmupItem: (itemId: string) => void;
+  completeWarmupAndStart: () => void;
+
+  startRestTimer: (durationSeconds?: number) => void;
+  adjustRestTimer: (deltaSeconds: number) => void;
+  stopRestTimer: () => void;
+  tickRestTimer: () => void;
+
+  updateSet: (
+    workoutId: string,
+    supersetId: string,
+    exerciseId: string,
+    setNumber: number,
+    data: { actualWeight?: number; actualReps?: number; completed?: boolean }
+  ) => void;
+
+  toggleSetCompletion: (
+    workoutId: string,
+    supersetId: string,
+    exerciseId: string,
+    setNumber: number,
+    restDuration?: number,
+    soundEnabled?: boolean,
+    hapticsEnabled?: boolean
+  ) => void;
+
+  finishWorkout: (
+    notes?: string,
+    weightStep?: number,
+    soundEnabled?: boolean,
+    hapticsEnabled?: boolean
+  ) => { tonnage: number; power: number; progressed: boolean };
+
+  cancelWorkout: () => void;
+  loadDemoData: () => void;
+  resetAllWorkouts: () => void;
+  setWorkouts: (workouts: WorkoutSession[]) => void;
+}
+
+export const useWorkoutStore = create<WorkoutState>()(
+  persist(
+    (set, get) => ({
+      exercises: DEFAULT_EXERCISES,
+      workouts: generateFullProgram(DEFAULT_EXERCISES, 2.5),
+      activeWorkoutId: null,
+      workoutElapsedSeconds: 0,
+      isStopwatchRunning: false,
+
+      isWarmupModalOpen: false,
+      warmupItems: DEFAULT_WARMUP_LIST,
+
+      isRestTimerActive: false,
+      restTimerSeconds: 30,
+      restTimerMaxSeconds: 30,
+
+      hasHydrated: false,
+      setHasHydrated: (val) => set({ hasHydrated: val }),
+
+      initializeProgram: (exercises, weightStep = 2.5) => {
+        const workouts = generateFullProgram(exercises, weightStep);
+        set({
+          exercises,
+          workouts,
+          activeWorkoutId: null,
+          workoutElapsedSeconds: 0,
+          isStopwatchRunning: false,
+        });
+      },
+
+      updateExercise1RM: (exerciseId, oneRepMax) => {
+        set((state) => ({
+          exercises: state.exercises.map((ex) =>
+            ex.id === exerciseId ? { ...ex, oneRepMax } : ex
+          ),
+        }));
+      },
+
+      startWorkout: (workoutId) => {
+        const { workouts } = get();
+        const workout = workouts.find((w) => w.id === workoutId);
+        if (!workout) return;
+
+        set({
+          activeWorkoutId: workoutId,
+          workoutElapsedSeconds: workout.durationSeconds || 0,
+          isStopwatchRunning: true,
+          workouts: workouts.map((w) =>
+            w.id === workoutId
+              ? {
+                  ...w,
+                  status: "in_progress",
+                  startedAt: w.startedAt || new Date().toISOString(),
+                }
+              : w
+          ),
+        });
+      },
+
+      pauseStopwatch: () => set({ isStopwatchRunning: false }),
+      resumeStopwatch: () => set({ isStopwatchRunning: true }),
+      tickStopwatch: () => {
+        const { isStopwatchRunning, workoutElapsedSeconds } = get();
+        if (isStopwatchRunning) {
+          set({ workoutElapsedSeconds: workoutElapsedSeconds + 1 });
+        }
+      },
+
+      openWarmupModal: () => set({ isWarmupModalOpen: true }),
+      closeWarmupModal: () => set({ isWarmupModalOpen: false }),
+      toggleWarmupItem: (itemId) =>
+        set((state) => ({
+          warmupItems: state.warmupItems.map((item) =>
+            item.id === itemId ? { ...item, completed: !item.completed } : item
+          ),
+        })),
+      completeWarmupAndStart: () => {
+        const { activeWorkoutId, startWorkout, workouts } = get();
+        set({ isWarmupModalOpen: false });
+        if (activeWorkoutId) {
+          set({ isStopwatchRunning: true });
+        } else {
+          const nextUpcoming =
+            workouts.find((w) => w.status === "in_progress") ||
+            workouts.find((w) => w.status === "upcoming") ||
+            workouts[0];
+          if (nextUpcoming) {
+            startWorkout(nextUpcoming.id);
+          }
+        }
+      },
+
+      startRestTimer: (duration = 30) => {
+        set({
+          isRestTimerActive: true,
+          restTimerSeconds: duration,
+          restTimerMaxSeconds: duration,
+        });
+      },
+
+      adjustRestTimer: (delta) => {
+        set((state) => {
+          const newSeconds = Math.max(0, state.restTimerSeconds + delta);
+          return {
+            restTimerSeconds: newSeconds,
+            restTimerMaxSeconds: Math.max(state.restTimerMaxSeconds, newSeconds),
+            isRestTimerActive: newSeconds > 0,
+          };
+        });
+      },
+
+      stopRestTimer: () => set({ isRestTimerActive: false, restTimerSeconds: 0 }),
+
+      tickRestTimer: () => {
+        const { isRestTimerActive, restTimerSeconds } = get();
+        if (!isRestTimerActive) return;
+
+        if (restTimerSeconds <= 1) {
+          // Таймер окончен!
+          set({ isRestTimerActive: false, restTimerSeconds: 0 });
+          soundPlayer.playRestComplete();
+          triggerHaptic("success");
+        } else {
+          // Звук тика на последних 3 секундах
+          if (restTimerSeconds <= 4) {
+            soundPlayer.playTick();
+          }
+          set({ restTimerSeconds: restTimerSeconds - 1 });
+        }
+      },
+
+      updateSet: (workoutId, supersetId, exerciseId, setNumber, data) => {
+        set((state) => ({
+          workouts: state.workouts.map((w) => {
+            if (w.id !== workoutId) return w;
+            return {
+              ...w,
+              supersets: w.supersets.map((ss) => {
+                if (ss.id !== supersetId) return ss;
+                return {
+                  ...ss,
+                  exercises: ss.exercises.map((ex) => {
+                    if (ex.exerciseId !== exerciseId) return ex;
+                    return {
+                      ...ex,
+                      sets: ex.sets.map((s) => {
+                        if (s.setNumber !== setNumber) return s;
+                        return { ...s, ...data };
+                      }),
+                    };
+                  }),
+                };
+              }),
+            };
+          }),
+        }));
+      },
+
+      toggleSetCompletion: (
+        workoutId,
+        supersetId,
+        exerciseId,
+        setNumber,
+        restDuration = 30,
+        soundEnabled = true,
+        hapticsEnabled = true
+      ) => {
+        const { workouts, startRestTimer } = get();
+        const workout = workouts.find((w) => w.id === workoutId);
+        if (!workout) return;
+
+        const ss = workout.supersets.find((s) => s.id === supersetId);
+        const ex = ss?.exercises.find((e) => e.exerciseId === exerciseId);
+        const s = ex?.sets.find((set) => set.setNumber === setNumber);
+        if (!s) return;
+
+        const willBeCompleted = !s.completed;
+
+        set((state) => ({
+          workouts: state.workouts.map((w) => {
+            if (w.id !== workoutId) return w;
+            return {
+              ...w,
+              supersets: w.supersets.map((superSet) => {
+                if (superSet.id !== supersetId) return superSet;
+                return {
+                  ...superSet,
+                  exercises: superSet.exercises.map((exercise) => {
+                    if (exercise.exerciseId !== exerciseId) return exercise;
+                    return {
+                      ...exercise,
+                      sets: exercise.sets.map((item) => {
+                        if (item.setNumber !== setNumber) return item;
+                        return {
+                          ...item,
+                          completed: willBeCompleted,
+                          actualWeight: item.actualWeight ?? item.targetWeight,
+                          actualReps: item.actualReps ?? item.targetReps,
+                          completedAt: willBeCompleted ? new Date().toISOString() : undefined,
+                        };
+                      }),
+                    };
+                  }),
+                };
+              }),
+            };
+          }),
+        }));
+
+        if (willBeCompleted) {
+          if (hapticsEnabled) triggerHaptic("impact");
+          if (soundEnabled) soundPlayer.playBeep(600, 0.1, "sine");
+          // Автостарт таймера отдыха
+          startRestTimer(restDuration);
+        }
+      },
+
+      finishWorkout: (notes, weightStep = 2.5, soundEnabled = true, hapticsEnabled = true) => {
+        const { activeWorkoutId, workouts, workoutElapsedSeconds } = get();
+        if (!activeWorkoutId) return { tonnage: 0, power: 0, progressed: false };
+
+        const currentWorkout = workouts.find((w) => w.id === activeWorkoutId);
+        if (!currentWorkout) return { tonnage: 0, power: 0, progressed: false };
+
+        const tonnage = calculateWorkoutTonnage(currentWorkout.supersets);
+        const power = calculateWorkoutPower(tonnage, workoutElapsedSeconds);
+
+        // Проверяем, все ли подходы успешно закрыты для авто-прибавки
+        let allSetsCompleted = true;
+        for (const ss of currentWorkout.supersets) {
+          for (const ex of ss.exercises) {
+            for (const s of ex.sets) {
+              if (!s.completed || (s.actualReps && s.actualReps < s.targetReps)) {
+                allSetsCompleted = false;
+              }
+            }
+          }
+        }
+
+        // Если успешно — прибавляем веса к следующим тренировкам в этом микроцикле
+        const updatedWorkouts = workouts.map((w) => {
+          if (w.id === activeWorkoutId) {
+            return {
+              ...w,
+              status: "completed" as const,
+              completedAt: new Date().toISOString(),
+              durationSeconds: workoutElapsedSeconds,
+              tonnageKg: tonnage,
+              powerKgPerMin: power,
+              notes: notes || w.notes,
+            };
+          }
+
+          // Авто-прибавка: для последующих тренировок увеличиваем целевой вес на weightStep (+2.5 кг)
+          if (allSetsCompleted && w.workoutNumber > currentWorkout.workoutNumber && w.microcycle === currentWorkout.microcycle) {
+            return {
+              ...w,
+              supersets: w.supersets.map((ss) => ({
+                ...ss,
+                exercises: ss.exercises.map((ex) => ({
+                  ...ex,
+                  sets: ex.sets.map((s) => ({
+                    ...s,
+                    targetWeight: roundToWeightStep(s.targetWeight + weightStep, weightStep),
+                  })),
+                })),
+              })),
+            };
+          }
+
+          return w;
+        });
+
+        set({
+          workouts: updatedWorkouts,
+          activeWorkoutId: null,
+          workoutElapsedSeconds: 0,
+          isStopwatchRunning: false,
+          isRestTimerActive: false,
+        });
+
+        if (soundEnabled) soundPlayer.playWorkoutComplete();
+        if (hapticsEnabled) triggerHaptic("success");
+
+        return { tonnage, power, progressed: allSetsCompleted };
+      },
+
+      cancelWorkout: () => {
+        const { activeWorkoutId, workouts } = get();
+        if (!activeWorkoutId) return;
+
+        set({
+          activeWorkoutId: null,
+          workoutElapsedSeconds: 0,
+          isStopwatchRunning: false,
+          isRestTimerActive: false,
+          workouts: workouts.map((w) =>
+            w.id === activeWorkoutId && w.status === "in_progress"
+              ? { ...w, status: "upcoming" }
+              : w
+          ),
+        });
+      },
+
+      loadDemoData: () => {
+        set({
+          workouts: getDemoProgram(),
+          activeWorkoutId: null,
+          workoutElapsedSeconds: 0,
+          isStopwatchRunning: false,
+          isRestTimerActive: false,
+        });
+      },
+
+      resetAllWorkouts: () => {
+        const { exercises } = get();
+        set({
+          workouts: generateFullProgram(exercises, 2.5),
+          activeWorkoutId: null,
+          workoutElapsedSeconds: 0,
+          isStopwatchRunning: false,
+          isRestTimerActive: false,
+        });
+      },
+
+      setWorkouts: (workouts) => set({ workouts }),
+    }),
+    {
+      name: "smt_workouts_v2",
+      storage: createJSONStorage(() => localStorage),
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
+    }
+  )
+);
