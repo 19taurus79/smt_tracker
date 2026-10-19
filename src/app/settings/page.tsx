@@ -15,6 +15,7 @@ import {
   Timer,
   Scale,
   BookOpen,
+  Smartphone,
 } from "lucide-react";
 import { useWorkoutStore } from "@/lib/store/useWorkoutStore";
 import { useBodyStore } from "@/lib/store/useBodyStore";
@@ -265,6 +266,38 @@ export default function SettingsPage() {
             className="text-xs text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10"
           >
             Тест сигнала таймера
+          </Button>
+        </div>
+      </Card>
+
+      {/* PWA Installation Card */}
+      <Card className="border-cyan-500/30 bg-gradient-to-br from-cyan-950/20 via-slate-900/60 to-slate-900/60 p-4 sm:p-5 space-y-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm sm:text-base flex items-center gap-2 text-white">
+            <Smartphone className="h-4 w-4 text-cyan-400" />
+            <span>Установка на экран телефона (PWA)</span>
+          </CardTitle>
+          <span className="text-[10px] text-cyan-400 font-mono">Нативное приложение</span>
+        </div>
+        <p className="text-xs text-slate-300">
+          Установите СМТ-1 Трекер как нативное приложение на рабочий стол вашего смартфона. Будет открываться во весь экран без адресной строки и работать автономно.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-2.5 pt-1">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const isIos = /iphone|ipad|ipod/.test(navigator.userAgent.toLowerCase());
+              if (isIos) {
+                alert("На iPhone (Safari):\n1. Нажмите иконку «Поделиться» (квадрат со стрелкой вверх внизу экрана)\n2. Выберите «На экран Домой» (Add to Home Screen)\n3. Нажмите «Добавить»");
+              } else {
+                alert("На Android (Chrome):\n1. Нажмите меню «⋮» в правом верхнем углу\n2. Выберите «Установить приложение» или «Добавить на главный экран»");
+              }
+            }}
+            className="text-xs font-bold border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/10"
+          >
+            <Smartphone className="h-4 w-4 mr-1.5" />
+            <span>Инструкция по установке на главный экран</span>
           </Button>
         </div>
       </Card>

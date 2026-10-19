@@ -3,6 +3,7 @@ import "./globals.css";
 import { TopHeader } from "@/components/navigation/TopHeader";
 import { BottomNav } from "@/components/navigation/BottomNav";
 import { RestTimerOverlay } from "@/components/workout/RestTimerOverlay";
+import { PwaInstallBanner } from "@/components/pwa/PwaInstallBanner";
 import Script from "next/script";
 
 export const metadata: Metadata = {
@@ -38,6 +39,7 @@ export default function RootLayout({
           src="https://telegram.org/js/telegram-web-app.js"
           strategy="beforeInteractive"
         />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
       </head>
       <body className="min-h-full flex flex-col bg-slate-950 text-slate-100 selection:bg-emerald-500/30 selection:text-emerald-300">
         <TopHeader />
@@ -45,6 +47,7 @@ export default function RootLayout({
           {children}
         </main>
         <RestTimerOverlay />
+        <PwaInstallBanner />
         <BottomNav />
       </body>
     </html>

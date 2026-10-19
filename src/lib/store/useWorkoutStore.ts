@@ -75,8 +75,18 @@ interface WorkoutState {
     hapticsEnabled?: boolean
   ) => void;
 
+  completeSupersetRound: (
+    workoutId: string,
+    supersetId: string,
+    roundNumber: number,
+    restDuration?: number,
+    soundEnabled?: boolean,
+    hapticsEnabled?: boolean
+  ) => void;
+
   finishWorkout: (
     notes?: string,
+    exerciseIncrements?: Record<string, number>,
     weightStep?: number,
     soundEnabled?: boolean,
     hapticsEnabled?: boolean
@@ -305,7 +315,73 @@ export const useWorkoutStore = create<WorkoutState>()(
         }
       },
 
-      finishWorkout: (notes, weightStep = 2.5, soundEnabled = true, hapticsEnabled = true) => {
+      completeSupersetRound: (
+        workoutId,
+        supersetId,
+        roundNumber,
+        restDuration = 30,
+        soundEnabled = true,
+        hapticsEnabled = true
+      ) => {
+        let willBeCompleted = false;
+
+        set((state) => {
+          const workout = state.workouts.find((w) => w.id === workoutId);
+          if (!workout) return state;
+
+          const ss = workout.supersets.find((s) => s.id === supersetId);
+          if (!ss) return state;
+
+          const allRoundSetsCompleted = ss.exercises.every((ex) => {
+            const s = ex.sets.find((set) => set.setNumber === roundNumber);
+            return s ? s.completed : false;
+          });
+
+          willBeCompleted = !allRoundSetsCompleted;
+
+          const updatedWorkouts = state.workouts.map((w) => {
+            if (w.id !== workoutId) return w;
+            return {
+              ...w,
+              supersets: w.supersets.map((s) => {
+                if (s.id !== supersetId) return s;
+                return {
+                  ...s,
+                  exercises: s.exercises.map((ex) => ({
+                    ...ex,
+                    sets: ex.sets.map((set) => {
+                      if (set.setNumber !== roundNumber) return set;
+                      return {
+                        ...set,
+                        completed: willBeCompleted,
+                        actualWeight: set.actualWeight ?? set.targetWeight,
+                        actualReps: set.actualReps ?? set.targetReps,
+                      };
+                    }),
+                  })),
+                };
+              }),
+            };
+          });
+
+          return { workouts: updatedWorkouts };
+        });
+
+        if (willBeCompleted) {
+          if (hapticsEnabled) triggerHaptic("success");
+          if (soundEnabled) soundPlayer.playBeep(600, 0.15, "sine");
+          // Отдых 30 сек запускается ТОЛЬКО после завершения всего круга
+          get().startRestTimer(restDuration);
+        }
+      },
+
+      finishWorkout: (
+        notes,
+        exerciseIncrements,
+        weightStep = 2.5,
+        soundEnabled = true,
+        hapticsEnabled = true
+      ) => {
         const { activeWorkoutId, workouts, workoutElapsedSeconds } = get();
         if (!activeWorkoutId) return { tonnage: 0, power: 0, progressed: false };
 
@@ -315,7 +391,7 @@ export const useWorkoutStore = create<WorkoutState>()(
         const tonnage = calculateWorkoutTonnage(currentWorkout.supersets);
         const power = calculateWorkoutPower(tonnage, workoutElapsedSeconds);
 
-        // Проверяем, все ли подходы успешно закрыты для авто-прибавки
+        // Проверяем, все ли подходы успешно закрыты
         let allSetsCompleted = true;
         for (const ss of currentWorkout.supersets) {
           for (const ex of ss.exercises) {
@@ -327,7 +403,7 @@ export const useWorkoutStore = create<WorkoutState>()(
           }
         }
 
-        // Если успешно — прибавляем веса к следующим тренировкам в этом микроцикле
+        // Обновляем последующие тренировки
         const updatedWorkouts = workouts.map((w) => {
           if (w.id === activeWorkoutId) {
             return {
@@ -341,21 +417,42 @@ export const useWorkoutStore = create<WorkoutState>()(
             };
           }
 
-          // Авто-прибавка: для последующих тренировок увеличиваем целевой вес на weightStep (+2.5 кг)
-          if (allSetsCompleted && w.workoutNumber > currentWorkout.workoutNumber && w.microcycle === currentWorkout.microcycle) {
-            return {
-              ...w,
-              supersets: w.supersets.map((ss) => ({
-                ...ss,
-                exercises: ss.exercises.map((ex) => ({
-                  ...ex,
-                  sets: ex.sets.map((s) => ({
-                    ...s,
-                    targetWeight: roundToWeightStep(s.targetWeight + weightStep, weightStep),
+          if (w.workoutNumber > currentWorkout.workoutNumber) {
+            // Если переданы предложенные пользователем прибавки весов:
+            if (exerciseIncrements && Object.keys(exerciseIncrements).length > 0) {
+              return {
+                ...w,
+                supersets: w.supersets.map((ss) => ({
+                  ...ss,
+                  exercises: ss.exercises.map((ex) => {
+                    const inc = exerciseIncrements[ex.exerciseId] || 0;
+                    if (inc === 0) return ex;
+                    return {
+                      ...ex,
+                      sets: ex.sets.map((s) => ({
+                        ...s,
+                        targetWeight: roundToWeightStep(s.targetWeight + inc, 1.25),
+                      })),
+                    };
+                  }),
+                })),
+              };
+            } else if (allSetsCompleted && w.microcycle === currentWorkout.microcycle) {
+              // Авто-прибавка по умолчанию для текущего микроцикла
+              return {
+                ...w,
+                supersets: w.supersets.map((ss) => ({
+                  ...ss,
+                  exercises: ss.exercises.map((ex) => ({
+                    ...ex,
+                    sets: ex.sets.map((s) => ({
+                      ...s,
+                      targetWeight: roundToWeightStep(s.targetWeight + weightStep, weightStep),
+                    })),
                   })),
                 })),
-              })),
-            };
+              };
+            }
           }
 
           return w;

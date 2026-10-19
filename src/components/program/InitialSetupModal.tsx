@@ -54,6 +54,21 @@ export function InitialSetupModal({ open, onOpenChange }: InitialSetupModalProps
     );
   };
 
+  const handleStartWeightChange = (id: string, val: string) => {
+    const startWeight = parseFloat(val) || 0;
+    setLocalExercises((prev) =>
+      prev.map((ex) => {
+        if (ex.id !== id) return ex;
+        const pct = ex.startingPercentage || (ex.category === "main" ? 0.40 : 0.30);
+        const calculated1RM = pct > 0 ? Math.round((startWeight / pct) * 10) / 10 : startWeight;
+        return {
+          ...ex,
+          oneRepMax: calculated1RM,
+        };
+      })
+    );
+  };
+
   const handleCategoryChange = (id: string, category: ExerciseCategory) => {
     setLocalExercises((prev) =>
       prev.map((ex) =>
@@ -214,39 +229,51 @@ export function InitialSetupModal({ open, onOpenChange }: InitialSetupModalProps
                   </div>
                 </div>
 
-                {/* 1RM + Calculation Row */}
-                <div className="flex items-center justify-between gap-2 pt-1 border-t border-white/5 text-xs">
-                  <span className="text-[11px] text-slate-400">
-                    Стартовый вес:{" "}
-                    <strong className="text-emerald-300 font-bold">
-                      {startWeight} кг
-                    </strong>
-                  </span>
+                {/* Starting weight & 1RM dual synchronized inputs */}
+                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/5">
+                  <div className="bg-black/30 p-2 rounded-xl border border-white/5 space-y-1">
+                    <label className="text-[10px] text-emerald-400 font-semibold block">
+                      Стартовый вес (МКЦ-1)
+                    </label>
+                    <div className="flex items-center gap-1">
+                      <Input
+                        type="number"
+                        step="0.5"
+                        value={startWeight}
+                        onChange={(e) => handleStartWeightChange(ex.id, e.target.value)}
+                        className="h-7 text-center font-bold text-xs bg-slate-950 text-emerald-300"
+                        title="Рабочий вес для первой тренировки"
+                      />
+                      <span className="text-[10px] text-slate-500">кг</span>
+                    </div>
+                  </div>
 
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <span className="text-[11px] text-slate-400">1ПМ:</span>
-                    <Input
-                      type="number"
-                      step="2.5"
-                      value={ex.oneRepMax}
-                      onChange={(e) => handle1RMChange(ex.id, e.target.value)}
-                      className="h-7 w-16 text-center font-bold text-xs bg-slate-950"
-                      title="1ПМ (кг)"
-                    />
-                    <span className="text-[10px] text-slate-500">кг</span>
-
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 text-slate-400 hover:text-emerald-400"
-                      onClick={() =>
-                        setCalcModalExercise({ id: ex.id, name: ex.name })
-                      }
-                      title="Калькулятор 1ПМ"
-                    >
-                      <Calculator className="h-3.5 w-3.5" />
-                    </Button>
+                  <div className="bg-black/30 p-2 rounded-xl border border-white/5 space-y-1">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] text-slate-400 font-semibold block">
+                        Базовый 1ПМ
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setCalcModalExercise({ id: ex.id, name: ex.name })}
+                        className="text-[10px] text-cyan-400 hover:text-cyan-300 flex items-center gap-0.5"
+                        title="Калькулятор по повторениям"
+                      >
+                        <Calculator className="h-3 w-3" />
+                        <span>расчет</span>
+                      </button>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Input
+                        type="number"
+                        step="2.5"
+                        value={ex.oneRepMax}
+                        onChange={(e) => handle1RMChange(ex.id, e.target.value)}
+                        className="h-7 text-center font-bold text-xs bg-slate-950 text-white"
+                        title="Разовый максимум 1ПМ (кг)"
+                      />
+                      <span className="text-[10px] text-slate-500">кг</span>
+                    </div>
                   </div>
                 </div>
               </div>

@@ -27,9 +27,14 @@ export function OneRepMaxModal({
   const repsNum = parseInt(reps, 10) || 0;
 
   const result = calculateOneRepMax(weightNum, repsNum);
+  const [adjusted1RM, setAdjusted1RM] = useState<string>("");
+
+  const effective1RM = adjusted1RM !== "" ? (parseFloat(adjusted1RM) || 0) : result.average;
+  const startWeight40 = Math.round(effective1RM * 0.40 * 10) / 10;
+  const startWeight30 = Math.round(effective1RM * 0.30 * 10) / 10;
 
   const handleApply = () => {
-    onApply(result.average);
+    onApply(effective1RM);
     onOpenChange(false);
   };
 
@@ -55,7 +60,10 @@ export function OneRepMaxModal({
             <Input
               type="number"
               value={weight}
-              onChange={(e) => setWeight(e.target.value)}
+              onChange={(e) => {
+                setWeight(e.target.value);
+                setAdjusted1RM("");
+              }}
               placeholder="80"
             />
           </div>
@@ -64,29 +72,51 @@ export function OneRepMaxModal({
             <Input
               type="number"
               value={reps}
-              onChange={(e) => setReps(e.target.value)}
+              onChange={(e) => {
+                setReps(e.target.value);
+                setAdjusted1RM("");
+              }}
               placeholder="8"
             />
           </div>
         </div>
 
         {/* Calculation Result */}
-        <div className="rounded-2xl border border-emerald-500/30 bg-emerald-950/20 p-4 text-center">
-          <span className="text-xs text-slate-400">Расчетный максимум (1ПМ):</span>
-          <div className="text-3xl font-black text-emerald-400 my-1">
-            {result.average} кг
+        <div className="rounded-2xl border border-emerald-500/30 bg-emerald-950/20 p-4 text-center space-y-2">
+          <span className="text-xs text-slate-400">Расчетный 1ПМ (скорректируйте при необходимости):</span>
+          <div className="flex items-center justify-center gap-2">
+            <Input
+              type="number"
+              step="0.5"
+              value={adjusted1RM !== "" ? adjusted1RM : result.average}
+              onChange={(e) => setAdjusted1RM(e.target.value)}
+              className="text-2xl font-black text-center text-emerald-400 h-11 w-32 bg-slate-950 border-emerald-500/40"
+            />
+            <span className="text-sm font-bold text-slate-400">кг</span>
           </div>
-          <div className="flex justify-center gap-4 text-[11px] text-slate-400 mt-2">
+          
+          <div className="flex justify-center gap-3 text-[11px] text-slate-400">
             <span>Эпли: {result.epley} кг</span>
             <span>•</span>
             <span>Бжицки: {result.brzycki} кг</span>
           </div>
+
+          <div className="pt-2 border-t border-white/5 flex items-center justify-around text-xs">
+            <div>
+              <span className="text-slate-400 block text-[10px]">Для Базового (40%):</span>
+              <strong className="text-emerald-300">{startWeight40} кг</strong>
+            </div>
+            <div>
+              <span className="text-slate-400 block text-[10px]">Для Подсобки (30%):</span>
+              <strong className="text-cyan-300">{startWeight30} кг</strong>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="pt-4 flex flex-col gap-2">
+      <div className="pt-2 flex flex-col gap-2">
         <Button variant="accent" size="lg" className="w-full font-bold" onClick={handleApply}>
-          <span>Применить {result.average} кг в 1ПМ</span>
+          <span>Применить {effective1RM} кг в 1ПМ</span>
           <ArrowRight className="h-4 w-4 ml-2" />
         </Button>
       </div>
