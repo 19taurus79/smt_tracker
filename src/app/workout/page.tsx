@@ -58,10 +58,10 @@ function WorkoutContent() {
 
   // Synchronize target workout from URL query if present
   useEffect(() => {
-    if (queryId) {
+    if (queryId && queryId !== viewingWorkoutId) {
       setViewingWorkoutId(queryId);
     }
-  }, [queryId, setViewingWorkoutId]);
+  }, [queryId, viewingWorkoutId, setViewingWorkoutId]);
 
   // Global stopwatch tick
   useEffect(() => {
@@ -301,8 +301,8 @@ function WorkoutContent() {
                 Режим предварительного ознакомления
               </div>
               <div className="text-[11px] text-slate-300">
-                Ознакомьтесь со схемами и рабочими весами. Выполните суставную разминку и
-                нажмите «Начать тренировку», чтобы запустить секундомер.
+                Ознакомьтесь со схемами и рабочими весами. Выполните разминку и
+                нажмите «Начать», чтобы включить секундомер и активировать фиксацию подходов.
               </div>
             </div>
           </div>

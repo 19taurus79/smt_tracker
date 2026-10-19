@@ -241,9 +241,13 @@ export const useWorkoutStore = create<WorkoutState>()(
           ),
         })),
       completeWarmupAndStart: () => {
-        const { activeWorkoutId, startWorkout, workouts } = get();
+        const { activeWorkoutId, viewingWorkoutId, startWorkout, workouts } = get();
         set({ isWarmupModalOpen: false });
-        if (activeWorkoutId) {
+        const targetId = viewingWorkoutId || activeWorkoutId;
+        const targetWorkout = workouts.find((w) => w.id === targetId);
+        if (targetWorkout && targetWorkout.status !== "completed") {
+          startWorkout(targetWorkout.id);
+        } else if (activeWorkoutId) {
           set({ isStopwatchRunning: true });
         } else {
           const nextUpcoming =
@@ -333,7 +337,7 @@ export const useWorkoutStore = create<WorkoutState>()(
       ) => {
         const { workouts, startRestTimer } = get();
         const workout = workouts.find((w) => w.id === workoutId);
-        if (!workout) return;
+        if (!workout || workout.status !== "in_progress") return;
 
         const ss = workout.supersets.find((s) => s.id === supersetId);
         const ex = ss?.exercises.find((e) => e.exerciseId === exerciseId);
@@ -393,7 +397,7 @@ export const useWorkoutStore = create<WorkoutState>()(
 
         set((state) => {
           const workout = state.workouts.find((w) => w.id === workoutId);
-          if (!workout) return state;
+          if (!workout || workout.status !== "in_progress") return state;
 
           const ss = workout.supersets.find((s) => s.id === supersetId);
           if (!ss) return state;

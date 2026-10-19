@@ -167,30 +167,34 @@ export function SetRow({
           </div>
 
           {/* Action Done Button */}
-          <Button
-            size="sm"
-            variant={set.completed ? "default" : "outline"}
-            disabled={!isActive}
-            className={cn(
-              "h-7 sm:h-8 px-2.5 sm:px-3 rounded-lg text-xs font-bold transition-all ml-auto sm:ml-1",
-              set.completed
-                ? "bg-emerald-500 text-slate-950 hover:bg-emerald-400"
-                : !isActive
-                ? "opacity-35 cursor-not-allowed border-white/10 text-slate-500 hover:bg-transparent"
-                : "border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
-            )}
-            onClick={handleToggle}
-            title={!isActive ? "Сначала нажмите «Начать тренировку»" : undefined}
+          <div
+            className={!isActive && !set.completed ? "cursor-not-allowed" : undefined}
+            title={!isActive && !set.completed ? "Сначала нажмите «Начать тренировку», чтобы зачесть подход" : undefined}
           >
-            {set.completed ? (
-              <div className="flex items-center gap-1">
-                <Check className="h-3 w-3 stroke-[3]" />
-                <span>Сделан</span>
-              </div>
-            ) : (
-              <span>Зачесть</span>
-            )}
-          </Button>
+            <Button
+              size="sm"
+              variant={set.completed ? "default" : "outline"}
+              disabled={!isActive}
+              className={cn(
+                "h-7 sm:h-8 px-2.5 sm:px-3 rounded-lg text-xs font-bold transition-all ml-auto sm:ml-1",
+                set.completed
+                  ? "bg-emerald-500 text-slate-950 hover:bg-emerald-400"
+                  : !isActive
+                  ? "opacity-35 cursor-not-allowed border-white/10 text-slate-500 hover:bg-transparent"
+                  : "border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
+              )}
+              onClick={handleToggle}
+            >
+              {set.completed ? (
+                <div className="flex items-center gap-1">
+                  <Check className="h-3 w-3 stroke-[3]" />
+                  <span>Сделан</span>
+                </div>
+              ) : (
+                <span>Зачесть</span>
+              )}
+            </Button>
+          </div>
         </div>
       </div>
     </div>

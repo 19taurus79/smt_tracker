@@ -296,44 +296,48 @@ export function SupersetCard({ workoutId, superset }: SupersetCardProps) {
                   )}
 
                   {/* Single Unified Round Completion Button */}
-                  <Button
-                    disabled={!isActive}
-                    onClick={() =>
-                      completeSupersetRound(
-                        workoutId,
-                        superset.id,
-                        roundNum,
-                        defaultRestSeconds,
-                        soundEnabled,
-                        hapticsEnabled
-                      )
-                    }
-                    className={cn(
-                      "w-full font-bold text-xs min-h-9 py-1.5 px-2 transition-all leading-tight text-center",
-                      isRoundDone
-                        ? "bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/50"
-                        : !isActive
-                        ? "opacity-35 cursor-not-allowed bg-slate-900 border border-white/10 text-slate-500"
-                        : "bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 shadow-md shadow-emerald-500/20"
-                    )}
-                    title={!isActive ? "Сначала нажмите «Начать тренировку»" : undefined}
+                  <div
+                    className={!isActive && !isRoundDone ? "cursor-not-allowed" : undefined}
+                    title={!isActive && !isRoundDone ? "Сначала нажмите «Начать тренировку», чтобы зачесть круг" : undefined}
                   >
-                    {isRoundDone ? (
-                      <span className="flex items-center justify-center gap-1.5">
-                        <Check className="h-3.5 w-3.5 shrink-0" />
-                        <span>Круг {roundNum} выполнен (нажмите для отмены)</span>
-                      </span>
-                    ) : !isActive ? (
-                      <span className="flex items-center justify-center gap-1.5 text-slate-500">
-                        <span>Завершить Круг {roundNum} (нажмите «Начать тренировку»)</span>
-                      </span>
-                    ) : (
-                      <span className="flex items-center justify-center gap-1.5">
-                        <Check className="h-3.5 w-3.5 shrink-0" />
-                        <span>Завершить Круг {roundNum} (1А + 1Б) → Отдых {defaultRestSeconds}с</span>
-                      </span>
-                    )}
-                  </Button>
+                    <Button
+                      disabled={!isActive}
+                      onClick={() =>
+                        completeSupersetRound(
+                          workoutId,
+                          superset.id,
+                          roundNum,
+                          defaultRestSeconds,
+                          soundEnabled,
+                          hapticsEnabled
+                        )
+                      }
+                      className={cn(
+                        "w-full font-bold text-xs min-h-9 py-1.5 px-2 transition-all leading-tight text-center",
+                        isRoundDone
+                          ? "bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/50"
+                          : !isActive
+                          ? "opacity-35 cursor-not-allowed bg-slate-900 border border-white/10 text-slate-500 pointer-events-none"
+                          : "bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-slate-950 shadow-md shadow-emerald-500/20"
+                      )}
+                    >
+                      {isRoundDone ? (
+                        <span className="flex items-center justify-center gap-1.5">
+                          <Check className="h-3.5 w-3.5 shrink-0" />
+                          <span>Круг {roundNum} выполнен (нажмите для отмены)</span>
+                        </span>
+                      ) : !isActive ? (
+                        <span className="flex items-center justify-center gap-1.5 text-slate-500">
+                          <span>Завершить Круг {roundNum} (нажмите «Начать тренировку»)</span>
+                        </span>
+                      ) : (
+                        <span className="flex items-center justify-center gap-1.5">
+                          <Check className="h-3.5 w-3.5 shrink-0" />
+                          <span>Завершить Круг {roundNum} (1А + 1Б) → Отдых {defaultRestSeconds}с</span>
+                        </span>
+                      )}
+                    </Button>
+                  </div>
                 </div>
               );
             })}
