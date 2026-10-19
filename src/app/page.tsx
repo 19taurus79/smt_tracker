@@ -13,6 +13,7 @@ import {
   Calendar,
   Sparkles,
   Zap,
+  Eye,
 } from "lucide-react";
 import { useWorkoutStore } from "@/lib/store/useWorkoutStore";
 import { useBodyStore } from "@/lib/store/useBodyStore";
@@ -42,6 +43,7 @@ export default function HomePage() {
   const {
     workouts,
     activeWorkoutId,
+    setViewingWorkoutId,
     startWorkout,
     restartWorkout,
     openWarmupModal,
@@ -127,7 +129,12 @@ export default function HomePage() {
                   <span className="text-emerald-400 font-bold">
                     {ss.label.split(":")[0]}:
                   </span>{" "}
-                  {ss.exercises.map((e) => getShortExerciseName(e.name)).join(" + ")}
+                  {ss.exercises
+                    .map(
+                      (e) =>
+                        `${getShortExerciseName(e.name)} (${e.sets[0]?.targetWeight} кг)`
+                    )
+                    .join(" + ")}
                 </div>
               ))}
             </div>
@@ -143,17 +150,30 @@ export default function HomePage() {
                   <Trophy className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 text-amber-300" />
                   <span>Посмотреть отчет</span>
                 </Button>
-              ) : (
+              ) : activeWorkoutId ? (
                 <Link
-                  href="/workout"
-                  onClick={() => startWorkout(currentOrNextWorkout.id)}
+                  href={`/workout?id=${activeWorkoutId}`}
+                  onClick={() => setViewingWorkoutId(activeWorkoutId)}
                   className="flex-1"
                 >
-                  <Button variant="accent" size="lg" className="w-full font-bold shadow-lg shadow-emerald-500/20 h-11 sm:h-13 text-sm">
+                  <Button variant="accent" size="lg" className="w-full font-bold shadow-lg shadow-emerald-500/20 h-11 sm:h-13 text-sm animate-pulse">
                     <Play className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 fill-current" />
-                    <span>
-                      {activeWorkoutId ? "Продолжить тренировку" : "Начать тренировку"}
-                    </span>
+                    <span>Продолжить тренировку</span>
+                  </Button>
+                </Link>
+              ) : (
+                <Link
+                  href={`/workout?id=${currentOrNextWorkout.id}`}
+                  onClick={() => setViewingWorkoutId(currentOrNextWorkout.id)}
+                  className="flex-1"
+                >
+                  <Button
+                    variant="accent"
+                    size="lg"
+                    className="w-full font-bold shadow-lg shadow-emerald-500/20 h-11 sm:h-13 text-sm"
+                  >
+                    <Eye className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5" />
+                    <span>Ознакомиться с планом</span>
                   </Button>
                 </Link>
               )}

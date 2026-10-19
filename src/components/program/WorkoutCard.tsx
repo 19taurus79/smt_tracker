@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { CheckCircle2, Play, ChevronRight, FileText } from "lucide-react";
+import { CheckCircle2, Play, ChevronRight, FileText, Eye } from "lucide-react";
 import { WorkoutSession } from "@/types/smt";
 import { useWorkoutStore } from "@/lib/store/useWorkoutStore";
 import { formatTime } from "@/lib/utils";
@@ -27,15 +27,10 @@ function getShortExerciseName(name: string): string {
 }
 
 export function WorkoutCard({ workout, onStart, onOpenReport }: WorkoutCardProps) {
-  const { startWorkout, activeWorkoutId } = useWorkoutStore();
+  const { startWorkout, setViewingWorkoutId, activeWorkoutId } = useWorkoutStore();
 
   const isCurrentActive = activeWorkoutId === workout.id;
   const isCompleted = workout.status === "completed";
-
-  const handleStart = () => {
-    startWorkout(workout.id);
-    if (onStart) onStart();
-  };
 
   return (
     <Card
@@ -131,17 +126,27 @@ export function WorkoutCard({ workout, onStart, onOpenReport }: WorkoutCardProps
               <span>Открыть отчет</span>
             </Button>
           ) : isCurrentActive ? (
-            <Link href="/workout">
+            <Link
+              href={`/workout?id=${workout.id}`}
+              onClick={() => setViewingWorkoutId(workout.id)}
+            >
               <Button variant="default" size="sm" className="h-7 sm:h-8 text-xs font-bold animate-pulse">
                 <Play className="h-3.5 w-3.5 mr-1 fill-current" />
                 <span>Продолжить тренировку</span>
               </Button>
             </Link>
           ) : (
-            <Link href="/workout" onClick={handleStart}>
-              <Button variant="outline" size="sm" className="h-7 sm:h-8 text-xs font-semibold hover:border-emerald-500/50 hover:text-emerald-400">
-                <Play className="h-3.5 w-3.5 mr-1" />
-                <span>Начать</span>
+            <Link
+              href={`/workout?id=${workout.id}`}
+              onClick={() => setViewingWorkoutId(workout.id)}
+            >
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 sm:h-8 text-xs font-semibold hover:border-emerald-500/50 hover:text-emerald-400"
+              >
+                <Eye className="h-3.5 w-3.5 mr-1 text-emerald-400" />
+                <span>Ознакомиться</span>
                 <ChevronRight className="h-3.5 w-3.5 ml-0.5" />
               </Button>
             </Link>

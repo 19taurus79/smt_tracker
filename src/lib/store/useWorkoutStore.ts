@@ -23,6 +23,7 @@ interface WorkoutState {
   exercises: ExerciseDefinition[];
   workouts: WorkoutSession[];
   activeWorkoutId: string | null;
+  viewingWorkoutId: string | null;
   workoutElapsedSeconds: number;
   isStopwatchRunning: boolean;
   
@@ -42,8 +43,10 @@ interface WorkoutState {
   // Actions
   initializeProgram: (exercises: ExerciseDefinition[], weightStep?: number) => void;
   updateExercise1RM: (exerciseId: string, oneRepMax: number) => void;
+  setViewingWorkoutId: (workoutId: string | null) => void;
   startWorkout: (workoutId: string) => void;
   restartWorkout: (workoutId: string) => void;
+  resetWorkout: (workoutId: string) => void;
   pauseStopwatch: () => void;
   resumeStopwatch: () => void;
   tickStopwatch: () => void;
@@ -107,6 +110,7 @@ export const useWorkoutStore = create<WorkoutState>()(
       exercises: DEFAULT_EXERCISES,
       workouts: generateFullProgram(DEFAULT_EXERCISES, 2.5),
       activeWorkoutId: null,
+      viewingWorkoutId: null,
       workoutElapsedSeconds: 0,
       isStopwatchRunning: false,
 
@@ -126,6 +130,7 @@ export const useWorkoutStore = create<WorkoutState>()(
           exercises,
           workouts,
           activeWorkoutId: null,
+          viewingWorkoutId: null,
           workoutElapsedSeconds: 0,
           isStopwatchRunning: false,
         });
@@ -139,6 +144,8 @@ export const useWorkoutStore = create<WorkoutState>()(
         }));
       },
 
+      setViewingWorkoutId: (workoutId) => set({ viewingWorkoutId: workoutId }),
+
       startWorkout: (workoutId) => {
         const { workouts } = get();
         const workout = workouts.find((w) => w.id === workoutId);
@@ -147,7 +154,7 @@ export const useWorkoutStore = create<WorkoutState>()(
         // Если тренировка уже завершена, НЕ перезапускаем её в in_progress и не включаем таймер!
         if (workout.status === "completed") {
           set({
-            activeWorkoutId: workoutId,
+            viewingWorkoutId: workoutId,
             isStopwatchRunning: false,
           });
           return;
@@ -155,6 +162,7 @@ export const useWorkoutStore = create<WorkoutState>()(
 
         set({
           activeWorkoutId: workoutId,
+          viewingWorkoutId: workoutId,
           workoutElapsedSeconds: workout.durationSeconds || 0,
           isStopwatchRunning: true,
           workouts: workouts.map((w) =>
@@ -169,25 +177,29 @@ export const useWorkoutStore = create<WorkoutState>()(
         });
       },
 
-      restartWorkout: (workoutId) => {
-        const { workouts } = get();
+      resetWorkout: (workoutId) => {
+        const { workouts, activeWorkoutId } = get();
         const workout = workouts.find((w) => w.id === workoutId);
         if (!workout) return;
 
+        const isActive = activeWorkoutId === workoutId;
+
         set({
-          activeWorkoutId: workoutId,
-          workoutElapsedSeconds: 0,
-          isStopwatchRunning: true,
+          activeWorkoutId: isActive ? null : activeWorkoutId,
+          workoutElapsedSeconds: isActive ? 0 : get().workoutElapsedSeconds,
+          isStopwatchRunning: isActive ? false : get().isStopwatchRunning,
+          isRestTimerActive: isActive ? false : get().isRestTimerActive,
           workouts: workouts.map((w) => {
             if (w.id !== workoutId) return w;
             return {
               ...w,
-              status: "in_progress",
-              startedAt: new Date().toISOString(),
+              status: "upcoming" as const,
+              startedAt: undefined,
               completedAt: undefined,
               durationSeconds: 0,
               tonnageKg: undefined,
               powerKgPerMin: undefined,
+              notes: undefined,
               supersets: w.supersets.map((ss) => ({
                 ...ss,
                 exercises: ss.exercises.map((ex) => ({
@@ -197,12 +209,18 @@ export const useWorkoutStore = create<WorkoutState>()(
                     completed: false,
                     actualWeight: undefined,
                     actualReps: undefined,
+                    completedAt: undefined,
                   })),
                 })),
               })),
             };
           }),
         });
+      },
+
+      restartWorkout: (workoutId) => {
+        get().resetWorkout(workoutId);
+        get().startWorkout(workoutId);
       },
 
       pauseStopwatch: () => set({ isStopwatchRunning: false }),

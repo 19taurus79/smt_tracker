@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import React, { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Play,
   Pause,
@@ -11,45 +11,57 @@ import {
   RotateCcw,
   Trophy,
   FileText,
+  Eye,
+  ArrowLeft,
 } from "lucide-react";
+import Link from "next/link";
 import { useWorkoutStore } from "@/lib/store/useWorkoutStore";
 import { formatTime, cn } from "@/lib/utils";
 import { SupersetCard } from "@/components/workout/SupersetCard";
 import { WarmupModal } from "@/components/workout/WarmupModal";
 import { FinishModal } from "@/components/workout/FinishModal";
 import { WorkoutReportModal } from "@/components/program/WorkoutReportModal";
+import { ConfirmResetModal } from "@/components/workout/ConfirmResetModal";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 
-export default function WorkoutPage() {
+function WorkoutContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const queryId = searchParams.get("id");
+
   const {
     workouts,
     activeWorkoutId,
+    viewingWorkoutId,
     workoutElapsedSeconds,
     isStopwatchRunning,
     startWorkout,
     restartWorkout,
+    resetWorkout,
     pauseStopwatch,
     resumeStopwatch,
     tickStopwatch,
-    cancelWorkout,
     openWarmupModal,
+    setViewingWorkoutId,
   } = useWorkoutStore();
 
   const [isFinishModalOpen, setIsFinishModalOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
+  const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
-
-  const handleOpenFinishModal = () => {
-    pauseStopwatch();
-    setIsFinishModalOpen(true);
-  };
 
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Synchronize target workout from URL query if present
+  useEffect(() => {
+    if (queryId) {
+      setViewingWorkoutId(queryId);
+    }
+  }, [queryId, setViewingWorkoutId]);
 
   // Global stopwatch tick
   useEffect(() => {
@@ -70,8 +82,14 @@ export default function WorkoutPage() {
     );
   }
 
-  // Find active or upcoming workout
+  // Target workout resolution:
+  // 1. Explicit query ?id=
+  // 2. Currently viewed workout (viewingWorkoutId)
+  // 3. Currently active workout in progress (activeWorkoutId)
+  // 4. First in-progress, first upcoming, or workouts[0]
+  const targetId = queryId || viewingWorkoutId || activeWorkoutId;
   const currentWorkout =
+    workouts.find((w) => w.id === targetId) ||
     workouts.find((w) => w.id === activeWorkoutId) ||
     workouts.find((w) => w.status === "in_progress") ||
     workouts.find((w) => w.status === "upcoming") ||
@@ -81,9 +99,19 @@ export default function WorkoutPage() {
     return (
       <div className="text-center py-12">
         <p className="text-slate-400">Нет доступных тренировок.</p>
+        <Link href="/program">
+          <Button variant="outline" className="mt-4 text-xs">
+            Перейти к сетке программы
+          </Button>
+        </Link>
       </div>
     );
   }
+
+  const isCurrentActive =
+    activeWorkoutId === currentWorkout.id && currentWorkout.status === "in_progress";
+  const isCompleted = currentWorkout.status === "completed";
+  const isUpcoming = !isCurrentActive && !isCompleted;
 
   // Calculate overall set progress for this workout
   let totalSets = 0;
@@ -95,7 +123,14 @@ export default function WorkoutPage() {
     }
   }
 
-  const isCompleted = currentWorkout.status === "completed";
+  const handleOpenFinishModal = () => {
+    pauseStopwatch();
+    setIsFinishModalOpen(true);
+  };
+
+  const handleStartThisWorkout = () => {
+    startWorkout(currentWorkout.id);
+  };
 
   return (
     <div className="space-y-4 animate-in fade-in duration-200">
@@ -107,21 +142,27 @@ export default function WorkoutPage() {
             <div className="flex items-center gap-1.5 rounded-lg bg-slate-950 px-2 sm:px-2.5 py-1 border border-white/10 shrink-0">
               <Timer
                 className={cn(
-                  "h-3.5 w-3.5 text-emerald-400 shrink-0",
-                  !isCompleted && isStopwatchRunning && "animate-pulse"
+                  "h-3.5 w-3.5 shrink-0",
+                  isCurrentActive && isStopwatchRunning
+                    ? "text-emerald-400 animate-pulse"
+                    : isCompleted
+                    ? "text-cyan-400"
+                    : "text-slate-500"
                 )}
               />
               <span className="font-mono text-xs sm:text-base font-black text-white">
                 {formatTime(
                   isCompleted
                     ? currentWorkout.durationSeconds || 0
-                    : workoutElapsedSeconds
+                    : isCurrentActive
+                    ? workoutElapsedSeconds
+                    : 0
                 )}
               </span>
             </div>
 
-            {/* Play / Pause Stopwatch */}
-            {!isCompleted && (
+            {/* Play / Pause Stopwatch (Only during active session) */}
+            {isCurrentActive && (
               <Button
                 variant="outline"
                 size="icon"
@@ -151,7 +192,7 @@ export default function WorkoutPage() {
               <span>Разминка</span>
             </Button>
 
-            {!isCompleted && activeWorkoutId && (
+            {isCurrentActive && (
               <Button
                 variant="accent"
                 size="sm"
@@ -160,6 +201,30 @@ export default function WorkoutPage() {
               >
                 <CheckCircle className="h-3.5 w-3.5 mr-1 shrink-0" />
                 <span>Завершить</span>
+              </Button>
+            )}
+
+            {isUpcoming && (
+              <Button
+                variant="accent"
+                size="sm"
+                className="h-8 px-2.5 sm:px-3 text-[11px] sm:text-xs font-bold"
+                onClick={handleStartThisWorkout}
+              >
+                <Play className="h-3.5 w-3.5 mr-1 fill-current" />
+                <span>Начать</span>
+              </Button>
+            )}
+
+            {isCompleted && (
+              <Button
+                variant="default"
+                size="sm"
+                className="h-8 px-2.5 sm:px-3 text-[11px] sm:text-xs font-bold bg-emerald-600 hover:bg-emerald-500"
+                onClick={() => setIsReportOpen(true)}
+              >
+                <FileText className="h-3.5 w-3.5 mr-1" />
+                <span>Отчет</span>
               </Button>
             )}
           </div>
@@ -182,37 +247,76 @@ export default function WorkoutPage() {
         </div>
       </div>
 
-      {/* Workout Info Title */}
+      {/* Workout Info Title & Mode Badge */}
       <div className="flex items-center justify-between px-1">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-lg sm:text-2xl font-black text-white">
               {currentWorkout.title}
             </h1>
             <Badge
-              variant={isCompleted ? "success" : "secondary"}
+              variant={
+                isCompleted
+                  ? "success"
+                  : isCurrentActive
+                  ? "warning"
+                  : "outline"
+              }
               className="text-[10px] sm:text-xs"
             >
-              {isCompleted ? "Завершена" : "Активна"}
+              {isCompleted
+                ? "Завершена"
+                : isCurrentActive
+                ? "В процессе"
+                : "Ознакомление"}
             </Badge>
           </div>
           <p className="text-[11px] text-slate-400 mt-0.5">
-            Микроцикл {currentWorkout.microcycle} • Отдых между подходами: 30 секунд
+            Микроцикл {currentWorkout.microcycle} • Неделя {currentWorkout.week} • Отдых
+            между кругами: 30 секунд
           </p>
         </div>
 
-        {!activeWorkoutId && !isCompleted && (
+        <Link href="/program">
           <Button
-            variant="default"
+            variant="ghost"
             size="sm"
-            onClick={() => startWorkout(currentWorkout.id)}
-            className="text-xs font-bold h-8"
+            className="text-xs text-slate-400 hover:text-white h-8 px-2"
           >
-            <Play className="h-3.5 w-3.5 mr-1 fill-current" />
+            <ArrowLeft className="h-3.5 w-3.5 mr-1" />
+            <span>Сетка</span>
+          </Button>
+        </Link>
+      </div>
+
+      {/* Informational Banner for Upcoming (Preview) Mode */}
+      {isUpcoming && (
+        <div className="rounded-2xl border border-emerald-500/30 bg-emerald-950/20 p-3 sm:p-4 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="h-9 w-9 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0 border border-emerald-500/30">
+              <Eye className="h-4 w-4" />
+            </div>
+            <div>
+              <div className="text-xs sm:text-sm font-bold text-white">
+                Режим предварительного ознакомления
+              </div>
+              <div className="text-[11px] text-slate-300">
+                Ознакомьтесь со схемами и рабочими весами. Выполните суставную разминку и
+                нажмите «Начать тренировку», чтобы запустить секундомер.
+              </div>
+            </div>
+          </div>
+          <Button
+            variant="accent"
+            size="sm"
+            onClick={handleStartThisWorkout}
+            className="font-bold text-xs shrink-0 h-9 hidden sm:flex items-center gap-1.5"
+          >
+            <Play className="h-3.5 w-3.5 fill-current" />
             <span>Начать</span>
           </Button>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Supersets List */}
       <div className="space-y-3.5">
@@ -225,7 +329,7 @@ export default function WorkoutPage() {
         ))}
       </div>
 
-      {/* Bottom Completion Action / Completed State Actions */}
+      {/* Bottom Action Bar depending on state */}
       {isCompleted ? (
         <div className="pt-2 pb-6 flex flex-col sm:flex-row gap-2.5">
           <Button
@@ -241,21 +345,33 @@ export default function WorkoutPage() {
           <Button
             variant="outline"
             size="lg"
-            className="flex-1 font-bold text-xs sm:text-sm px-3 py-3 border-white/20 hover:bg-white/10 text-white flex items-center justify-center gap-2 text-center"
+            className="font-semibold text-xs sm:text-sm px-3 py-3 border-rose-500/30 text-rose-300 hover:bg-rose-500/10 flex items-center justify-center gap-1.5 text-center"
+            onClick={() => setIsResetConfirmOpen(true)}
+            title="Сбросить статус завершенности тренировки"
+          >
+            <RotateCcw className="h-4 w-4 shrink-0" />
+            <span>Сбросить тренировку</span>
+          </Button>
+
+          <Button
+            variant="outline"
+            size="lg"
+            className="sm:flex-1 font-bold text-xs sm:text-sm px-3 py-3 border-white/20 hover:bg-white/10 text-white flex items-center justify-center gap-2 text-center"
             onClick={() => {
               const nextUpcoming = workouts.find((w) => w.status === "upcoming");
               if (nextUpcoming) {
-                startWorkout(nextUpcoming.id);
+                setViewingWorkoutId(nextUpcoming.id);
+                router.push(`/workout?id=${nextUpcoming.id}`);
               } else {
                 router.push("/program");
               }
             }}
           >
             <Play className="h-4 w-4 fill-current text-emerald-400 shrink-0" />
-            <span>К следующей тренировке</span>
+            <span>К следующей</span>
           </Button>
         </div>
-      ) : (
+      ) : isCurrentActive ? (
         <div className="pt-2 pb-6 flex flex-col gap-2.5">
           <Button
             variant="accent"
@@ -267,17 +383,38 @@ export default function WorkoutPage() {
             <span>Завершить тренировку и рассчитать мощность</span>
           </Button>
 
-          {activeWorkoutId && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={cancelWorkout}
-              className="text-xs text-slate-400 hover:text-rose-400 h-9"
-            >
-              <RotateCcw className="h-3.5 w-3.5 mr-1" />
-              <span>Сбросить текущую сессию</span>
-            </Button>
-          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsResetConfirmOpen(true)}
+            className="text-xs text-slate-400 hover:text-rose-400 h-9"
+          >
+            <RotateCcw className="h-3.5 w-3.5 mr-1" />
+            <span>Сбросить текущую сессию</span>
+          </Button>
+        </div>
+      ) : (
+        /* isUpcoming (Preview Mode Bottom Action) */
+        <div className="pt-2 pb-6 flex flex-col sm:flex-row gap-2.5">
+          <Button
+            variant="accent"
+            size="lg"
+            className="flex-1 font-black text-xs sm:text-sm px-4 py-3.5 shadow-xl shadow-emerald-500/25 flex items-center justify-center gap-2 text-center leading-snug"
+            onClick={handleStartThisWorkout}
+          >
+            <Play className="h-4 w-4 fill-current shrink-0" />
+            <span>Начать тренировку (старт секундомера)</span>
+          </Button>
+
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={openWarmupModal}
+            className="sm:w-auto font-semibold border-amber-500/30 text-amber-300 hover:bg-amber-500/10 px-4 py-3 text-xs sm:text-sm"
+          >
+            <Flame className="h-4 w-4 mr-1.5 text-amber-400" />
+            <span>Разминка</span>
+          </Button>
         </div>
       )}
 
@@ -296,6 +433,28 @@ export default function WorkoutPage() {
           restartWorkout(workoutId);
         }}
       />
+      <ConfirmResetModal
+        open={isResetConfirmOpen}
+        onOpenChange={setIsResetConfirmOpen}
+        workout={currentWorkout}
+        onConfirm={() => {
+          resetWorkout(currentWorkout.id);
+        }}
+      />
     </div>
+  );
+}
+
+export default function WorkoutPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-[70vh] items-center justify-center">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
+        </div>
+      }
+    >
+      <WorkoutContent />
+    </Suspense>
   );
 }

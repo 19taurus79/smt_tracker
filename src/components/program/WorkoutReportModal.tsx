@@ -15,6 +15,7 @@ import { WorkoutSession } from "@/types/smt";
 import { formatTime, formatDate } from "@/lib/utils";
 import { Dialog, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { ConfirmResetModal } from "@/components/workout/ConfirmResetModal";
 
 interface WorkoutReportModalProps {
   open: boolean;
@@ -29,29 +30,14 @@ export function WorkoutReportModal({
   workout,
   onRestart,
 }: WorkoutReportModalProps) {
-  const [confirmRestart, setConfirmRestart] = useState(false);
+  const [isConfirmResetOpen, setIsConfirmResetOpen] = useState(false);
 
   if (!workout) return null;
-
-  const handleRestartClick = () => {
-    if (!confirmRestart) {
-      setConfirmRestart(true);
-      return;
-    }
-    if (onRestart) {
-      onRestart(workout.id);
-      onOpenChange(false);
-      setConfirmRestart(false);
-    }
-  };
 
   return (
     <Dialog
       open={open}
-      onOpenChange={(val) => {
-        if (!val) setConfirmRestart(false);
-        onOpenChange(val);
-      }}
+      onOpenChange={onOpenChange}
     >
       <DialogHeader>
         <DialogTitle onClose={() => onOpenChange(false)}>
@@ -188,19 +174,29 @@ export function WorkoutReportModal({
 
         {onRestart && (
           <Button
-            variant={confirmRestart ? "destructive" : "ghost"}
+            variant="ghost"
             size="default"
-            className="text-xs font-semibold"
-            onClick={handleRestartClick}
+            className="text-xs font-semibold text-slate-400 hover:text-rose-400 hover:bg-rose-500/10"
+            onClick={() => setIsConfirmResetOpen(true)}
             title="Сбросить статус и пройти тренировку заново"
           >
             <RotateCcw className="h-3.5 w-3.5 mr-1" />
-            <span>
-              {confirmRestart ? "Точно сбросить и пройти заново?" : "Пройти заново"}
-            </span>
+            <span>Сбросить и пройти заново</span>
           </Button>
         )}
       </div>
+
+      <ConfirmResetModal
+        open={isConfirmResetOpen}
+        onOpenChange={setIsConfirmResetOpen}
+        workout={workout}
+        onConfirm={() => {
+          if (onRestart) {
+            onRestart(workout.id);
+            onOpenChange(false);
+          }
+        }}
+      />
     </Dialog>
   );
 }
