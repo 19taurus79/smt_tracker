@@ -28,7 +28,7 @@ export function BottomNav() {
   const { activeWorkoutId } = useWorkoutStore();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-slate-950/95 backdrop-blur-2xl pb-[var(--tg-safe-area-inset-bottom,0px)]">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-slate-950/95 backdrop-blur-2xl pb-[max(env(safe-area-inset-bottom,0px),var(--tg-safe-area-inset-bottom,0px))]">
       <div className="mx-auto flex h-14 sm:h-16 max-w-lg items-center justify-around px-1">
         {NAV_ITEMS.map((item) => {
           const isActive = pathname === item.href;

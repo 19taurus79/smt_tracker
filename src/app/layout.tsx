@@ -43,7 +43,7 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col bg-slate-950 text-slate-100 selection:bg-emerald-500/30 selection:text-emerald-300">
         <TopHeader />
-        <main className="flex-1 pb-24 max-w-5xl w-full mx-auto px-4 sm:px-6 pt-4">
+        <main className="flex-1 pb-[calc(4.25rem+max(env(safe-area-inset-bottom,0px),var(--tg-safe-area-inset-bottom,0px)))] max-w-5xl w-full mx-auto px-4 sm:px-6 pt-3 sm:pt-4">
           {children}
         </main>
         <RestTimerOverlay />

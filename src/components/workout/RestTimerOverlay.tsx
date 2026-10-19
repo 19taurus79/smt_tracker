@@ -37,7 +37,7 @@ export function RestTimerOverlay() {
       : 0;
 
   return (
-    <div className="fixed bottom-20 left-4 right-4 z-40 mx-auto max-w-md animate-in slide-in-from-bottom-5">
+    <div className="fixed bottom-[calc(4.5rem+max(env(safe-area-inset-bottom,0px),var(--tg-safe-area-inset-bottom,0px)))] left-4 right-4 z-40 mx-auto max-w-md animate-in slide-in-from-bottom-5">
       <div className="relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-slate-900/95 p-3.5 shadow-2xl backdrop-blur-xl">
         {/* Progress Background bar */}
         <div

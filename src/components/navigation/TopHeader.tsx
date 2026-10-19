@@ -24,7 +24,7 @@ export function TopHeader() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 w-full border-b border-white/10 bg-slate-950/80 backdrop-blur-xl pt-[var(--tg-safe-area-inset-top,0px)]">
+      <header className="sticky top-0 z-40 w-full border-b border-white/10 bg-slate-950/85 backdrop-blur-xl pt-[max(env(safe-area-inset-top,0px),var(--tg-safe-area-inset-top,0px))]">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4 sm:px-6">
           <Link href="/" className="flex items-center gap-2.5 group">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-emerald-500 to-cyan-500 text-slate-950 font-black shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform">

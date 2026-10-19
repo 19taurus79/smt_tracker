@@ -9,14 +9,19 @@
   --tg-safe-area-inset-right: 0px;
   --tg-content-safe-area-inset-top: 0px;
   --tg-content-safe-area-inset-bottom: 0px;
+  --safe-top: max(env(safe-area-inset-top, 0px), var(--tg-safe-area-inset-top, 0px));
+  --safe-bottom: max(env(safe-area-inset-bottom, 0px), var(--tg-safe-area-inset-bottom, 0px));
 }
 
-/* Telegram WebApp Theme variables override when present */
+html {
+  height: 100%;
+}
+
+/* Telegram WebApp & iOS Safari Theme styles */
 body {
   background-color: var(--tg-theme-bg-color, var(--background));
   color: var(--tg-theme-text-color, var(--foreground));
-  min-height: 100vh;
-  min-height: -webkit-fill-available;
+  min-height: 100dvh;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   overflow-x: hidden;
   -webkit-tap-highlight-color: transparent;
@@ -43,9 +48,9 @@ body {
 
 /* Telegram & Mobile Safe Area Utilities */
 .tma-safe-top {
-  padding-top: var(--tg-safe-area-inset-top, 0px);
+  padding-top: max(env(safe-area-inset-top, 0px), var(--tg-safe-area-inset-top, 0px));
 }
 
 .tma-safe-bottom {
-  padding-bottom: var(--tg-safe-area-inset-bottom, 0px);
+  padding-bottom: max(env(safe-area-inset-bottom, 0px), var(--tg-safe-area-inset-bottom, 0px));
 }

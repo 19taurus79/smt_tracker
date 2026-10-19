@@ -135,7 +135,7 @@ function WorkoutContent() {
   return (
     <div className="space-y-4 animate-in fade-in duration-200">
       {/* Sticky Compact Workout Dashboard Header */}
-      <div className="rounded-xl sm:rounded-2xl border border-white/10 bg-slate-900/90 p-2.5 sm:p-4 backdrop-blur-xl shadow-xl sticky top-14 sm:top-16 z-30">
+      <div className="rounded-xl sm:rounded-2xl border border-white/10 bg-slate-900/90 p-2.5 sm:p-4 backdrop-blur-xl shadow-xl sticky top-[calc(3.5rem+max(env(safe-area-inset-top,0px),var(--tg-safe-area-inset-top,0px)))] z-30">
         <div className="flex items-center justify-between gap-1.5 sm:gap-2">
           <div className="flex items-center gap-1.5">
             {/* Stopwatch pill */}
@@ -331,7 +331,7 @@ function WorkoutContent() {
 
       {/* Bottom Action Bar depending on state */}
       {isCompleted ? (
-        <div className="pt-2 pb-6 flex flex-col sm:flex-row gap-2.5">
+        <div className="pt-2 pb-2 flex flex-col sm:flex-row gap-2.5">
           <Button
             variant="default"
             size="lg"
@@ -372,7 +372,7 @@ function WorkoutContent() {
           </Button>
         </div>
       ) : isCurrentActive ? (
-        <div className="pt-2 pb-6 flex flex-col gap-2.5">
+        <div className="pt-2 pb-2 flex flex-col gap-2.5">
           <Button
             variant="accent"
             size="lg"
@@ -395,7 +395,7 @@ function WorkoutContent() {
         </div>
       ) : (
         /* isUpcoming (Preview Mode Bottom Action) */
-        <div className="pt-2 pb-6 flex flex-col sm:flex-row gap-2.5">
+        <div className="pt-2 pb-2 flex flex-col sm:flex-row gap-2.5">
           <Button
             variant="accent"
             size="lg"

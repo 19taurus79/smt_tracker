@@ -113,7 +113,7 @@ export function triggerHaptic(type: "impact" | "success" | "warning" = "impact")
   }
 
   // Fallback for mobile browser / PWA
-  if ("vibrate" in navigator) {
+  if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
     try {
       if (type === "success") {
         navigator.vibrate([100, 50, 150]);

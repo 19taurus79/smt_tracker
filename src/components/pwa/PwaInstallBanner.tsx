@@ -17,6 +17,12 @@ export function PwaInstallBanner() {
   const [showIOSGuide, setShowIOSGuide] = useState(false);
 
   useEffect(() => {
+    try {
+      if (localStorage.getItem("smt_pwa_dismissed") === "true") {
+        setDismissed(true);
+      }
+    } catch {}
+
     // Check if running in standalone mode (already installed as PWA)
     const isStandaloneMode =
       window.matchMedia("(display-mode: standalone)").matches ||
@@ -50,6 +56,13 @@ export function PwaInstallBanner() {
     };
   }, []);
 
+  const handleDismiss = () => {
+    setDismissed(true);
+    try {
+      localStorage.setItem("smt_pwa_dismissed", "true");
+    } catch {}
+  };
+
   // If already installed or user dismissed it
   if (isStandalone || dismissed) return null;
 
@@ -67,7 +80,7 @@ export function PwaInstallBanner() {
 
   return (
     <>
-      <div className="fixed bottom-20 left-4 right-4 z-40 max-w-md mx-auto rounded-2xl border border-emerald-500/40 bg-slate-900/95 p-3.5 shadow-2xl backdrop-blur-xl animate-in fade-in slide-in-from-bottom-5">
+      <div className="fixed bottom-[calc(4.5rem+max(env(safe-area-inset-bottom,0px),var(--tg-safe-area-inset-bottom,0px)))] left-4 right-4 z-40 max-w-md mx-auto rounded-2xl border border-emerald-500/40 bg-slate-900/95 p-3.5 shadow-2xl backdrop-blur-xl animate-in fade-in slide-in-from-bottom-5">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-emerald-500 to-cyan-500 text-slate-950 font-black shadow-lg shadow-emerald-500/20">
@@ -83,7 +96,7 @@ export function PwaInstallBanner() {
             </div>
           </div>
           <button
-            onClick={() => setDismissed(true)}
+            onClick={handleDismiss}
             className="text-slate-400 hover:text-white p-1"
           >
             <X className="h-4 w-4" />

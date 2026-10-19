@@ -120,6 +120,7 @@ export default function SettingsPage() {
   };
 
   const handleTestSound = () => {
+    soundPlayer.unlockAudio();
     soundPlayer.playRestComplete();
     triggerHaptic("success");
   };
@@ -267,6 +268,12 @@ export default function SettingsPage() {
           >
             Тест сигнала таймера
           </Button>
+        </div>
+
+        <div className="pt-1 border-t border-white/5 text-[11px] text-slate-400">
+          <p>
+            💡 <strong className="text-slate-300">На заметку (iPhone / iOS):</strong> звук веб-таймера воспроизводится только если боковой физический переключатель режима (Silent Switch) не находится в бесшумном положении (без оранжевой полоски).
+          </p>
         </div>
       </Card>
 
