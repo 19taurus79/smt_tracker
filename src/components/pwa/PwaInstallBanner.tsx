@@ -30,11 +30,13 @@ export function PwaInstallBanner() {
 
     setIsStandalone(isStandaloneMode);
 
-    // Register Service Worker
+    // Register Service Worker & check for updates
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker
         .register("/sw.js")
-        .then(() => console.log("SW registered"))
+        .then((reg) => {
+          reg.update().catch(() => {});
+        })
         .catch((err) => console.log("SW registration error", err));
     }
 
