@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Flame,
   Play,
@@ -23,6 +24,8 @@ import { Progress } from "@/components/ui/progress";
 import { WarmupModal } from "@/components/workout/WarmupModal";
 import { InitialSetupModal } from "@/components/program/InitialSetupModal";
 import { BodyLogModal } from "@/components/body/BodyLogModal";
+import { WorkoutReportModal } from "@/components/program/WorkoutReportModal";
+import { WorkoutSession } from "@/types/smt";
 
 function getShortExerciseName(name: string): string {
   if (name.includes("узким")) return "Жим узким";
@@ -35,10 +38,12 @@ function getShortExerciseName(name: string): string {
 }
 
 export default function HomePage() {
+  const router = useRouter();
   const {
     workouts,
     activeWorkoutId,
     startWorkout,
+    restartWorkout,
     openWarmupModal,
   } = useWorkoutStore();
 
@@ -47,6 +52,7 @@ export default function HomePage() {
   const [mounted, setMounted] = useState(false);
   const [isSetupOpen, setIsSetupOpen] = useState(false);
   const [isBodyModalOpen, setIsBodyModalOpen] = useState(false);
+  const [selectedReportWorkout, setSelectedReportWorkout] = useState<WorkoutSession | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -75,12 +81,14 @@ export default function HomePage() {
         ) / 10
       : 0;
 
-  // Next workout: active one OR first upcoming
+  // Next workout: active one OR in-progress OR first upcoming OR last completed
   const currentOrNextWorkout =
     workouts.find((w) => w.id === activeWorkoutId) ||
+    workouts.find((w) => w.status === "in_progress") ||
     workouts.find((w) => w.status === "upcoming") ||
-    workouts[0];
+    workouts[workouts.length - 1];
 
+  const isHeroCompleted = currentOrNextWorkout?.status === "completed";
   const latestCompleted = completedWorkouts[completedWorkouts.length - 1];
   const latestBody = measurements[0];
 
@@ -94,7 +102,11 @@ export default function HomePage() {
           <CardHeader className="p-4 sm:p-6 pb-2">
             <div className="flex items-center justify-between">
               <Badge variant="default" className="text-[10px] sm:text-xs uppercase tracking-wider font-bold">
-                {activeWorkoutId ? "🔥 Тренировка активна" : "Следующая тренировка"}
+                {activeWorkoutId
+                  ? "🔥 Тренировка активна"
+                  : isHeroCompleted
+                  ? "🎉 Все 36 тренировок завершены"
+                  : "Следующая тренировка"}
               </Badge>
               <span className="text-[11px] sm:text-xs text-slate-400 font-medium">
                 МКЦ {currentOrNextWorkout.microcycle} • #{currentOrNextWorkout.workoutNumber}/36
@@ -121,18 +133,30 @@ export default function HomePage() {
             </div>
 
             <div className="pt-1 flex flex-col sm:flex-row gap-2">
-              <Link
-                href="/workout"
-                onClick={() => startWorkout(currentOrNextWorkout.id)}
-                className="flex-1"
-              >
-                <Button variant="accent" size="lg" className="w-full font-bold shadow-lg shadow-emerald-500/20 h-11 sm:h-13 text-sm">
-                  <Play className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 fill-current" />
-                  <span>
-                    {activeWorkoutId ? "Продолжить тренировку" : "Начать тренировку"}
-                  </span>
+              {isHeroCompleted ? (
+                <Button
+                  variant="accent"
+                  size="lg"
+                  className="w-full flex-1 font-bold shadow-lg shadow-emerald-500/20 h-11 sm:h-13 text-sm"
+                  onClick={() => setSelectedReportWorkout(currentOrNextWorkout)}
+                >
+                  <Trophy className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 text-amber-300" />
+                  <span>Посмотреть отчет</span>
                 </Button>
-              </Link>
+              ) : (
+                <Link
+                  href="/workout"
+                  onClick={() => startWorkout(currentOrNextWorkout.id)}
+                  className="flex-1"
+                >
+                  <Button variant="accent" size="lg" className="w-full font-bold shadow-lg shadow-emerald-500/20 h-11 sm:h-13 text-sm">
+                    <Play className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 fill-current" />
+                    <span>
+                      {activeWorkoutId ? "Продолжить тренировку" : "Начать тренировку"}
+                    </span>
+                  </Button>
+                </Link>
+              )}
 
               <Button
                 variant="outline"
@@ -267,11 +291,15 @@ export default function HomePage() {
                 </p>
               </div>
 
-              <Link href="/workout" onClick={() => startWorkout(latestCompleted.id)}>
-                <Button variant="outline" size="sm" className="text-xs h-7 sm:h-8">
-                  Смотреть
-                </Button>
-              </Link>
+              <Button
+                variant="outline"
+                size="sm"
+                className="text-xs h-7 sm:h-8 font-semibold text-slate-300 hover:text-white hover:border-emerald-500/40"
+                onClick={() => setSelectedReportWorkout(latestCompleted)}
+              >
+                <Trophy className="h-3.5 w-3.5 mr-1 text-amber-400" />
+                <span>Отчет</span>
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -281,6 +309,15 @@ export default function HomePage() {
       <WarmupModal />
       <InitialSetupModal open={isSetupOpen} onOpenChange={setIsSetupOpen} />
       <BodyLogModal open={isBodyModalOpen} onOpenChange={setIsBodyModalOpen} />
+      <WorkoutReportModal
+        open={Boolean(selectedReportWorkout)}
+        onOpenChange={(open) => !open && setSelectedReportWorkout(null)}
+        workout={selectedReportWorkout}
+        onRestart={(workoutId) => {
+          restartWorkout(workoutId);
+          router.push("/workout");
+        }}
+      />
     </div>
   );
 }

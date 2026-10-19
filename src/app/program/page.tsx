@@ -1,17 +1,21 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Sparkles, Filter, Calendar, Layers } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Sparkles, Calendar } from "lucide-react";
+import { WorkoutSession } from "@/types/smt";
 import { useWorkoutStore } from "@/lib/store/useWorkoutStore";
 import { WorkoutCard } from "@/components/program/WorkoutCard";
+import { WorkoutReportModal } from "@/components/program/WorkoutReportModal";
 import { InitialSetupModal } from "@/components/program/InitialSetupModal";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 
 export default function ProgramPage() {
-  const { workouts } = useWorkoutStore();
+  const router = useRouter();
+  const { workouts, restartWorkout } = useWorkoutStore();
   const [selectedMkc, setSelectedMkc] = useState<number | "all">("all");
   const [isSetupOpen, setIsSetupOpen] = useState(false);
+  const [selectedReportWorkout, setSelectedReportWorkout] = useState<WorkoutSession | null>(null);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -129,12 +133,25 @@ export default function ProgramPage() {
       {/* Grid of Workouts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
         {filteredWorkouts.map((workout) => (
-          <WorkoutCard key={workout.id} workout={workout} />
+          <WorkoutCard
+            key={workout.id}
+            workout={workout}
+            onOpenReport={(w) => setSelectedReportWorkout(w)}
+          />
         ))}
       </div>
 
-      {/* Modal */}
+      {/* Modals */}
       <InitialSetupModal open={isSetupOpen} onOpenChange={setIsSetupOpen} />
+      <WorkoutReportModal
+        open={Boolean(selectedReportWorkout)}
+        onOpenChange={(open) => !open && setSelectedReportWorkout(null)}
+        workout={selectedReportWorkout}
+        onRestart={(workoutId) => {
+          restartWorkout(workoutId);
+          router.push("/workout");
+        }}
+      />
     </div>
   );
 }

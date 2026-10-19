@@ -10,12 +10,14 @@ import {
   Flame,
   RotateCcw,
   Trophy,
+  FileText,
 } from "lucide-react";
 import { useWorkoutStore } from "@/lib/store/useWorkoutStore";
-import { formatTime } from "@/lib/utils";
+import { formatTime, cn } from "@/lib/utils";
 import { SupersetCard } from "@/components/workout/SupersetCard";
 import { WarmupModal } from "@/components/workout/WarmupModal";
 import { FinishModal } from "@/components/workout/FinishModal";
+import { WorkoutReportModal } from "@/components/program/WorkoutReportModal";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -28,6 +30,7 @@ export default function WorkoutPage() {
     workoutElapsedSeconds,
     isStopwatchRunning,
     startWorkout,
+    restartWorkout,
     pauseStopwatch,
     resumeStopwatch,
     tickStopwatch,
@@ -36,6 +39,7 @@ export default function WorkoutPage() {
   } = useWorkoutStore();
 
   const [isFinishModalOpen, setIsFinishModalOpen] = useState(false);
+  const [isReportOpen, setIsReportOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   const handleOpenFinishModal = () => {
@@ -101,9 +105,18 @@ export default function WorkoutPage() {
           <div className="flex items-center gap-1.5">
             {/* Stopwatch pill */}
             <div className="flex items-center gap-1.5 rounded-lg bg-slate-950 px-2 sm:px-2.5 py-1 border border-white/10 shrink-0">
-              <Timer className="h-3.5 w-3.5 text-emerald-400 animate-pulse shrink-0" />
+              <Timer
+                className={cn(
+                  "h-3.5 w-3.5 text-emerald-400 shrink-0",
+                  !isCompleted && isStopwatchRunning && "animate-pulse"
+                )}
+              />
               <span className="font-mono text-xs sm:text-base font-black text-white">
-                {formatTime(workoutElapsedSeconds)}
+                {formatTime(
+                  isCompleted
+                    ? currentWorkout.durationSeconds || 0
+                    : workoutElapsedSeconds
+                )}
               </span>
             </div>
 
@@ -212,8 +225,37 @@ export default function WorkoutPage() {
         ))}
       </div>
 
-      {/* Bottom Completion Action */}
-      {!isCompleted && (
+      {/* Bottom Completion Action / Completed State Actions */}
+      {isCompleted ? (
+        <div className="pt-2 pb-6 flex flex-col sm:flex-row gap-2.5">
+          <Button
+            variant="default"
+            size="lg"
+            className="flex-1 font-bold text-xs sm:text-sm px-3 py-3 shadow-xl bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center gap-2 text-center"
+            onClick={() => setIsReportOpen(true)}
+          >
+            <FileText className="h-4 w-4 shrink-0" />
+            <span>Открыть отчет о тренировке</span>
+          </Button>
+
+          <Button
+            variant="outline"
+            size="lg"
+            className="flex-1 font-bold text-xs sm:text-sm px-3 py-3 border-white/20 hover:bg-white/10 text-white flex items-center justify-center gap-2 text-center"
+            onClick={() => {
+              const nextUpcoming = workouts.find((w) => w.status === "upcoming");
+              if (nextUpcoming) {
+                startWorkout(nextUpcoming.id);
+              } else {
+                router.push("/program");
+              }
+            }}
+          >
+            <Play className="h-4 w-4 fill-current text-emerald-400 shrink-0" />
+            <span>К следующей тренировке</span>
+          </Button>
+        </div>
+      ) : (
         <div className="pt-2 pb-6 flex flex-col gap-2.5">
           <Button
             variant="accent"
@@ -244,7 +286,15 @@ export default function WorkoutPage() {
       <FinishModal
         open={isFinishModalOpen}
         onOpenChange={setIsFinishModalOpen}
-        onFinished={() => router.push("/analytics")}
+        onFinished={() => router.push("/program")}
+      />
+      <WorkoutReportModal
+        open={isReportOpen}
+        onOpenChange={setIsReportOpen}
+        workout={currentWorkout}
+        onRestart={(workoutId) => {
+          restartWorkout(workoutId);
+        }}
       />
     </div>
   );

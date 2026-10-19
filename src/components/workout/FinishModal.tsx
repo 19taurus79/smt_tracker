@@ -52,7 +52,11 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
   }, [open]);
 
   const effectiveDuration = frozenDuration > 0 ? frozenDuration : (workoutElapsedSeconds || 1);
-  const currentWorkout = workouts.find((w) => w.id === activeWorkoutId);
+  const currentWorkout =
+    workouts.find((w) => w.id === activeWorkoutId) ||
+    workouts.find((w) => w.status === "in_progress") ||
+    workouts.find((w) => w.status === "upcoming") ||
+    workouts[0];
   const tonnage = currentWorkout
     ? calculateWorkoutTonnage(currentWorkout.supersets)
     : 0;
@@ -130,7 +134,8 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
       weightIncrementKg,
       soundEnabled,
       hapticsEnabled,
-      effectiveDuration
+      effectiveDuration,
+      currentWorkout.id
     );
     onOpenChange(false);
     onFinished();

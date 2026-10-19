@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { CheckCircle2, Play, ChevronRight } from "lucide-react";
+import { CheckCircle2, Play, ChevronRight, FileText } from "lucide-react";
 import { WorkoutSession } from "@/types/smt";
 import { useWorkoutStore } from "@/lib/store/useWorkoutStore";
 import { formatTime } from "@/lib/utils";
@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 interface WorkoutCardProps {
   workout: WorkoutSession;
   onStart?: () => void;
+  onOpenReport?: (workout: WorkoutSession) => void;
 }
 
 function getShortExerciseName(name: string): string {
@@ -25,7 +26,7 @@ function getShortExerciseName(name: string): string {
   return name.split(" ")[0];
 }
 
-export function WorkoutCard({ workout, onStart }: WorkoutCardProps) {
+export function WorkoutCard({ workout, onStart, onOpenReport }: WorkoutCardProps) {
   const { startWorkout, activeWorkoutId } = useWorkoutStore();
 
   const isCurrentActive = activeWorkoutId === workout.id;
@@ -102,16 +103,16 @@ export function WorkoutCard({ workout, onStart }: WorkoutCardProps) {
         </div>
 
         {/* Stats Row if Completed */}
-        {isCompleted && workout.tonnageKg && (
+        {isCompleted && (workout.tonnageKg !== undefined || workout.completedAt) && (
           <div className="grid grid-cols-3 gap-2 pt-1 border-t border-white/5 text-[10px] sm:text-[11px] text-slate-400">
             <div>
-              Тоннаж: <strong className="text-emerald-400">{workout.tonnageKg} кг</strong>
+              Тоннаж: <strong className="text-emerald-400">{workout.tonnageKg || 0} кг</strong>
             </div>
             <div>
               Время: <strong className="text-cyan-400">{formatTime(workout.durationSeconds || 0)}</strong>
             </div>
             <div>
-              Мощность: <strong className="text-amber-400">{workout.powerKgPerMin} кг/м</strong>
+              Мощность: <strong className="text-amber-400">{workout.powerKgPerMin || 0} кг/м</strong>
             </div>
           </div>
         )}
@@ -119,12 +120,16 @@ export function WorkoutCard({ workout, onStart }: WorkoutCardProps) {
         {/* Action Button */}
         <div className="pt-1 flex justify-end">
           {isCompleted ? (
-            <Link href="/workout" onClick={() => startWorkout(workout.id)}>
-              <Button variant="outline" size="sm" className="h-7 sm:h-8 text-xs font-semibold text-slate-300">
-                <CheckCircle2 className="h-3.5 w-3.5 mr-1 text-emerald-400" />
-                <span>Открыть отчет</span>
-              </Button>
-            </Link>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => onOpenReport?.(workout)}
+              className="h-7 sm:h-8 text-xs font-semibold text-slate-300 hover:text-white hover:border-emerald-500/40"
+            >
+              <FileText className="h-3.5 w-3.5 mr-1 text-emerald-400" />
+              <span>Открыть отчет</span>
+            </Button>
           ) : isCurrentActive ? (
             <Link href="/workout">
               <Button variant="default" size="sm" className="h-7 sm:h-8 text-xs font-bold animate-pulse">

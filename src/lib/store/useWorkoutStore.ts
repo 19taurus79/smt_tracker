@@ -43,6 +43,7 @@ interface WorkoutState {
   initializeProgram: (exercises: ExerciseDefinition[], weightStep?: number) => void;
   updateExercise1RM: (exerciseId: string, oneRepMax: number) => void;
   startWorkout: (workoutId: string) => void;
+  restartWorkout: (workoutId: string) => void;
   pauseStopwatch: () => void;
   resumeStopwatch: () => void;
   tickStopwatch: () => void;
@@ -90,7 +91,8 @@ interface WorkoutState {
     weightStep?: number,
     soundEnabled?: boolean,
     hapticsEnabled?: boolean,
-    overrideDurationSeconds?: number
+    overrideDurationSeconds?: number,
+    targetWorkoutId?: string
   ) => { tonnage: number; power: number; progressed: boolean };
 
   cancelWorkout: () => void;
@@ -142,6 +144,15 @@ export const useWorkoutStore = create<WorkoutState>()(
         const workout = workouts.find((w) => w.id === workoutId);
         if (!workout) return;
 
+        // Если тренировка уже завершена, НЕ перезапускаем её в in_progress и не включаем таймер!
+        if (workout.status === "completed") {
+          set({
+            activeWorkoutId: workoutId,
+            isStopwatchRunning: false,
+          });
+          return;
+        }
+
         set({
           activeWorkoutId: workoutId,
           workoutElapsedSeconds: workout.durationSeconds || 0,
@@ -155,6 +166,42 @@ export const useWorkoutStore = create<WorkoutState>()(
                 }
               : w
           ),
+        });
+      },
+
+      restartWorkout: (workoutId) => {
+        const { workouts } = get();
+        const workout = workouts.find((w) => w.id === workoutId);
+        if (!workout) return;
+
+        set({
+          activeWorkoutId: workoutId,
+          workoutElapsedSeconds: 0,
+          isStopwatchRunning: true,
+          workouts: workouts.map((w) => {
+            if (w.id !== workoutId) return w;
+            return {
+              ...w,
+              status: "in_progress",
+              startedAt: new Date().toISOString(),
+              completedAt: undefined,
+              durationSeconds: 0,
+              tonnageKg: undefined,
+              powerKgPerMin: undefined,
+              supersets: w.supersets.map((ss) => ({
+                ...ss,
+                exercises: ss.exercises.map((ex) => ({
+                  ...ex,
+                  sets: ex.sets.map((s) => ({
+                    ...s,
+                    completed: false,
+                    actualWeight: undefined,
+                    actualReps: undefined,
+                  })),
+                })),
+              })),
+            };
+          }),
         });
       },
 
@@ -382,18 +429,26 @@ export const useWorkoutStore = create<WorkoutState>()(
         weightStep = 2.5,
         soundEnabled = true,
         hapticsEnabled = true,
-        overrideDurationSeconds
+        overrideDurationSeconds,
+        targetWorkoutId
       ) => {
         const { activeWorkoutId, workouts, workoutElapsedSeconds } = get();
-        if (!activeWorkoutId) return { tonnage: 0, power: 0, progressed: false };
+        const workoutIdToFinish =
+          targetWorkoutId ||
+          activeWorkoutId ||
+          workouts.find((w) => w.status === "in_progress")?.id ||
+          workouts.find((w) => w.status === "upcoming")?.id ||
+          workouts[0]?.id;
 
-        const currentWorkout = workouts.find((w) => w.id === activeWorkoutId);
+        if (!workoutIdToFinish) return { tonnage: 0, power: 0, progressed: false };
+
+        const currentWorkout = workouts.find((w) => w.id === workoutIdToFinish);
         if (!currentWorkout) return { tonnage: 0, power: 0, progressed: false };
 
         const effectiveDuration =
           overrideDurationSeconds !== undefined && overrideDurationSeconds > 0
             ? overrideDurationSeconds
-            : workoutElapsedSeconds;
+            : (currentWorkout.durationSeconds || workoutElapsedSeconds);
 
         const tonnage = calculateWorkoutTonnage(currentWorkout.supersets);
         const power = calculateWorkoutPower(tonnage, effectiveDuration);
@@ -412,7 +467,7 @@ export const useWorkoutStore = create<WorkoutState>()(
 
         // Обновляем последующие тренировки
         const updatedWorkouts = workouts.map((w) => {
-          if (w.id === activeWorkoutId) {
+          if (w.id === workoutIdToFinish) {
             return {
               ...w,
               status: "completed" as const,
