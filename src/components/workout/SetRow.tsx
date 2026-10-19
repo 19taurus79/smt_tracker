@@ -127,10 +127,17 @@ export function SetRow({
         <div className="flex items-center justify-between sm:justify-end gap-1.5 pt-1 sm:pt-0 border-t border-white/5 sm:border-t-0">
           <div className="flex items-center gap-1">
             <input
-              type="number"
-              step="0.5"
+              type="text"
+              inputMode="decimal"
               value={currentWeight}
-              onChange={handleWeightChange}
+              onChange={(e) => {
+                const clean = e.target.value.replace(",", ".").trim();
+                const val = parseFloat(clean);
+                updateSet(workoutId, supersetId, exerciseId, set.setNumber, {
+                  actualWeight: !isNaN(val) ? val : 0,
+                });
+              }}
+              onFocus={(e) => e.target.select()}
               className="w-13 h-7 sm:h-8 rounded-lg border border-white/10 bg-slate-900 px-1 text-center font-bold text-xs text-white focus:outline-none focus:border-emerald-500"
               title="Фактический вес (кг)"
             />
@@ -139,9 +146,16 @@ export function SetRow({
 
           <div className="flex items-center gap-1">
             <input
-              type="number"
+              type="text"
+              inputMode="numeric"
               value={currentReps}
-              onChange={handleRepsChange}
+              onChange={(e) => {
+                const val = parseInt(e.target.value, 10);
+                updateSet(workoutId, supersetId, exerciseId, set.setNumber, {
+                  actualReps: !isNaN(val) ? val : 0,
+                });
+              }}
+              onFocus={(e) => e.target.select()}
               className="w-10 h-7 sm:h-8 rounded-lg border border-white/10 bg-slate-900 px-1 text-center font-bold text-xs text-white focus:outline-none focus:border-emerald-500"
               title="Фактические повторения"
             />

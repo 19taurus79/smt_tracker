@@ -23,13 +23,16 @@ export function OneRepMaxModal({
   const [weight, setWeight] = useState("80");
   const [reps, setReps] = useState("8");
 
-  const weightNum = parseFloat(weight) || 0;
+  const weightNum = parseFloat(weight.replace(",", ".")) || 0;
   const repsNum = parseInt(reps, 10) || 0;
 
   const result = calculateOneRepMax(weightNum, repsNum);
   const [adjusted1RM, setAdjusted1RM] = useState<string>("");
 
-  const effective1RM = adjusted1RM !== "" ? (parseFloat(adjusted1RM) || 0) : result.average;
+  const effective1RM =
+    adjusted1RM !== ""
+      ? parseFloat(adjusted1RM.replace(",", ".")) || 0
+      : result.average;
   const startWeight40 = Math.round(effective1RM * 0.40 * 10) / 10;
   const startWeight30 = Math.round(effective1RM * 0.30 * 10) / 10;
 
@@ -58,25 +61,31 @@ export function OneRepMaxModal({
           <div className="space-y-1">
             <label className="text-xs font-medium text-slate-300">Рабочий вес (кг)</label>
             <Input
-              type="number"
+              type="text"
+              inputMode="decimal"
               value={weight}
               onChange={(e) => {
                 setWeight(e.target.value);
                 setAdjusted1RM("");
               }}
+              onFocus={(e) => e.target.select()}
               placeholder="80"
+              className="text-center font-bold text-sm bg-slate-950 text-white border-white/10"
             />
           </div>
           <div className="space-y-1">
             <label className="text-xs font-medium text-slate-300">Повторения</label>
             <Input
-              type="number"
+              type="text"
+              inputMode="numeric"
               value={reps}
               onChange={(e) => {
                 setReps(e.target.value);
                 setAdjusted1RM("");
               }}
+              onFocus={(e) => e.target.select()}
               placeholder="8"
+              className="text-center font-bold text-sm bg-slate-950 text-white border-white/10"
             />
           </div>
         </div>
@@ -86,15 +95,16 @@ export function OneRepMaxModal({
           <span className="text-xs text-slate-400">Расчетный 1ПМ (скорректируйте при необходимости):</span>
           <div className="flex items-center justify-center gap-2">
             <Input
-              type="number"
-              step="0.5"
-              value={adjusted1RM !== "" ? adjusted1RM : result.average}
+              type="text"
+              inputMode="decimal"
+              value={adjusted1RM !== "" ? adjusted1RM : String(result.average)}
               onChange={(e) => setAdjusted1RM(e.target.value)}
+              onFocus={(e) => e.target.select()}
               className="text-2xl font-black text-center text-emerald-400 h-11 w-32 bg-slate-950 border-emerald-500/40"
             />
             <span className="text-sm font-bold text-slate-400">кг</span>
           </div>
-          
+
           <div className="flex justify-center gap-3 text-[11px] text-slate-400">
             <span>Эпли: {result.epley} кг</span>
             <span>•</span>

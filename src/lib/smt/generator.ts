@@ -128,8 +128,14 @@ export function createSupersetsForWorkout(
 
   const getTargetWeight = (ex: ExerciseDefinition) => {
     const isMain = ex.category === "main";
-    const baseWeight = ex.oneRepMax * (isMain ? params.main.percent : params.accessory.percent);
     const progressionBonus = Math.floor(workoutIdxInMkc / 3) * weightStep;
+
+    // Если для первого микроцикла пользователь вручную задал стартовый вес:
+    if (microcycle === 1 && ex.customStartWeight !== undefined && ex.customStartWeight > 0) {
+      return Math.max(ex.customStartWeight + progressionBonus, 0);
+    }
+
+    const baseWeight = ex.oneRepMax * (isMain ? params.main.percent : params.accessory.percent);
     return Math.max(roundToWeightStep(baseWeight + progressionBonus, weightStep), weightStep);
   };
 

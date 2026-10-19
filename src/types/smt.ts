@@ -6,6 +6,7 @@ export interface ExerciseDefinition {
   category: ExerciseCategory;
   oneRepMax: number; // 1ПМ в кг
   startingPercentage: number; // 0.40 для базы, 0.30 для подсобки
+  customStartWeight?: number; // Заданный пользователем стартовый вес для МКЦ-1
   notes?: string;
   // К какому блоку относится и как выполняется
   blockType?: "single" | "superset";

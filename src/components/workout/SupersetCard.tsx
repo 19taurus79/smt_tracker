@@ -194,14 +194,17 @@ export function SupersetCard({ workoutId, superset }: SupersetCardProps) {
                       <div className="flex items-center gap-1.5 shrink-0">
                         <div className="flex items-center gap-1 bg-black/40 px-2 py-1 rounded-lg border border-white/5">
                           <input
-                            type="number"
-                            step="0.5"
+                            type="text"
+                            inputMode="decimal"
                             value={set1.actualWeight ?? set1.targetWeight}
-                            onChange={(e) =>
+                            onChange={(e) => {
+                              const clean = e.target.value.replace(",", ".").trim();
+                              const val = parseFloat(clean);
                               updateSet(workoutId, superset.id, ex1.exerciseId, set1.setNumber, {
-                                actualWeight: parseFloat(e.target.value) || 0,
-                              })
-                            }
+                                actualWeight: !isNaN(val) ? val : 0,
+                              });
+                            }}
+                            onFocus={(e) => e.target.select()}
                             className="w-11 bg-transparent text-center text-xs font-bold text-white focus:outline-none"
                           />
                           <span className="text-[10px] text-slate-500">кг</span>
@@ -209,13 +212,16 @@ export function SupersetCard({ workoutId, superset }: SupersetCardProps) {
 
                         <div className="flex items-center gap-1 bg-black/40 px-2 py-1 rounded-lg border border-white/5">
                           <input
-                            type="number"
+                            type="text"
+                            inputMode="numeric"
                             value={set1.actualReps ?? set1.targetReps}
-                            onChange={(e) =>
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value, 10);
                               updateSet(workoutId, superset.id, ex1.exerciseId, set1.setNumber, {
-                                actualReps: parseInt(e.target.value, 10) || 0,
-                              })
-                            }
+                                actualReps: !isNaN(val) ? val : 0,
+                              });
+                            }}
+                            onFocus={(e) => e.target.select()}
                             className="w-8 bg-transparent text-center text-xs font-bold text-white focus:outline-none"
                           />
                           <span className="text-[10px] text-slate-500">повт</span>
@@ -250,14 +256,17 @@ export function SupersetCard({ workoutId, superset }: SupersetCardProps) {
                       <div className="flex items-center gap-1.5 shrink-0">
                         <div className="flex items-center gap-1 bg-black/40 px-2 py-1 rounded-lg border border-white/5">
                           <input
-                            type="number"
-                            step="0.5"
+                            type="text"
+                            inputMode="decimal"
                             value={set2.actualWeight ?? set2.targetWeight}
-                            onChange={(e) =>
+                            onChange={(e) => {
+                              const clean = e.target.value.replace(",", ".").trim();
+                              const val = parseFloat(clean);
                               updateSet(workoutId, superset.id, ex2.exerciseId, set2.setNumber, {
-                                actualWeight: parseFloat(e.target.value) || 0,
-                              })
-                            }
+                                actualWeight: !isNaN(val) ? val : 0,
+                              });
+                            }}
+                            onFocus={(e) => e.target.select()}
                             className="w-11 bg-transparent text-center text-xs font-bold text-white focus:outline-none"
                           />
                           <span className="text-[10px] text-slate-500">кг</span>
@@ -265,13 +274,16 @@ export function SupersetCard({ workoutId, superset }: SupersetCardProps) {
 
                         <div className="flex items-center gap-1 bg-black/40 px-2 py-1 rounded-lg border border-white/5">
                           <input
-                            type="number"
+                            type="text"
+                            inputMode="numeric"
                             value={set2.actualReps ?? set2.targetReps}
-                            onChange={(e) =>
+                            onChange={(e) => {
+                              const val = parseInt(e.target.value, 10);
                               updateSet(workoutId, superset.id, ex2.exerciseId, set2.setNumber, {
-                                actualReps: parseInt(e.target.value, 10) || 0,
-                              })
-                            }
+                                actualReps: !isNaN(val) ? val : 0,
+                              });
+                            }}
+                            onFocus={(e) => e.target.select()}
                             className="w-8 bg-transparent text-center text-xs font-bold text-white focus:outline-none"
                           />
                           <span className="text-[10px] text-slate-500">повт</span>
