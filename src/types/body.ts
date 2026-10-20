@@ -16,4 +16,5 @@ export interface AppSettings {
   soundEnabled: boolean;
   hapticsEnabled: boolean;
   theme: "telegram" | "dark" | "light";
+  showForecastInAnalytics?: boolean; // toggle forecast on charts
 }

@@ -41,6 +41,8 @@ export default function SettingsPage() {
     setSoundEnabled,
     hapticsEnabled,
     setHapticsEnabled,
+    showForecastInAnalytics,
+    setShowForecastInAnalytics,
   } = useSettingsStore();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -225,6 +227,31 @@ export default function SettingsPage() {
                   +{step} кг
                 </button>
               ))}
+            </div>
+          </div>
+
+          {/* Forecast in Analytics Toggle */}
+          <div className="pt-2 border-t border-white/5">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <span className="text-xs font-semibold text-slate-300 block">
+                  Прогноз программы в аналитике
+                </span>
+                <span className="text-[11px] text-slate-400 block mt-0.5">
+                  Показывать плановые веса и тоннаж СМТ-1 полупрозрачными линиями
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowForecastInAnalytics(!showForecastInAnalytics)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all shrink-0 ${
+                  showForecastInAnalytics
+                    ? "bg-emerald-500 text-slate-950 border-emerald-400 shadow-md shadow-emerald-500/20"
+                    : "bg-white/5 text-slate-400 border-white/10 hover:text-white"
+                }`}
+              >
+                {showForecastInAnalytics ? "Включен" : "Выключен"}
+              </button>
             </div>
           </div>
         </div>

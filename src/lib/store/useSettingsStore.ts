@@ -8,6 +8,7 @@ interface SettingsState extends AppSettings {
   setSoundEnabled: (enabled: boolean) => void;
   setHapticsEnabled: (enabled: boolean) => void;
   setTheme: (theme: "telegram" | "dark" | "light") => void;
+  setShowForecastInAnalytics: (show: boolean) => void;
   resetSettings: () => void;
 }
 
@@ -17,6 +18,7 @@ const defaultSettings: AppSettings = {
   soundEnabled: true,
   hapticsEnabled: true,
   theme: "telegram",
+  showForecastInAnalytics: true,
 };
 
 export const useSettingsStore = create<SettingsState>()(
@@ -28,6 +30,7 @@ export const useSettingsStore = create<SettingsState>()(
       setSoundEnabled: (enabled) => set({ soundEnabled: enabled }),
       setHapticsEnabled: (enabled) => set({ hapticsEnabled: enabled }),
       setTheme: (theme) => set({ theme }),
+      setShowForecastInAnalytics: (show) => set({ showForecastInAnalytics: show }),
       resetSettings: () => set(defaultSettings),
     }),
     {

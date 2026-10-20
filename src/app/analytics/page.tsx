@@ -1,15 +1,17 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { TrendingUp, Dumbbell, Ruler, Activity } from "lucide-react";
+import { TrendingUp, Dumbbell, Ruler, Activity, Eye, EyeOff } from "lucide-react";
 import { TonnageChart } from "@/components/analytics/TonnageChart";
 import { PowerChart } from "@/components/analytics/PowerChart";
 import { KeyLiftsChart } from "@/components/analytics/KeyLiftsChart";
 import { BodyCompChart } from "@/components/analytics/BodyCompChart";
+import { useSettingsStore } from "@/lib/store/useSettingsStore";
 
 export default function AnalyticsPage() {
   const [activeTab, setActiveTab] = useState<"workouts" | "body">("workouts");
   const [mounted, setMounted] = useState(false);
+  const { showForecastInAnalytics, setShowForecastInAnalytics } = useSettingsStore();
 
   useEffect(() => {
     setMounted(true);
@@ -36,31 +38,59 @@ export default function AnalyticsPage() {
         </p>
       </div>
 
-      {/* Tabs Switcher */}
-      <div className="flex rounded-2xl bg-slate-900/80 p-1 border border-white/10 max-w-md">
-        <button
-          onClick={() => setActiveTab("workouts")}
-          className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold transition-all ${
-            activeTab === "workouts"
-              ? "bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20"
-              : "text-slate-400 hover:text-white"
-          }`}
-        >
-          <Dumbbell className="h-4 w-4" />
-          <span>Тренировки СМТ</span>
-        </button>
+      {/* Tabs and Controls */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        {/* Tabs Switcher */}
+        <div className="flex rounded-2xl bg-slate-900/80 p-1 border border-white/10 w-full sm:w-auto sm:min-w-[280px]">
+          <button
+            onClick={() => setActiveTab("workouts")}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-bold transition-all ${
+              activeTab === "workouts"
+                ? "bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            <Dumbbell className="h-4 w-4" />
+            <span>Тренировки СМТ</span>
+          </button>
 
-        <button
-          onClick={() => setActiveTab("body")}
-          className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold transition-all ${
-            activeTab === "body"
-              ? "bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20"
-              : "text-slate-400 hover:text-white"
-          }`}
-        >
-          <Ruler className="h-4 w-4" />
-          <span>Тело и Замеры</span>
-        </button>
+          <button
+            onClick={() => setActiveTab("body")}
+            className={`flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-bold transition-all ${
+              activeTab === "body"
+                ? "bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            <Ruler className="h-4 w-4" />
+            <span>Тело и Замеры</span>
+          </button>
+        </div>
+
+        {/* Global Forecast Toggle for Workouts */}
+        {activeTab === "workouts" && (
+          <button
+            onClick={() => setShowForecastInAnalytics(!showForecastInAnalytics)}
+            className={`flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-semibold border transition-all ${
+              showForecastInAnalytics
+                ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/25"
+                : "bg-slate-900/80 text-slate-400 border-white/10 hover:text-white hover:border-white/20"
+            }`}
+            title={showForecastInAnalytics ? "Скрыть прогноз будущих тренировок" : "Показать прогноз будущих тренировок"}
+          >
+            {showForecastInAnalytics ? (
+              <>
+                <Eye className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                <span>Прогноз: <strong className="text-emerald-300 font-bold">Включен (полупрозрачный)</strong></span>
+              </>
+            ) : (
+              <>
+                <EyeOff className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                <span>Прогноз: <strong className="text-slate-300 font-bold">Выключен (только факт)</strong></span>
+              </>
+            )}
+          </button>
+        )}
       </div>
 
       {/* Tab Contents */}
