@@ -45,10 +45,10 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
 
   const modalSubtitle =
     language === "en"
-      ? "Complete guide to V. Goncharov system and tracker features"
+      ? "Complete guide to Mike Kazakov (Steelfactor) system and tracker features"
       : language === "ru"
-      ? "Полное руководство по системе В. Гончарова и функциям приложения"
-      : "Повний посібник із системи В. Гончарова та функцій додатку";
+      ? "Полное руководство по системе Майка Казакова (Steelfactor) и функциям приложения"
+      : "Повний посібник із системи Майка Казакова (Steelfactor) та функцій додатку";
 
   const tabs = [
     {
@@ -142,7 +142,7 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
               <div className="rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-4">
                 <h3 className="font-bold text-sm sm:text-base text-emerald-400 flex items-center gap-2 mb-2">
                   <Flame className="h-4 w-4" />
-                  Суть Сверхмощного тренинга (В. Гончаров)
+                  Суть Сверхмощного тренинга (Майк Казаков / Steelfactor)
                 </h3>
                 <p className="text-slate-300">
                   <strong>СМТ (Сверхмощный тренинг)</strong> — высокоплотная силовая методика,
