@@ -33,6 +33,8 @@ export function StoryShareModal({
   const { workouts } = useWorkoutStore();
   const [selectedTemplate, setSelectedTemplate] = useState<StoryTemplateType>("power");
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isPublishingChallenge, setIsPublishingChallenge] = useState(false);
+  const [publishedChallenge, setPublishedChallenge] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   if (!workout) return null;
@@ -70,6 +72,40 @@ export function StoryShareModal({
       : athleticScore.tierKey === "power_master"
       ? t.scoring.tierPowerMaster
       : t.scoring.tierActive;
+
+  const handlePublishChallenge = async () => {
+    if (isPublishingChallenge || publishedChallenge || !workout) return;
+    setIsPublishingChallenge(true);
+    try {
+      const res = await fetch("/api/challenge/publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          workoutNumber: workout.workoutNumber || 1,
+          microcycle: workout.microcycle || 1,
+          durationSeconds: workout.durationSeconds || 0,
+          tonnageKg: workout.tonnageKg || 0,
+          powerKgPerMin: workout.powerKgPerMin || 0,
+          athleticScore: {
+            score: athleticScore.score,
+            tier: athleticScore.tierKey,
+            tierLabel: tierTitle,
+          },
+          athleteName: window.Telegram?.WebApp?.initDataUnsafe?.user?.first_name || "",
+          athleteUsername: window.Telegram?.WebApp?.initDataUnsafe?.user?.username || "",
+          notes: workout.notes || "",
+        }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setPublishedChallenge(true);
+      }
+    } catch (e) {
+      console.error("Failed to publish challenge:", e);
+    } finally {
+      setIsPublishingChallenge(false);
+    }
+  };
 
   // Extract key exercises (Top 3)
   const exercisesSummary = workout.supersets
@@ -873,6 +909,27 @@ export function StoryShareModal({
         >
           <Download className="h-4 w-4 shrink-0" />
           <span>{isGenerating ? t.story.generating : t.story.downloadButton}</span>
+        </Button>
+
+        <Button
+          variant="outline"
+          size="lg"
+          disabled={isPublishingChallenge || publishedChallenge}
+          className={`font-semibold text-xs transition-all ${
+            publishedChallenge
+              ? "border-emerald-500/40 text-emerald-300 bg-emerald-500/10"
+              : "border-amber-500/30 text-amber-300 hover:bg-amber-500/10"
+          }`}
+          onClick={handlePublishChallenge}
+        >
+          <Flame className="h-4 w-4 mr-1 text-amber-400" />
+          <span>
+            {publishedChallenge
+              ? (language === "uk" ? "В каналі!" : language === "en" ? "In Channel!" : "В канале!")
+              : isPublishingChallenge
+              ? (language === "uk" ? "Публікація..." : language === "en" ? "Publishing..." : "Публикация...")
+              : (language === "uk" ? "В Челендж" : language === "en" ? "To Challenge" : "В Челлендж")}
+          </span>
         </Button>
 
         <Button

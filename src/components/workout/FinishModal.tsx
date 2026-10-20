@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Send,
   Camera,
+  Flame,
 } from "lucide-react";
 import { useWorkoutStore } from "@/lib/store/useWorkoutStore";
 import { useSettingsStore } from "@/lib/store/useSettingsStore";
@@ -60,6 +61,8 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
   const [frozenDuration, setFrozenDuration] = useState<number>(0);
   const [sendToCoach, setSendToCoach] = useState(false);
   const [isStoryModalOpen, setIsStoryModalOpen] = useState(false);
+  const [isPublishingChallenge, setIsPublishingChallenge] = useState(false);
+  const [publishedChallenge, setPublishedChallenge] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -98,6 +101,36 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
     gender,
     age: userAge,
   });
+
+  const handlePublishChallenge = async () => {
+    if (isPublishingChallenge || publishedChallenge) return;
+    setIsPublishingChallenge(true);
+    try {
+      const res = await fetch("/api/challenge/publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          workoutNumber: currentWorkout?.workoutNumber || 1,
+          microcycle: currentWorkout?.microcycle || 1,
+          durationSeconds: effectiveDuration,
+          tonnageKg: tonnage,
+          powerKgPerMin: power,
+          athleticScore,
+          athleteName: traineeName || window.Telegram?.WebApp?.initDataUnsafe?.user?.first_name || "",
+          athleteUsername: window.Telegram?.WebApp?.initDataUnsafe?.user?.username || "",
+          notes,
+        }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setPublishedChallenge(true);
+      }
+    } catch (e) {
+      console.error("Failed to publish to challenge:", e);
+    } finally {
+      setIsPublishingChallenge(false);
+    }
+  };
   const tierColor = getTierColor(athleticScore.tierKey);
   const tierLabel = getTierLabel(athleticScore.tierKey, t);
 
@@ -375,16 +408,40 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
             </div>
           </label>
 
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="text-xs font-semibold border-pink-500/30 text-pink-300 hover:bg-pink-500/10 shrink-0 self-start sm:self-auto"
-            onClick={() => setIsStoryModalOpen(true)}
-          >
-            <Camera className="h-3.5 w-3.5 mr-1 text-pink-400" />
-            <span>{t.workout.shareStoryButton}</span>
-          </Button>
+          <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={isPublishingChallenge || publishedChallenge}
+              className={`text-xs font-semibold transition-all ${
+                publishedChallenge
+                  ? "border-emerald-500/40 text-emerald-300 bg-emerald-500/10"
+                  : "border-amber-500/30 text-amber-300 hover:bg-amber-500/10"
+              }`}
+              onClick={handlePublishChallenge}
+            >
+              <Flame className="h-3.5 w-3.5 mr-1 text-amber-400" />
+              <span>
+                {publishedChallenge
+                  ? (language === "uk" ? "В каналі!" : language === "en" ? "In Channel!" : "В канале!")
+                  : isPublishingChallenge
+                  ? (language === "uk" ? "Публікація..." : language === "en" ? "Publishing..." : "Публикация...")
+                  : (language === "uk" ? "Челендж" : language === "en" ? "Challenge" : "Челлендж")}
+              </span>
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="text-xs font-semibold border-pink-500/30 text-pink-300 hover:bg-pink-500/10"
+              onClick={() => setIsStoryModalOpen(true)}
+            >
+              <Camera className="h-3.5 w-3.5 mr-1 text-pink-400" />
+              <span>{t.workout.shareStoryButton}</span>
+            </Button>
+          </div>
         </div>
       </div>
 

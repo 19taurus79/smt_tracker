@@ -40,6 +40,13 @@ declare global {
           left: number;
           right: number;
         };
+        CloudStorage?: {
+          setItem: (key: string, value: string, callback?: (error: Error | null, success?: boolean) => void) => void;
+          getItem: (key: string, callback: (error: Error | null, value?: string) => void) => void;
+          getItems: (keys: string[], callback: (error: Error | null, values?: Record<string, string>) => void) => void;
+          removeItem: (key: string, callback?: (error: Error | null, success?: boolean) => void) => void;
+          getKeys: (callback: (error: Error | null, keys?: string[]) => void) => void;
+        };
         onEvent: (eventType: string, eventHandler: () => void) => void;
         offEvent: (eventType: string, eventHandler: () => void) => void;
       };

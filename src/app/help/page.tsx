@@ -125,26 +125,42 @@ export default function HelpPage() {
             <Card className="border-white/10 bg-slate-900/60 p-4 sm:p-5 space-y-3">
               <CardTitle className="text-sm sm:text-base text-emerald-400 flex items-center gap-2">
                 <Flame className="h-4 w-4" />
-                <span>Философия и цели СМТ-1</span>
+                <span>Манифест и цели СМТ-1 (Майк Казаков)</span>
               </CardTitle>
               <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
                 В отличие от традиционного бодибилдинга с паузами по 2–3 минуты, методика Майка
                 Казакова (форум Steelfactor) делает ставку на <strong>сверхвысокую плотность силовой работы</strong>.
-                Умеренный процент от 1ПМ (40–55%) при паузe ровно 30 секунд стимулирует глубочайшую
-                капилляризацию мышц, сжигает подкожный жир и дает мощный выброс гормона роста.
+                Цель: функциональное тело, взрывной рост силовой выносливости, деление и рост митохондрий,
+                быстрое сжигание подкожного жира и защита суставов без использования допинга.
               </p>
+              <div className="rounded-lg bg-emerald-950/30 border border-emerald-500/20 p-3 text-xs text-emerald-200">
+                <span className="font-bold">⚡️ Главный закон СМТ от автора:</span>
+                <p className="mt-1 text-slate-300">
+                  <strong>Этап 1:</strong> закрыть тренировку в заданном режиме подходов с паузами <strong>строго до 30 секунд</strong>.
+                  <br />
+                  <strong>Этап 2:</strong> добавление веса (+2.5 кг). Без выполнения первого этапа нет второго — и следовательно, нет СМТ!
+                </p>
+              </div>
             </Card>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <Card className="border-cyan-500/20 bg-cyan-950/15 p-4 space-y-2">
                 <div className="flex items-center gap-2 text-cyan-400 font-bold text-xs uppercase tracking-wider">
                   <Timer className="h-4 w-4" />
                   Отдых строго 30 секунд
                 </div>
                 <p className="text-xs text-slate-300">
-                  Пауза между подходами одиночного упражнения и между раундами суперсета составляет
-                  ровно 30 секунд. Не затягивайте паузу — лучше снизить вес снаряда, но сохранить
-                  темп.
+                  Пауза между подходами и кругами — не более 30 сек. Если не тянете темп — снизьте вес, но не растягивайте отдых!
+                </p>
+              </Card>
+
+              <Card className="border-amber-500/20 bg-amber-950/15 p-4 space-y-2">
+                <div className="flex items-center gap-2 text-amber-400 font-bold text-xs uppercase tracking-wider">
+                  <Flame className="h-4 w-4" />
+                  Темп: 1 подход = 1 минута
+                </div>
+                <p className="text-xs text-slate-300">
+                  Тренировка из 24 подходов должна длиться около 24–30 минут. Это максимальная энергоэффективность без катаболизма.
                 </p>
               </Card>
 
@@ -154,8 +170,7 @@ export default function HelpPage() {
                   Здоровье суставов
                 </div>
                 <p className="text-xs text-slate-300">
-                  Благодаря работе в диапазоне 40–55% от 1ПМ суставно-связочный аппарат не
-                  перегружается предельными весами, минимизируя риск травм и надрывов.
+                  Рабочий вес 40–55% от 1ПМ исключает пиковые травматичные нагрузки на связки и суставы.
                 </p>
               </Card>
             </div>

@@ -178,14 +178,13 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
 
               <div className="rounded-xl border border-white/10 bg-slate-900/40 p-4 space-y-2">
                 <h4 className="font-bold text-white text-xs sm:text-sm">
-                  Почему нельзя отдыхать дольше 30 секунд?
+                  ⚡️ Золотые правила Майка Казакова:
                 </h4>
-                <p className="text-xs text-slate-400">
-                  Если вы делаете перерыв 2–3 минуты, как в пауэрлифтинге, тренировка перестает
-                  быть СМТ и превращается в обычный силовой тренинг. Главное в СМТ —{" "}
-                  <strong className="text-white">непрерывность и плотность</strong>. Если не
-                  хватает сил — лучше снизить вес на 2.5–5 кг, но сохранить темп в 30 секунд!
-                </p>
+                <ul className="text-xs text-slate-300 space-y-1.5 list-disc list-inside">
+                  <li><strong>Этап 1:</strong> закрыть тренировку с отдыхом <strong>строго до 30 секунд</strong>. <strong>Этап 2:</strong> добавить +2.5 кг. Без первого этапа нет СМТ!</li>
+                  <li><strong>Темп тренировки:</strong> 1 подход = ~1 минута. Вся тренировка из 24 подходов длится <strong>24–30 минут</strong>.</li>
+                  <li>Если тяжело — снизьте рабочий вес, но <strong>не растягивайте паузу</strong>. СМТ работает именно за счет непрерывной высокой плотности.</li>
+                </ul>
               </div>
             </div>
           )}
