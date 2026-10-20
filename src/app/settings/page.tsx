@@ -16,12 +16,16 @@ import {
   Scale,
   BookOpen,
   Smartphone,
+  Sun,
+  Send,
+  User,
 } from "lucide-react";
 import { useWorkoutStore } from "@/lib/store/useWorkoutStore";
 import { useBodyStore } from "@/lib/store/useBodyStore";
 import { useSettingsStore } from "@/lib/store/useSettingsStore";
 import { soundPlayer } from "@/lib/audio/sound";
 import { triggerHaptic, isTelegramWebApp } from "@/lib/tma/telegram";
+import { shareToTelegramCoach } from "@/lib/coach/telegramCoach";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { HelpModal } from "@/components/help/HelpModal";
@@ -43,6 +47,12 @@ export default function SettingsPage() {
     setHapticsEnabled,
     showForecastInAnalytics,
     setShowForecastInAnalytics,
+    keepScreenAwake,
+    setKeepScreenAwake,
+    coachTelegramUsername,
+    setCoachTelegramUsername,
+    traineeName,
+    setTraineeName,
   } = useSettingsStore();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -254,6 +264,94 @@ export default function SettingsPage() {
               </button>
             </div>
           </div>
+
+          {/* Keep Screen Awake (Wake Lock) */}
+          <div className="pt-2 border-t border-white/5">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <span className="text-xs font-semibold text-slate-300 block">
+                  Не выключать экран во время тренировки (Wake Lock)
+                </span>
+                <span className="text-[11px] text-slate-400 block mt-0.5">
+                  Предотвращает автоматическую блокировку экрана, пока идет таймер тренировки
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setKeepScreenAwake(!keepScreenAwake)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all shrink-0 ${
+                  keepScreenAwake
+                    ? "bg-emerald-500 text-slate-950 border-emerald-400 shadow-md shadow-emerald-500/20"
+                    : "bg-white/5 text-slate-400 border-white/10 hover:text-white"
+                }`}
+              >
+                {keepScreenAwake ? "Включен" : "Выключен"}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Card>
+
+      {/* Telegram Coach Settings */}
+      <Card className="border-cyan-500/30 bg-slate-900/60 p-4 sm:p-5 space-y-4">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm sm:text-base flex items-center gap-2 text-white">
+            <Send className="h-4 w-4 text-cyan-400" />
+            <span>Связь с тренером (Отчеты в Telegram)</span>
+          </CardTitle>
+          <span className="text-[10px] text-cyan-400 font-mono">1-Click Отчеты</span>
+        </div>
+
+        <p className="text-xs text-slate-300 leading-relaxed">
+          Укажите ник вашего тренера в Telegram и ваше имя. После каждой тренировки или замера вы сможете мгновенно в один клик отправлять готовый подробный отчет с тоннажем, мощностью и замерами.
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          <div>
+            <label className="text-xs font-semibold text-slate-300 block mb-1">
+              Ваше имя (атлет)
+            </label>
+            <input
+              type="text"
+              value={traineeName}
+              onChange={(e) => setTraineeName(e.target.value)}
+              placeholder="Например: Александр"
+              className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-400"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-slate-300 block mb-1">
+              Telegram тренера (@username)
+            </label>
+            <input
+              type="text"
+              value={coachTelegramUsername}
+              onChange={(e) => setCoachTelegramUsername(e.target.value)}
+              placeholder="@coach_username"
+              className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-400"
+            />
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 border-t border-white/5">
+          <span className="text-[11px] text-slate-400">
+            {coachTelegramUsername
+              ? `Отчеты будут открывать чат с ${coachTelegramUsername.startsWith("@") ? coachTelegramUsername : "@" + coachTelegramUsername}`
+              : "Если ник не указан, Telegram предложит выбрать контакт тренера"}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-xs font-semibold border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/10 self-start sm:self-auto"
+            onClick={() => {
+              const testMsg = `🏋️ ТЕСТОВЫЙ ОТЧЕТ СМТ-1\n👤 Атлет: ${traineeName || "Подопечный"}\n✅ Связь с тренером успешно настроена!`;
+              shareToTelegramCoach(testMsg, coachTelegramUsername);
+            }}
+          >
+            <Send className="h-3 w-3 mr-1.5" />
+            <span>Тест связи</span>
+          </Button>
         </div>
       </Card>
 

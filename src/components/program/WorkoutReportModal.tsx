@@ -10,12 +10,19 @@ import {
   FileText,
   RotateCcw,
   Calendar,
+  Send,
+  Camera,
+  Sparkles,
 } from "lucide-react";
 import { WorkoutSession } from "@/types/smt";
 import { formatTime, formatDate } from "@/lib/utils";
 import { Dialog, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ConfirmResetModal } from "@/components/workout/ConfirmResetModal";
+import { StoryShareModal } from "@/components/analytics/StoryShareModal";
+import { useSettingsStore } from "@/lib/store/useSettingsStore";
+import { useBodyStore } from "@/lib/store/useBodyStore";
+import { generateWorkoutCoachMessage, shareToTelegramCoach } from "@/lib/coach/telegramCoach";
 
 interface WorkoutReportModalProps {
   open: boolean;
@@ -31,6 +38,20 @@ export function WorkoutReportModal({
   onRestart,
 }: WorkoutReportModalProps) {
   const [isConfirmResetOpen, setIsConfirmResetOpen] = useState(false);
+  const [isStoryModalOpen, setIsStoryModalOpen] = useState(false);
+  const { coachTelegramUsername, traineeName } = useSettingsStore();
+  const { measurements } = useBodyStore();
+
+  const handleSendToCoach = () => {
+    if (!workout) return;
+    const msg = generateWorkoutCoachMessage({
+      workout,
+      traineeName,
+      weightIncrement: 2.5,
+      latestMeasurement: measurements[0],
+    });
+    shareToTelegramCoach(msg, coachTelegramUsername);
+  };
 
   if (!workout) return null;
 
@@ -162,29 +183,62 @@ export function WorkoutReportModal({
       </div>
 
       {/* Modal Actions */}
-      <div className="pt-2 border-t border-white/10 flex flex-col sm:flex-row gap-2 shrink-0">
-        <Button
-          variant="outline"
-          size="default"
-          className="flex-1 font-semibold text-xs"
-          onClick={() => onOpenChange(false)}
-        >
-          <span>Закрыть отчет</span>
-        </Button>
-
-        {onRestart && (
+      <div className="pt-2 border-t border-white/10 space-y-2 shrink-0">
+        <div className="flex flex-col sm:flex-row gap-2">
           <Button
-            variant="ghost"
+            variant="accent"
             size="default"
-            className="text-xs font-semibold text-slate-400 hover:text-rose-400 hover:bg-rose-500/10"
-            onClick={() => setIsConfirmResetOpen(true)}
-            title="Сбросить статус и пройти тренировку заново"
+            className="flex-1 font-bold text-xs flex items-center justify-center gap-1.5 bg-gradient-to-r from-emerald-500 to-cyan-500 text-slate-950 hover:opacity-90 shadow-md shadow-emerald-500/20"
+            onClick={handleSendToCoach}
           >
-            <RotateCcw className="h-3.5 w-3.5 mr-1" />
-            <span>Сбросить и пройти заново</span>
+            <Send className="h-3.5 w-3.5 shrink-0" />
+            <span>
+              {coachTelegramUsername ? "Отправить тренеру в Telegram" : "Поделиться отчетом в Telegram"}
+            </span>
           </Button>
-        )}
+
+          <Button
+            variant="outline"
+            size="default"
+            className="flex-1 font-bold text-xs flex items-center justify-center gap-1.5 border-pink-500/40 text-pink-300 hover:bg-pink-500/10"
+            onClick={() => setIsStoryModalOpen(true)}
+          >
+            <Camera className="h-3.5 w-3.5 text-pink-400 shrink-0" />
+            <span>Stories для Instagram</span>
+          </Button>
+        </div>
+
+        <div className="flex items-center justify-between gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="flex-1 font-semibold text-xs border-white/10"
+            onClick={() => onOpenChange(false)}
+          >
+            <span>Закрыть отчет</span>
+          </Button>
+
+          {onRestart && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs font-semibold text-slate-400 hover:text-rose-400 hover:bg-rose-500/10"
+              onClick={() => setIsConfirmResetOpen(true)}
+              title="Сбросить статус и пройти тренировку заново"
+            >
+              <RotateCcw className="h-3.5 w-3.5 mr-1" />
+              <span>Сбросить и пройти заново</span>
+            </Button>
+          )}
+        </div>
       </div>
+
+      <StoryShareModal
+        open={isStoryModalOpen}
+        onOpenChange={setIsStoryModalOpen}
+        workout={workout}
+        latestMeasurement={measurements[0]}
+      />
 
       <ConfirmResetModal
         open={isConfirmResetOpen}

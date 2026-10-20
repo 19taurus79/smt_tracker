@@ -1,14 +1,17 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Plus, Ruler, Scale, Flame, Sparkles } from "lucide-react";
+import { Plus, Ruler, Scale, Flame, Sparkles, Send } from "lucide-react";
 import { useBodyStore } from "@/lib/store/useBodyStore";
+import { useSettingsStore } from "@/lib/store/useSettingsStore";
 import { BodyLogList } from "@/components/body/BodyLogList";
 import { BodyLogModal } from "@/components/body/BodyLogModal";
 import { Button } from "@/components/ui/button";
+import { generateMeasurementCoachMessage, shareToTelegramCoach } from "@/lib/coach/telegramCoach";
 
 export default function BodyPage() {
   const { measurements } = useBodyStore();
+  const { coachTelegramUsername, traineeName } = useSettingsStore();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -40,7 +43,7 @@ export default function BodyPage() {
   return (
     <div className="space-y-5 animate-in fade-in duration-200">
       {/* Header & Add Button */}
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
             <Ruler className="h-6 w-6 text-emerald-400" />
@@ -51,15 +54,37 @@ export default function BodyPage() {
           </p>
         </div>
 
-        <Button
-          variant="accent"
-          size="sm"
-          className="font-bold shrink-0"
-          onClick={() => setIsModalOpen(true)}
-        >
-          <Plus className="h-4 w-4 mr-1.5" />
-          <span>Добавить замер</span>
-        </Button>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          {latest && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="font-semibold text-xs border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/10 shrink-0"
+              onClick={() => {
+                const msg = generateMeasurementCoachMessage(
+                  latest,
+                  measurements[1],
+                  traineeName
+                );
+                shareToTelegramCoach(msg, coachTelegramUsername);
+              }}
+              title="Отправить последние замеры тренеру в Telegram"
+            >
+              <Send className="h-3.5 w-3.5 mr-1.5 text-cyan-400" />
+              <span>{coachTelegramUsername ? "Тренеру в Telegram" : "Поделиться замерами"}</span>
+            </Button>
+          )}
+
+          <Button
+            variant="accent"
+            size="sm"
+            className="font-bold shrink-0"
+            onClick={() => setIsModalOpen(true)}
+          >
+            <Plus className="h-4 w-4 mr-1.5" />
+            <span>Добавить замер</span>
+          </Button>
+        </div>
       </div>
 
       {/* Top Stat Cards */}

@@ -9,6 +9,9 @@ interface SettingsState extends AppSettings {
   setHapticsEnabled: (enabled: boolean) => void;
   setTheme: (theme: "telegram" | "dark" | "light") => void;
   setShowForecastInAnalytics: (show: boolean) => void;
+  setKeepScreenAwake: (keep: boolean) => void;
+  setCoachTelegramUsername: (username: string) => void;
+  setTraineeName: (name: string) => void;
   resetSettings: () => void;
 }
 
@@ -19,6 +22,9 @@ const defaultSettings: AppSettings = {
   hapticsEnabled: true,
   theme: "telegram",
   showForecastInAnalytics: true,
+  keepScreenAwake: true,
+  coachTelegramUsername: "",
+  traineeName: "",
 };
 
 export const useSettingsStore = create<SettingsState>()(
@@ -31,6 +37,9 @@ export const useSettingsStore = create<SettingsState>()(
       setHapticsEnabled: (enabled) => set({ hapticsEnabled: enabled }),
       setTheme: (theme) => set({ theme }),
       setShowForecastInAnalytics: (show) => set({ showForecastInAnalytics: show }),
+      setKeepScreenAwake: (keep) => set({ keepScreenAwake: keep }),
+      setCoachTelegramUsername: (username) => set({ coachTelegramUsername: username }),
+      setTraineeName: (name) => set({ traineeName: name }),
       resetSettings: () => set(defaultSettings),
     }),
     {

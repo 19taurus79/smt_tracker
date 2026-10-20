@@ -13,9 +13,13 @@ import {
   FileText,
   Eye,
   ArrowLeft,
+  Sun,
+  SunDim,
 } from "lucide-react";
 import Link from "next/link";
 import { useWorkoutStore } from "@/lib/store/useWorkoutStore";
+import { useSettingsStore } from "@/lib/store/useSettingsStore";
+import { wakeLockManager } from "@/lib/wakeLock/wakeLock";
 import { formatTime, cn } from "@/lib/utils";
 import { SupersetCard } from "@/components/workout/SupersetCard";
 import { WarmupModal } from "@/components/workout/WarmupModal";
@@ -47,6 +51,8 @@ function WorkoutContent() {
     setViewingWorkoutId,
   } = useWorkoutStore();
 
+  const { keepScreenAwake, setKeepScreenAwake } = useSettingsStore();
+
   const [isFinishModalOpen, setIsFinishModalOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
@@ -55,6 +61,7 @@ function WorkoutContent() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
 
   // Synchronize target workout from URL query if present
   useEffect(() => {
@@ -112,6 +119,20 @@ function WorkoutContent() {
     activeWorkoutId === currentWorkout.id && currentWorkout.status === "in_progress";
   const isCompleted = currentWorkout.status === "completed";
   const isUpcoming = !isCurrentActive && !isCompleted;
+
+  // Manage Screen Wake Lock
+  useEffect(() => {
+    const isRunning = isCurrentActive && isStopwatchRunning && keepScreenAwake;
+    if (isRunning) {
+      wakeLockManager.acquire();
+    } else {
+      wakeLockManager.release();
+    }
+
+    return () => {
+      wakeLockManager.release();
+    };
+  }, [isCurrentActive, isStopwatchRunning, keepScreenAwake]);
 
   // Calculate overall set progress for this workout
   let totalSets = 0;
@@ -176,6 +197,32 @@ function WorkoutContent() {
                   <Pause className="h-3.5 w-3.5 text-amber-400" />
                 ) : (
                   <Play className="h-3.5 w-3.5 text-emerald-400 fill-current" />
+                )}
+              </Button>
+            )}
+
+            {/* Screen Wake Lock Toggle (during active workout) */}
+            {isCurrentActive && wakeLockManager.isSupported() && (
+              <Button
+                variant="outline"
+                size="icon"
+                className={cn(
+                  "h-8 w-8 rounded-lg shrink-0 border-white/10 transition-colors",
+                  keepScreenAwake
+                    ? "text-amber-400 border-amber-500/30 bg-amber-500/10"
+                    : "text-slate-500 hover:text-slate-300"
+                )}
+                onClick={() => setKeepScreenAwake(!keepScreenAwake)}
+                title={
+                  keepScreenAwake
+                    ? "Экран не гаснет во время тренировки (Wake Lock вкл)"
+                    : "Экран выключается стандартно (Wake Lock выкл)"
+                }
+              >
+                {keepScreenAwake ? (
+                  <Sun className="h-3.5 w-3.5 fill-current" />
+                ) : (
+                  <SunDim className="h-3.5 w-3.5" />
                 )}
               </Button>
             )}

@@ -12,13 +12,18 @@ import {
   Sparkles,
   Sliders,
   ChevronRight,
+  Send,
+  Camera,
 } from "lucide-react";
 import { useWorkoutStore } from "@/lib/store/useWorkoutStore";
 import { useSettingsStore } from "@/lib/store/useSettingsStore";
+import { useBodyStore } from "@/lib/store/useBodyStore";
 import { formatTime } from "@/lib/utils";
 import { Dialog, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { calculateWorkoutTonnage, calculateWorkoutPower } from "@/lib/smt/calculator";
+import { StoryShareModal } from "@/components/analytics/StoryShareModal";
+import { generateWorkoutCoachMessage, shareToTelegramCoach } from "@/lib/coach/telegramCoach";
 
 interface FinishModalProps {
   open: boolean;
@@ -34,13 +39,23 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
     pauseStopwatch,
     finishWorkout,
   } = useWorkoutStore();
-  const { weightIncrementKg, soundEnabled, hapticsEnabled } = useSettingsStore();
+  const { weightIncrementKg, soundEnabled, hapticsEnabled, coachTelegramUsername, traineeName } =
+    useSettingsStore();
+  const { measurements } = useBodyStore();
 
   const [notes, setNotes] = useState("");
   // Proposed increments per exercise ID: { [exerciseId]: incrementKg }
   const [exerciseIncrements, setExerciseIncrements] = useState<Record<string, number>>({});
   // Фиксируем время в момент открытия модалки, чтобы мощность не падала во время редактирования
   const [frozenDuration, setFrozenDuration] = useState<number>(0);
+  const [sendToCoach, setSendToCoach] = useState(false);
+  const [isStoryModalOpen, setIsStoryModalOpen] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setSendToCoach(Boolean(coachTelegramUsername));
+    }
+  }, [open, coachTelegramUsername]);
 
   useEffect(() => {
     if (open) {
@@ -137,6 +152,23 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
       effectiveDuration,
       currentWorkout.id
     );
+
+    if (sendToCoach) {
+      const msg = generateWorkoutCoachMessage({
+        workout: {
+          ...currentWorkout,
+          durationSeconds: effectiveDuration,
+          tonnageKg: tonnage,
+          powerKgPerMin: power,
+          notes,
+        },
+        traineeName,
+        weightIncrement: weightIncrementKg,
+        latestMeasurement: measurements[0],
+      });
+      shareToTelegramCoach(msg, coachTelegramUsername);
+    }
+
     onOpenChange(false);
     onFinished();
   };
@@ -284,6 +316,40 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
             className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-emerald-500"
           />
         </div>
+
+        {/* Coach Sharing & Instagram Stories */}
+        <div className="p-3 rounded-2xl bg-slate-950/80 border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <label className="flex items-center gap-2.5 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={sendToCoach}
+              onChange={(e) => setSendToCoach(e.target.checked)}
+              className="h-4 w-4 rounded border-white/20 bg-slate-900 text-cyan-500 focus:ring-0"
+            />
+            <div>
+              <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                <Send className="h-3.5 w-3.5 text-cyan-400" />
+                <span>Отправить отчет тренеру в Telegram</span>
+              </span>
+              <span className="text-[10px] text-slate-400 block mt-0.5">
+                {coachTelegramUsername
+                  ? `Чат с ${coachTelegramUsername.startsWith("@") ? coachTelegramUsername : "@" + coachTelegramUsername}`
+                  : "В Telegram откроется выбор контакта"}
+              </span>
+            </div>
+          </label>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="text-xs font-semibold border-pink-500/30 text-pink-300 hover:bg-pink-500/10 shrink-0 self-start sm:self-auto"
+            onClick={() => setIsStoryModalOpen(true)}
+          >
+            <Camera className="h-3.5 w-3.5 mr-1 text-pink-400" />
+            <span>Stories Instagram</span>
+          </Button>
+        </div>
       </div>
 
       <div className="pt-2 flex flex-col gap-2 shrink-0">
@@ -297,6 +363,19 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
           <span>Применить выбранные веса и сохранить</span>
         </Button>
       </div>
+
+      <StoryShareModal
+        open={isStoryModalOpen}
+        onOpenChange={setIsStoryModalOpen}
+        workout={{
+          ...currentWorkout,
+          durationSeconds: effectiveDuration,
+          tonnageKg: tonnage,
+          powerKgPerMin: power,
+          notes,
+        }}
+        latestMeasurement={measurements[0]}
+      />
     </Dialog>
   );
 }
