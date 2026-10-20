@@ -2,6 +2,7 @@ import { WorkoutSession } from "@/types/smt";
 import { BodyMeasurement, AppLanguage } from "@/types/body";
 import { formatTime, formatDate } from "@/lib/utils";
 import { getLocalizedExerciseName, formatWorkoutTitle } from "@/lib/i18n/exercises";
+import { calculateAthleticScore } from "@/lib/scoring/athleticScore";
 
 export interface CoachReportPayload {
   workout: WorkoutSession;
@@ -9,6 +10,8 @@ export interface CoachReportPayload {
   weightIncrement?: number;
   latestMeasurement?: BodyMeasurement;
   language?: AppLanguage;
+  gender?: "male" | "female";
+  userAge?: number;
 }
 
 export function generateWorkoutCoachMessage({
@@ -17,6 +20,8 @@ export function generateWorkoutCoachMessage({
   weightIncrement = 2.5,
   latestMeasurement,
   language = "uk",
+  gender,
+  userAge,
 }: CoachReportPayload): string {
   const localeStr = language === "uk" ? "uk-UA" : language === "en" ? "en-US" : "ru-RU";
   const dateStr = workout.completedAt
@@ -57,11 +62,29 @@ export function generateWorkoutCoachMessage({
       ? "📋 *Выполненные веса:*"
       : "📋 *Виконані ваги:*";
 
+  const scoreResult = calculateAthleticScore({
+    tonnageKg: workout.tonnageKg || 0,
+    durationSeconds: workout.durationSeconds || 45 * 60,
+    bodyWeightKg: latestMeasurement?.weightKg || 80,
+    gender: gender || "male",
+    age: userAge || 28,
+  });
+
+  const tierName =
+    language === "en"
+      ? (scoreResult.tierKey === "titan" ? "ELITE TITAN" : scoreResult.tierKey === "iron_pro" ? "Iron Pro" : scoreResult.tierKey === "power_master" ? "Power Master" : "Active Athlete")
+      : language === "ru"
+      ? (scoreResult.tierKey === "titan" ? "ТИТАН СИЛЫ" : scoreResult.tierKey === "iron_pro" ? "Железный Профи" : scoreResult.tierKey === "power_master" ? "Мастер Мощности" : "Активный Атлет")
+      : (scoreResult.tierKey === "titan" ? "ТИТАН СИЛИ" : scoreResult.tierKey === "iron_pro" ? "Залізний Профі" : scoreResult.tierKey === "power_master" ? "Майстер Потужності" : "Активний Атлет");
+
+  const scoreLabel = language === "en" ? "🏆 *Athletic Score:*" : language === "ru" ? "🏆 *Индекс Атлетичности:*" : "🏆 *Індекс Атлетичності:*";
+
   const lines: string[] = [
     headerTitle,
     traineeName ? `${athleteLabel} ${traineeName}` : "",
     `${dateLabel} ${dateStr}`,
     `${sessionLabel} ${workoutTitleStr}`,
+    `${scoreLabel} ${scoreResult.score}/100 (${tierName})`,
     `${timeLabel} ${durationStr}`,
     `${tonnageLabel} ${tonnageStr} | ${powerLabel} ${powerStr}`,
     "",

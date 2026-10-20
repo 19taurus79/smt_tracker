@@ -26,6 +26,7 @@ import { StoryShareModal } from "@/components/analytics/StoryShareModal";
 import { generateWorkoutCoachMessage, shareToTelegramCoach } from "@/lib/coach/telegramCoach";
 import { useTranslation } from "@/lib/i18n";
 import { getLocalizedExerciseName } from "@/lib/i18n/exercises";
+import { calculateAthleticScore, getTierLabel, getTierColor } from "@/lib/scoring/athleticScore";
 
 interface FinishModalProps {
   open: boolean;
@@ -41,8 +42,15 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
     pauseStopwatch,
     finishWorkout,
   } = useWorkoutStore();
-  const { weightIncrementKg, soundEnabled, hapticsEnabled, coachTelegramUsername, traineeName } =
-    useSettingsStore();
+  const {
+    weightIncrementKg,
+    soundEnabled,
+    hapticsEnabled,
+    coachTelegramUsername,
+    traineeName,
+    gender,
+    userAge,
+  } = useSettingsStore();
   const { measurements } = useBodyStore();
   const { t, language } = useTranslation();
 
@@ -81,6 +89,17 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
 
   // Check if current workout is the last one in the microcycle (e.g. 9, 18, 27, 36)
   const isEndOfMicrocycle = currentWorkout ? currentWorkout.workoutNumber % 9 === 0 : false;
+
+  const athleteWeight = measurements[0]?.weightKg || 80;
+  const athleticScore = calculateAthleticScore({
+    tonnageKg: tonnage,
+    durationSeconds: effectiveDuration,
+    bodyWeightKg: athleteWeight,
+    gender,
+    age: userAge,
+  });
+  const tierColor = getTierColor(athleticScore.tierKey);
+  const tierLabel = getTierLabel(athleticScore.tierKey, t);
 
   // Collect unique exercises from the current workout
   const uniqueExercises = React.useMemo(() => {
@@ -160,6 +179,8 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
         weightIncrement: weightIncrementKg,
         latestMeasurement: measurements[0],
         language,
+        gender,
+        userAge,
       });
       shareToTelegramCoach(msg, coachTelegramUsername);
     }
@@ -191,6 +212,35 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
       </DialogHeader>
 
       <div className="space-y-4 my-2 max-h-[72vh] overflow-y-auto pr-1">
+        {/* Athletic Score Hero Banner */}
+        <div
+          className={`p-3.5 sm:p-4 rounded-2xl border ${tierColor.border} ${tierColor.bg} flex items-center justify-between gap-3 shadow-lg ${tierColor.glow} transition-all`}
+        >
+          <div className="flex items-center gap-3">
+            <div
+              className={`flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-2xl bg-slate-950 border ${tierColor.border} text-xl sm:text-2xl font-black ${tierColor.text} shadow-inner shrink-0`}
+            >
+              {athleticScore.score}
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  {t.scoring.athleticScoreLabel}
+                </span>
+                <span
+                  className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${tierColor.bg} border ${tierColor.border} ${tierColor.text}`}
+                >
+                  {tierLabel}
+                </span>
+              </div>
+              <p className="text-xs text-slate-300 font-medium mt-0.5">
+                {t.scoring.relativeTonnage}: <strong className="text-white">{athleticScore.relativeTonnage}x</strong> • {t.scoring.density}: <strong className="text-white">{athleticScore.densityKgPerMin} {t.common.kg}/{t.common.min}</strong>
+              </p>
+            </div>
+          </div>
+          <Sparkles className={`h-6 w-6 ${tierColor.text} shrink-0 animate-pulse`} />
+        </div>
+
         {/* Metric Cards Grid */}
         <div className="grid grid-cols-3 gap-2.5">
           <div className="flex flex-col items-center justify-center p-3 rounded-2xl bg-white/5 border border-white/10 text-center">

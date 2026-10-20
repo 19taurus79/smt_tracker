@@ -238,6 +238,11 @@ export interface TranslationDict {
     tierIronPro: string;
     tierTitan: string;
     challengeCallout: string;
+    bestScore: string;
+    avgScore: string;
+    currentTier: string;
+    scoreDynamics: string;
+    scoreFormulaDesc: string;
   };
   story: {
     modalTitle: string;

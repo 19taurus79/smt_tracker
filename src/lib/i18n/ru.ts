@@ -240,6 +240,11 @@ export const ruDict: TranslationDict = {
     tierIronPro: "Железный Профи",
     tierTitan: "ТИТАН СИЛЫ",
     challengeCallout: "Осилишь такой темп?",
+    bestScore: "Лучший балл",
+    avgScore: "Средний балл",
+    currentTier: "Текущий ранг",
+    scoreDynamics: "Динамика Индекса Атлетичности (0-100)",
+    scoreFormulaDesc: "Рассчитывается из темпа, тоннажа на 1 кг массы тела и 30-секундных пауз отдыха",
   },
   story: {
     modalTitle: "Карточка Stories для Instagram",

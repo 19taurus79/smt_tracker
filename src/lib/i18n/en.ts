@@ -240,6 +240,11 @@ export const enDict: TranslationDict = {
     tierIronPro: "Iron Pro",
     tierTitan: "ELITE TITAN",
     challengeCallout: "Can you match this intensity?",
+    bestScore: "Best Score",
+    avgScore: "Avg Score",
+    currentTier: "Current Rank",
+    scoreDynamics: "Athletic Score Trend (0-100)",
+    scoreFormulaDesc: "Calculated from cadence, tonnage per kg of bodyweight, and 30s rest protocol",
   },
   story: {
     modalTitle: "Instagram Story Card",

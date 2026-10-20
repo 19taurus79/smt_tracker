@@ -30,6 +30,7 @@ import {
   formatSupersetLabel,
   formatSupersetType,
 } from "@/lib/i18n/exercises";
+import { calculateAthleticScore, getTierLabel, getTierColor } from "@/lib/scoring/athleticScore";
 
 interface WorkoutReportModalProps {
   open: boolean;
@@ -46,7 +47,7 @@ export function WorkoutReportModal({
 }: WorkoutReportModalProps) {
   const [isConfirmResetOpen, setIsConfirmResetOpen] = useState(false);
   const [isStoryModalOpen, setIsStoryModalOpen] = useState(false);
-  const { coachTelegramUsername, traineeName } = useSettingsStore();
+  const { coachTelegramUsername, traineeName, gender, userAge } = useSettingsStore();
   const { measurements } = useBodyStore();
   const { t, language } = useTranslation();
 
@@ -58,11 +59,24 @@ export function WorkoutReportModal({
       weightIncrement: 2.5,
       latestMeasurement: measurements[0],
       language,
+      gender,
+      userAge,
     });
     shareToTelegramCoach(msg, coachTelegramUsername);
   };
 
   if (!workout) return null;
+
+  const athleteWeight = measurements[0]?.weightKg || 80;
+  const athleticScore = calculateAthleticScore({
+    tonnageKg: workout.tonnageKg || 0,
+    durationSeconds: workout.durationSeconds || 45 * 60,
+    bodyWeightKg: athleteWeight,
+    gender,
+    age: userAge,
+  });
+  const tierColor = getTierColor(athleticScore.tierKey);
+  const tierLabel = getTierLabel(athleticScore.tierKey, t);
 
   const reportTitle =
     language === "uk"
@@ -116,6 +130,35 @@ export function WorkoutReportModal({
       </DialogHeader>
 
       <div className="space-y-4 my-2 max-h-[68vh] overflow-y-auto pr-1">
+        {/* Athletic Score Hero Banner */}
+        <div
+          className={`p-3 rounded-2xl border ${tierColor.border} ${tierColor.bg} flex items-center justify-between gap-3 shadow-md ${tierColor.glow}`}
+        >
+          <div className="flex items-center gap-2.5">
+            <div
+              className={`flex h-11 w-11 items-center justify-center rounded-xl bg-slate-950 border ${tierColor.border} text-lg font-black ${tierColor.text} shadow-inner shrink-0`}
+            >
+              {athleticScore.score}
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  {t.scoring.athleticScoreLabel}
+                </span>
+                <span
+                  className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${tierColor.bg} border ${tierColor.border} ${tierColor.text}`}
+                >
+                  {tierLabel}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-300 font-medium mt-0.5">
+                {t.scoring.relativeTonnage}: <strong className="text-white">{athleticScore.relativeTonnage}x</strong> • {t.scoring.density}: <strong className="text-white">{athleticScore.densityKgPerMin} {t.common.kg}/{t.common.min}</strong>
+              </p>
+            </div>
+          </div>
+          <Sparkles className={`h-5 w-5 ${tierColor.text} shrink-0 animate-pulse`} />
+        </div>
+
         {/* KPI Metrics Summary */}
         <div className="grid grid-cols-3 gap-2">
           <div className="flex flex-col items-center justify-center p-2.5 rounded-2xl bg-white/5 border border-white/10 text-center">

@@ -79,3 +79,65 @@ export function calculateAthleticScore({
     densityKgPerMin,
   };
 }
+
+export function getTierLabel(
+  tierKey: AthleticScoreResult["tierKey"],
+  t: { scoring: { tierTitan: string; tierIronPro: string; tierPowerMaster: string; tierActive: string } }
+): string {
+  switch (tierKey) {
+    case "titan":
+      return t.scoring.tierTitan;
+    case "iron_pro":
+      return t.scoring.tierIronPro;
+    case "power_master":
+      return t.scoring.tierPowerMaster;
+    case "active":
+    default:
+      return t.scoring.tierActive;
+  }
+}
+
+export function getTierColor(tierKey: AthleticScoreResult["tierKey"]): {
+  text: string;
+  bg: string;
+  border: string;
+  glow: string;
+  accentHex: string;
+} {
+  switch (tierKey) {
+    case "titan":
+      return {
+        text: "text-purple-400",
+        bg: "bg-purple-500/10",
+        border: "border-purple-500/40",
+        glow: "shadow-purple-500/20",
+        accentHex: "#c084fc",
+      };
+    case "iron_pro":
+      return {
+        text: "text-amber-400",
+        bg: "bg-amber-500/10",
+        border: "border-amber-500/40",
+        glow: "shadow-amber-500/20",
+        accentHex: "#fbbf24",
+      };
+    case "power_master":
+      return {
+        text: "text-emerald-400",
+        bg: "bg-emerald-500/10",
+        border: "border-emerald-500/40",
+        glow: "shadow-emerald-500/20",
+        accentHex: "#34d399",
+      };
+    case "active":
+    default:
+      return {
+        text: "text-cyan-400",
+        bg: "bg-cyan-500/10",
+        border: "border-cyan-500/40",
+        glow: "shadow-cyan-500/20",
+        accentHex: "#38bdf8",
+      };
+  }
+}
+

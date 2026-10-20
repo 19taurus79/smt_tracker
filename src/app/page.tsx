@@ -14,9 +14,11 @@ import {
   Sparkles,
   Zap,
   Eye,
+  ChevronRight,
 } from "lucide-react";
 import { useWorkoutStore } from "@/lib/store/useWorkoutStore";
 import { useBodyStore } from "@/lib/store/useBodyStore";
+import { useSettingsStore } from "@/lib/store/useSettingsStore";
 import { formatTime, formatDate } from "@/lib/utils";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -33,6 +35,11 @@ import {
   formatWorkoutTitle,
   formatSupersetLabel,
 } from "@/lib/i18n/exercises";
+import {
+  calculateAthleticScore,
+  getTierColor,
+  getTierLabel,
+} from "@/lib/scoring/athleticScore";
 
 export default function HomePage() {
   const router = useRouter();
@@ -45,6 +52,7 @@ export default function HomePage() {
   } = useWorkoutStore();
 
   const { measurements } = useBodyStore();
+  const { gender, userAge } = useSettingsStore();
 
   const [mounted, setMounted] = useState(false);
   const [isSetupOpen, setIsSetupOpen] = useState(false);
@@ -89,6 +97,18 @@ export default function HomePage() {
   const latestCompleted = completedWorkouts[completedWorkouts.length - 1];
   const latestBody = measurements[0];
 
+  const latestScore = latestCompleted
+    ? calculateAthleticScore({
+        tonnageKg: latestCompleted.tonnageKg || 0,
+        durationSeconds: latestCompleted.durationSeconds || 45 * 60,
+        bodyWeightKg: latestBody?.weightKg || 80,
+        gender,
+        age: userAge,
+      })
+    : null;
+  const latestTierColor = latestScore ? getTierColor(latestScore.tierKey) : null;
+  const latestTierLabel = latestScore ? getTierLabel(latestScore.tierKey, t) : null;
+
   return (
     <div className="space-y-4 sm:space-y-6 animate-in fade-in duration-300">
       {/* Hero: Next Workout Card */}
@@ -109,12 +129,22 @@ export default function HomePage() {
                 {t.common.microcycle} {currentOrNextWorkout.microcycle} • #{currentOrNextWorkout.workoutNumber}/36
               </span>
             </div>
-            <CardTitle className="text-lg sm:text-2xl mt-1.5 text-white font-black leading-tight">
-              {formatWorkoutTitle(
-                currentOrNextWorkout.workoutNumber,
-                currentOrNextWorkout.microcycle,
-                currentOrNextWorkout.week,
-                language
+            <CardTitle className="text-lg sm:text-2xl mt-1.5 text-white font-black leading-tight flex items-center justify-between flex-wrap gap-2">
+              <span>
+                {formatWorkoutTitle(
+                  currentOrNextWorkout.workoutNumber,
+                  currentOrNextWorkout.microcycle,
+                  currentOrNextWorkout.week,
+                  language
+                )}
+              </span>
+              {isHeroCompleted && latestScore && latestTierColor && (
+                <span
+                  className={`text-xs font-black uppercase px-2.5 py-1 rounded-xl border ${latestTierColor.border} ${latestTierColor.bg} ${latestTierColor.text} flex items-center gap-1.5 shadow-md`}
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                  {latestScore.score} • {latestTierLabel}
+                </span>
               )}
             </CardTitle>
           </CardHeader>
@@ -245,6 +275,46 @@ export default function HomePage() {
           </span>
         </div>
       </div>
+
+      {/* Latest Athletic Score Spotlight Card */}
+      {latestCompleted && latestScore && latestTierColor && (
+        <div
+          className={`rounded-2xl border ${latestTierColor.border} ${latestTierColor.bg} p-3.5 sm:p-4 flex items-center justify-between gap-3 shadow-lg ${latestTierColor.glow} transition-all`}
+        >
+          <div className="flex items-center gap-3">
+            <div
+              className={`flex h-12 w-12 sm:h-14 sm:w-14 items-center justify-center rounded-2xl bg-slate-950 border ${latestTierColor.border} text-xl sm:text-2xl font-black ${latestTierColor.text} shadow-inner shrink-0`}
+            >
+              {latestScore.score}
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  {t.scoring.title} (#{latestCompleted.workoutNumber})
+                </span>
+                <span
+                  className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${latestTierColor.bg} border ${latestTierColor.border} ${latestTierColor.text}`}
+                >
+                  {latestTierLabel}
+                </span>
+              </div>
+              <p className="text-xs text-slate-300 font-medium mt-0.5">
+                {t.scoring.relativeTonnage}: <strong className="text-white">{latestScore.relativeTonnage}x</strong> • {t.scoring.density}: <strong className="text-white">{latestScore.densityKgPerMin} {t.common.kg}/{t.common.min}</strong>
+              </p>
+            </div>
+          </div>
+          <Link href="/analytics">
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`text-xs font-bold ${latestTierColor.text} hover:bg-white/10 shrink-0`}
+            >
+              <span>{t.nav.analytics}</span>
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          </Link>
+        </div>
+      )}
 
       {/* Quick Actions Bar */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">

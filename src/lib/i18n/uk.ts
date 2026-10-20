@@ -240,6 +240,11 @@ export const ukDict: TranslationDict = {
     tierIronPro: "Залізний Профі",
     tierTitan: "ТИТАН СИЛИ",
     challengeCallout: "Чи подужаєш ти такий темп?",
+    bestScore: "Найкращий бал",
+    avgScore: "Середній бал",
+    currentTier: "Поточний ранг",
+    scoreDynamics: "Динаміка Індексу Атлетичності (0-100)",
+    scoreFormulaDesc: "Розраховується з темпу, тоннажу на 1 кг ваги тіла та 30-секундних пауз відпочинку",
   },
   story: {
     modalTitle: "Картка Stories для Instagram",

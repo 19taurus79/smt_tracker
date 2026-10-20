@@ -15,6 +15,10 @@ import {
   formatWorkoutTitle,
 } from "@/lib/i18n/exercises";
 
+import { useSettingsStore } from "@/lib/store/useSettingsStore";
+import { useBodyStore } from "@/lib/store/useBodyStore";
+import { calculateAthleticScore, getTierColor, getTierLabel } from "@/lib/scoring/athleticScore";
+
 interface WorkoutCardProps {
   workout: WorkoutSession;
   onStart?: () => void;
@@ -23,10 +27,24 @@ interface WorkoutCardProps {
 
 export function WorkoutCard({ workout, onStart, onOpenReport }: WorkoutCardProps) {
   const { setViewingWorkoutId, activeWorkoutId } = useWorkoutStore();
+  const { gender, userAge } = useSettingsStore();
+  const { measurements } = useBodyStore();
   const { t, language } = useTranslation();
 
   const isCurrentActive = activeWorkoutId === workout.id;
   const isCompleted = workout.status === "completed";
+
+  const scoreResult = isCompleted
+    ? calculateAthleticScore({
+        tonnageKg: workout.tonnageKg || 0,
+        durationSeconds: workout.durationSeconds || 45 * 60,
+        bodyWeightKg: measurements[0]?.weightKg || 80,
+        gender,
+        age: userAge,
+      })
+    : null;
+  const tierColor = scoreResult ? getTierColor(scoreResult.tierKey) : null;
+  const tierLabel = scoreResult ? getTierLabel(scoreResult.tierKey, t) : null;
 
   return (
     <Card
@@ -59,22 +77,32 @@ export function WorkoutCard({ workout, onStart, onOpenReport }: WorkoutCardProps
             </div>
           </div>
 
-          <Badge
-            variant={
-              isCompleted
-                ? "success"
+          <div className="flex items-center gap-1.5 shrink-0">
+            {isCompleted && scoreResult && tierColor && (
+              <span
+                className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full border ${tierColor.border} ${tierColor.bg} ${tierColor.text} shadow-sm`}
+                title={`${t.scoring.athleticScoreLabel}: ${scoreResult.score}/100 (${tierLabel})`}
+              >
+                ⚡ {scoreResult.score}
+              </span>
+            )}
+            <Badge
+              variant={
+                isCompleted
+                  ? "success"
+                  : isCurrentActive
+                  ? "warning"
+                  : "outline"
+              }
+              className="text-[10px] sm:text-xs shrink-0"
+            >
+              {isCompleted
+                ? t.program.statusCompleted
                 : isCurrentActive
-                ? "warning"
-                : "outline"
-            }
-            className="text-[10px] sm:text-xs shrink-0"
-          >
-            {isCompleted
-              ? t.program.statusCompleted
-              : isCurrentActive
-              ? t.program.statusInProgress
-              : t.program.statusUpcoming}
-          </Badge>
+                ? t.program.statusInProgress
+                : t.program.statusUpcoming}
+            </Badge>
+          </div>
         </div>
       </CardHeader>
 

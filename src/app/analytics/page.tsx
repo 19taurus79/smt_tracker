@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { TrendingUp, Dumbbell, Ruler, Activity, Eye, EyeOff } from "lucide-react";
+import { AthleticScoreChart } from "@/components/analytics/AthleticScoreChart";
 import { TonnageChart } from "@/components/analytics/TonnageChart";
 import { PowerChart } from "@/components/analytics/PowerChart";
 import { KeyLiftsChart } from "@/components/analytics/KeyLiftsChart";
@@ -104,6 +105,7 @@ export default function AnalyticsPage() {
       {/* Tab Contents */}
       {activeTab === "workouts" ? (
         <div className="space-y-5">
+          <AthleticScoreChart />
           <TonnageChart />
           <PowerChart />
           <KeyLiftsChart />
