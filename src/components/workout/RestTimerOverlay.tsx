@@ -5,6 +5,7 @@ import { Timer, Plus, Minus, X, Volume2, VolumeX } from "lucide-react";
 import { useWorkoutStore } from "@/lib/store/useWorkoutStore";
 import { useSettingsStore } from "@/lib/store/useSettingsStore";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "@/lib/i18n";
 
 export function RestTimerOverlay() {
   const {
@@ -17,8 +18,9 @@ export function RestTimerOverlay() {
   } = useWorkoutStore();
 
   const { soundEnabled, setSoundEnabled } = useSettingsStore();
+  const { t } = useTranslation();
 
-  // Интервал обратного отсчета
+  // Countdown timer tick
   useEffect(() => {
     if (!isRestTimerActive) return;
 
@@ -54,10 +56,10 @@ export function RestTimerOverlay() {
             <div>
               <div className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-emerald-400">
                 <Timer className="h-3.5 w-3.5 animate-spin" style={{ animationDuration: "3s" }} />
-                <span>Отдых СМТ</span>
+                <span>{t.workout.restTitle}</span>
               </div>
               <p className="text-[11px] text-slate-400">
-                {restTimerSeconds > 0 ? "Восстановление сил" : "Время следующего подхода!"}
+                {restTimerSeconds > 0 ? t.workout.restSubtitle : t.workout.restNextSetReady}
               </p>
             </div>
           </div>
@@ -69,7 +71,7 @@ export function RestTimerOverlay() {
               size="icon"
               className="h-8 w-8 rounded-lg"
               onClick={() => adjustRestTimer(-10)}
-              title="-10 секунд"
+              title="-10 сек"
             >
               <Minus className="h-3.5 w-3.5" />
             </Button>
@@ -79,7 +81,7 @@ export function RestTimerOverlay() {
               size="icon"
               className="h-8 w-8 rounded-lg"
               onClick={() => adjustRestTimer(+10)}
-              title="+10 секунд"
+              title="+10 сек"
             >
               <Plus className="h-3.5 w-3.5" />
             </Button>
@@ -89,7 +91,7 @@ export function RestTimerOverlay() {
               size="icon"
               className="h-8 w-8 rounded-lg text-slate-400 hover:text-white"
               onClick={() => setSoundEnabled(!soundEnabled)}
-              title={soundEnabled ? "Звук включен" : "Звук выключен"}
+              title={soundEnabled ? t.settings.soundEffects : t.common.cancel}
             >
               {soundEnabled ? (
                 <Volume2 className="h-3.5 w-3.5 text-emerald-400" />
@@ -99,14 +101,12 @@ export function RestTimerOverlay() {
             </Button>
 
             <Button
-              variant="destructive"
+              variant="accent"
               size="sm"
-              className="h-8 px-2.5 rounded-lg text-xs"
+              className="h-8 px-2.5 text-xs font-bold shadow-md shadow-emerald-500/20"
               onClick={stopRestTimer}
-              title="Пропустить отдых"
             >
-              <X className="h-3.5 w-3.5 sm:mr-1" />
-              <span className="hidden sm:inline">Пропуск</span>
+              <span>{t.workout.skipRest}</span>
             </Button>
           </div>
         </div>

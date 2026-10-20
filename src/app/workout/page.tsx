@@ -29,11 +29,14 @@ import { ConfirmResetModal } from "@/components/workout/ConfirmResetModal";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { useTranslation } from "@/lib/i18n";
+import { formatWorkoutTitle } from "@/lib/i18n/exercises";
 
 function WorkoutContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryId = searchParams.get("id");
+  const { t, language } = useTranslation();
 
   const {
     workouts,
@@ -42,8 +45,6 @@ function WorkoutContent() {
     workoutElapsedSeconds,
     isStopwatchRunning,
     startWorkout,
-    restartWorkout,
-    resetWorkout,
     pauseStopwatch,
     resumeStopwatch,
     tickStopwatch,
@@ -51,7 +52,7 @@ function WorkoutContent() {
     setViewingWorkoutId,
   } = useWorkoutStore();
 
-  const { keepScreenAwake, setKeepScreenAwake } = useSettingsStore();
+  const { keepScreenAwake, setKeepScreenAwake, defaultRestSeconds } = useSettingsStore();
 
   const [isFinishModalOpen, setIsFinishModalOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
@@ -61,7 +62,6 @@ function WorkoutContent() {
   useEffect(() => {
     setMounted(true);
   }, []);
-
 
   // Synchronize target workout from URL query if present
   useEffect(() => {
@@ -89,11 +89,6 @@ function WorkoutContent() {
     );
   }
 
-  // Target workout resolution:
-  // 1. Explicit query ?id=
-  // 2. Currently viewed workout (viewingWorkoutId)
-  // 3. Currently active workout in progress (activeWorkoutId)
-  // 4. First in-progress, first upcoming, or workouts[0]
   const targetId = queryId || viewingWorkoutId || activeWorkoutId;
   const currentWorkout =
     workouts.find((w) => w.id === targetId) ||
@@ -105,10 +100,10 @@ function WorkoutContent() {
   if (!currentWorkout) {
     return (
       <div className="text-center py-12">
-        <p className="text-slate-400">Нет доступных тренировок.</p>
+        <p className="text-slate-400">{t.workout.noWorkoutsAvailable}</p>
         <Link href="/program">
           <Button variant="outline" className="mt-4 text-xs">
-            Перейти к сетке программы
+            {t.workout.goToProgram}
           </Button>
         </Link>
       </div>
@@ -153,6 +148,20 @@ function WorkoutContent() {
     startWorkout(currentWorkout.id);
   };
 
+  const previewNoticeTitle =
+    language === "uk"
+      ? "Режим попереднього ознайомлення"
+      : language === "en"
+      ? "Preview & Preparation Mode"
+      : "Режим предварительного ознакомления";
+
+  const previewNoticeDesc =
+    language === "uk"
+      ? "Ознайомтеся зі схемами та робочими вагами. Виконайте розминку та натисніть «Почати», щоб увімкнути секундомір і фіксувати підходи."
+      : language === "en"
+      ? "Review target weights and structure. Complete warmup, then click 'Start' to begin the stopwatch and log sets."
+      : "Ознакомьтесь со схемами и рабочими весами. Выполните разминку и нажмите «Начать», чтобы включить секундомер и активировать фиксацию подходов.";
+
   return (
     <div className="space-y-4 animate-in fade-in duration-200">
       {/* Sticky Compact Workout Dashboard Header */}
@@ -191,7 +200,7 @@ function WorkoutContent() {
                 onClick={() =>
                   isStopwatchRunning ? pauseStopwatch() : resumeStopwatch()
                 }
-                title={isStopwatchRunning ? "Пауза секундомера" : "Продолжить"}
+                title={isStopwatchRunning ? t.workout.pause : t.workout.resume}
               >
                 {isStopwatchRunning ? (
                   <Pause className="h-3.5 w-3.5 text-amber-400" />
@@ -213,11 +222,7 @@ function WorkoutContent() {
                     : "text-slate-500 hover:text-slate-300"
                 )}
                 onClick={() => setKeepScreenAwake(!keepScreenAwake)}
-                title={
-                  keepScreenAwake
-                    ? "Экран не гаснет во время тренировки (Wake Lock вкл)"
-                    : "Экран выключается стандартно (Wake Lock выкл)"
-                }
+                title={keepScreenAwake ? t.workout.screenAwakeActive : t.workout.screenAwakeDisabled}
               >
                 {keepScreenAwake ? (
                   <Sun className="h-3.5 w-3.5 fill-current" />
@@ -236,7 +241,7 @@ function WorkoutContent() {
               className="h-8 px-2 sm:px-2.5 text-[11px] sm:text-xs font-semibold border-amber-500/30 text-amber-300 hover:bg-amber-500/10"
             >
               <Flame className="h-3.5 w-3.5 mr-1 text-amber-400 shrink-0" />
-              <span>Разминка</span>
+              <span>{t.workout.warmup}</span>
             </Button>
 
             {isCurrentActive && (
@@ -247,7 +252,7 @@ function WorkoutContent() {
                 onClick={handleOpenFinishModal}
               >
                 <CheckCircle className="h-3.5 w-3.5 mr-1 shrink-0" />
-                <span>Завершить</span>
+                <span>{t.workout.finish}</span>
               </Button>
             )}
 
@@ -259,7 +264,7 @@ function WorkoutContent() {
                 onClick={handleStartThisWorkout}
               >
                 <Play className="h-3.5 w-3.5 mr-1 fill-current" />
-                <span>Начать</span>
+                <span>{t.workout.start}</span>
               </Button>
             )}
 
@@ -271,7 +276,7 @@ function WorkoutContent() {
                 onClick={() => setIsReportOpen(true)}
               >
                 <FileText className="h-3.5 w-3.5 mr-1" />
-                <span>Отчет</span>
+                <span>{t.dashboard.viewReport}</span>
               </Button>
             )}
           </div>
@@ -281,9 +286,9 @@ function WorkoutContent() {
         <div className="mt-2 space-y-1">
           <div className="flex items-center justify-between text-[11px] text-slate-300">
             <span>
-              Прогресс подходов:{" "}
+              {t.dashboard.progress}:{" "}
               <strong className="text-emerald-400">
-                {completedSets} из {totalSets}
+                {completedSets} / {totalSets}
               </strong>
             </span>
             <span className="font-mono text-slate-400">
@@ -299,7 +304,12 @@ function WorkoutContent() {
         <div>
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-lg sm:text-2xl font-black text-white">
-              {currentWorkout.title}
+              {formatWorkoutTitle(
+                currentWorkout.workoutNumber,
+                currentWorkout.microcycle,
+                currentWorkout.week,
+                language
+              )}
             </h1>
             <Badge
               variant={
@@ -312,15 +322,14 @@ function WorkoutContent() {
               className="text-[10px] sm:text-xs"
             >
               {isCompleted
-                ? "Завершена"
+                ? t.program.statusCompleted
                 : isCurrentActive
-                ? "В процессе"
-                : "Ознакомление"}
+                ? t.program.statusInProgress
+                : t.dashboard.viewPlan}
             </Badge>
           </div>
           <p className="text-[11px] text-slate-400 mt-0.5">
-            Микроцикл {currentWorkout.microcycle} • Неделя {currentWorkout.week} • Отдых
-            между кругами: 30 секунд
+            {t.common.microcycle} {currentWorkout.microcycle} • {t.common.week} {currentWorkout.week} • {t.story.labels.restBetweenSets}
           </p>
         </div>
 
@@ -331,7 +340,7 @@ function WorkoutContent() {
             className="text-xs text-slate-400 hover:text-white h-8 px-2"
           >
             <ArrowLeft className="h-3.5 w-3.5 mr-1" />
-            <span>Сетка</span>
+            <span>{t.nav.program}</span>
           </Button>
         </Link>
       </div>
@@ -345,11 +354,10 @@ function WorkoutContent() {
             </div>
             <div>
               <div className="text-xs sm:text-sm font-bold text-white">
-                Режим предварительного ознакомления
+                {previewNoticeTitle}
               </div>
               <div className="text-[11px] text-slate-300">
-                Ознакомьтесь со схемами и рабочими весами. Выполните разминку и
-                нажмите «Начать», чтобы включить секундомер и активировать фиксацию подходов.
+                {previewNoticeDesc}
               </div>
             </div>
           </div>
@@ -360,7 +368,7 @@ function WorkoutContent() {
             className="font-bold text-xs shrink-0 h-9 hidden sm:flex items-center gap-1.5"
           >
             <Play className="h-3.5 w-3.5 fill-current" />
-            <span>Начать</span>
+            <span>{t.workout.start}</span>
           </Button>
         </div>
       )}
@@ -386,7 +394,7 @@ function WorkoutContent() {
             onClick={() => setIsReportOpen(true)}
           >
             <FileText className="h-4 w-4 shrink-0" />
-            <span>Открыть отчет о тренировке</span>
+            <span>{t.dashboard.viewReport}</span>
           </Button>
 
           <Button
@@ -394,10 +402,10 @@ function WorkoutContent() {
             size="lg"
             className="font-semibold text-xs sm:text-sm px-3 py-3 border-rose-500/30 text-rose-300 hover:bg-rose-500/10 flex items-center justify-center gap-1.5 text-center"
             onClick={() => setIsResetConfirmOpen(true)}
-            title="Сбросить статус завершенности тренировки"
+            title={t.workout.resetConfirmTitle}
           >
             <RotateCcw className="h-4 w-4 shrink-0" />
-            <span>Сбросить тренировку</span>
+            <span>{t.workout.resetSession}</span>
           </Button>
 
           <Button
@@ -415,7 +423,9 @@ function WorkoutContent() {
             }}
           >
             <Play className="h-4 w-4 fill-current text-emerald-400 shrink-0" />
-            <span>К следующей</span>
+            <span>
+              {language === "uk" ? "До наступного" : language === "en" ? "To Next Workout" : "К следующей"}
+            </span>
           </Button>
         </div>
       ) : isCurrentActive ? (
@@ -427,7 +437,7 @@ function WorkoutContent() {
             onClick={handleOpenFinishModal}
           >
             <Trophy className="h-4 w-4 shrink-0" />
-            <span>Завершить тренировку и рассчитать мощность</span>
+            <span>{t.workout.finish}</span>
           </Button>
 
           <Button
@@ -437,7 +447,7 @@ function WorkoutContent() {
             className="text-xs text-slate-400 hover:text-rose-400 h-9"
           >
             <RotateCcw className="h-3.5 w-3.5 mr-1" />
-            <span>Сбросить текущую сессию</span>
+            <span>{t.workout.resetSession}</span>
           </Button>
         </div>
       ) : (
@@ -450,17 +460,17 @@ function WorkoutContent() {
             onClick={handleStartThisWorkout}
           >
             <Play className="h-4 w-4 fill-current shrink-0" />
-            <span>Начать тренировку (старт секундомера)</span>
+            <span>{t.workout.start}</span>
           </Button>
 
           <Button
             variant="outline"
             size="lg"
             onClick={openWarmupModal}
-            className="sm:w-auto font-semibold border-amber-500/30 text-amber-300 hover:bg-amber-500/10 px-4 py-3 text-xs sm:text-sm"
+            className="font-bold border-amber-500/30 text-amber-300 hover:bg-amber-500/10 px-4 py-3.5 text-xs sm:text-sm flex items-center justify-center gap-2"
           >
-            <Flame className="h-4 w-4 mr-1.5 text-amber-400" />
-            <span>Разминка</span>
+            <Flame className="h-4 w-4 text-amber-400 shrink-0" />
+            <span>{t.workout.warmup}</span>
           </Button>
         </div>
       )}
@@ -470,22 +480,27 @@ function WorkoutContent() {
       <FinishModal
         open={isFinishModalOpen}
         onOpenChange={setIsFinishModalOpen}
-        onFinished={() => router.push("/program")}
+        onFinished={() => {
+          setIsFinishModalOpen(false);
+          setIsReportOpen(true);
+        }}
       />
       <WorkoutReportModal
         open={isReportOpen}
         onOpenChange={setIsReportOpen}
         workout={currentWorkout}
         onRestart={(workoutId) => {
-          restartWorkout(workoutId);
+          setIsReportOpen(false);
+          startWorkout(workoutId);
         }}
       />
       <ConfirmResetModal
         open={isResetConfirmOpen}
         onOpenChange={setIsResetConfirmOpen}
         workout={currentWorkout}
-        onConfirm={() => {
-          resetWorkout(currentWorkout.id);
+        onConfirmReset={() => {
+          setIsResetConfirmOpen(false);
+          router.push(`/workout?id=${currentWorkout.id}`);
         }}
       />
     </div>

@@ -23,6 +23,13 @@ import { StoryShareModal } from "@/components/analytics/StoryShareModal";
 import { useSettingsStore } from "@/lib/store/useSettingsStore";
 import { useBodyStore } from "@/lib/store/useBodyStore";
 import { generateWorkoutCoachMessage, shareToTelegramCoach } from "@/lib/coach/telegramCoach";
+import { useTranslation } from "@/lib/i18n";
+import {
+  getLocalizedExerciseName,
+  formatWorkoutTitle,
+  formatSupersetLabel,
+  formatSupersetType,
+} from "@/lib/i18n/exercises";
 
 interface WorkoutReportModalProps {
   open: boolean;
@@ -41,6 +48,7 @@ export function WorkoutReportModal({
   const [isStoryModalOpen, setIsStoryModalOpen] = useState(false);
   const { coachTelegramUsername, traineeName } = useSettingsStore();
   const { measurements } = useBodyStore();
+  const { t, language } = useTranslation();
 
   const handleSendToCoach = () => {
     if (!workout) return;
@@ -49,11 +57,40 @@ export function WorkoutReportModal({
       traineeName,
       weightIncrement: 2.5,
       latestMeasurement: measurements[0],
+      language,
     });
     shareToTelegramCoach(msg, coachTelegramUsername);
   };
 
   if (!workout) return null;
+
+  const reportTitle =
+    language === "uk"
+      ? `Звіт про тренування #${workout.workoutNumber}`
+      : language === "en"
+      ? `Workout Report #${workout.workoutNumber}`
+      : `Отчет о тренировке #${workout.workoutNumber}`;
+
+  const completedAtText =
+    language === "uk"
+      ? "Завершено:"
+      : language === "en"
+      ? "Completed:"
+      : "Завершена:";
+
+  const exercisesTitle =
+    language === "uk"
+      ? "Виконані вправи та підходи"
+      : language === "en"
+      ? "Completed Exercises & Sets"
+      : "Выполненные упражнения и подходы";
+
+  const repeatWorkoutText =
+    language === "uk"
+      ? "Повторити тренування"
+      : language === "en"
+      ? "Restart Workout"
+      : "Повторить тренировку";
 
   return (
     <Dialog
@@ -64,15 +101,15 @@ export function WorkoutReportModal({
         <DialogTitle onClose={() => onOpenChange(false)}>
           <div className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-emerald-400" />
-            <span className="truncate">Отчет о тренировке #{workout.workoutNumber}</span>
+            <span className="truncate">{reportTitle}</span>
           </div>
         </DialogTitle>
         <DialogDescription>
-          {workout.title} • Микроцикл {workout.microcycle} (Неделя {workout.week})
+          {formatWorkoutTitle(workout.workoutNumber, workout.microcycle, workout.week, language)}
           {workout.completedAt && (
             <span className="block text-[11px] text-slate-400 mt-0.5 flex items-center gap-1">
               <Calendar className="h-3 w-3" />
-              <span>Завершена: {formatDate(workout.completedAt)}</span>
+              <span>{completedAtText} {formatDate(workout.completedAt)}</span>
             </span>
           )}
         </DialogDescription>
@@ -83,15 +120,15 @@ export function WorkoutReportModal({
         <div className="grid grid-cols-3 gap-2">
           <div className="flex flex-col items-center justify-center p-2.5 rounded-2xl bg-white/5 border border-white/10 text-center">
             <Dumbbell className="h-4 w-4 text-emerald-400 mb-0.5" />
-            <span className="text-[10px] text-slate-400 uppercase font-semibold">Тоннаж</span>
+            <span className="text-[10px] text-slate-400 uppercase font-semibold">{t.common.tonnage}</span>
             <span className="text-sm sm:text-base font-black text-white">
-              {workout.tonnageKg ?? 0} кг
+              {workout.tonnageKg ?? 0} {t.common.kg}
             </span>
           </div>
 
           <div className="flex flex-col items-center justify-center p-2.5 rounded-2xl bg-white/5 border border-white/10 text-center">
             <Clock className="h-4 w-4 text-cyan-400 mb-0.5" />
-            <span className="text-[10px] text-slate-400 uppercase font-semibold">Время</span>
+            <span className="text-[10px] text-slate-400 uppercase font-semibold">{t.common.time}</span>
             <span className="font-mono text-sm sm:text-base font-black text-white">
               {formatTime(workout.durationSeconds ?? 0)}
             </span>
@@ -99,10 +136,10 @@ export function WorkoutReportModal({
 
           <div className="flex flex-col items-center justify-center p-2.5 rounded-2xl bg-white/5 border border-white/10 text-center">
             <Zap className="h-4 w-4 text-amber-400 mb-0.5" />
-            <span className="text-[10px] text-slate-400 uppercase font-semibold">Мощность</span>
+            <span className="text-[10px] text-slate-400 uppercase font-semibold">{t.common.density}</span>
             <span className="font-mono text-sm sm:text-base font-black text-amber-400">
               {workout.powerKgPerMin ?? 0}{" "}
-              <span className="text-[9px] text-slate-500 font-normal">кг/м</span>
+              <span className="text-[9px] text-slate-500 font-normal">{t.common.kg}/{t.common.min}</span>
             </span>
           </div>
         </div>
@@ -110,18 +147,18 @@ export function WorkoutReportModal({
         {/* Exercises Breakdown */}
         <div className="space-y-2.5">
           <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
-            Выполненные упражнения и подходы
+            {exercisesTitle}
           </h4>
 
-          {workout.supersets.map((ss) => (
+          {workout.supersets.map((ss, idx) => (
             <div
               key={ss.id}
               className="rounded-2xl border border-white/10 bg-slate-950/60 p-3 space-y-2"
             >
               <div className="text-xs font-bold text-emerald-400 flex items-center justify-between">
-                <span>{ss.label}</span>
+                <span>{formatSupersetLabel(ss.label, language)}</span>
                 <span className="text-[10px] font-normal text-slate-400">
-                  {ss.type === "single" ? "Одиночный блок" : "Суперсет (отдых 30с)"}
+                  {formatSupersetType(ss.type === "single", language)}
                 </span>
               </div>
 
@@ -129,9 +166,11 @@ export function WorkoutReportModal({
                 {ss.exercises.map((ex) => (
                   <div key={ex.id} className="space-y-1">
                     <div className="flex items-center justify-between text-xs">
-                      <span className="font-semibold text-white">{ex.name}</span>
+                      <span className="font-semibold text-white">
+                        {getLocalizedExerciseName(ex.name, language, false)}
+                      </span>
                       <span className="text-[10px] text-slate-400">
-                        {ex.category === "main" ? "Базовое 40%" : "Подсобка 30%"}
+                        {ex.category === "main" ? t.workout.mainExercise : t.workout.accessoryExercise}
                       </span>
                     </div>
 
@@ -149,14 +188,14 @@ export function WorkoutReportModal({
                                 : "bg-white/5 border-white/5 text-slate-400"
                             }`}
                           >
-                            <span className="font-mono text-[10px] text-slate-400">
-                              #{s.setNumber}
+                            <span className="text-[10px] text-slate-500">#{s.setNumber}</span>
+                            <span className="font-bold">
+                              {weight} {t.common.kg} × {reps}
                             </span>
-                            <span className="font-bold text-white">
-                              {weight} кг × {reps}
-                            </span>
-                            {s.completed && (
-                              <CheckCircle2 className="h-3 w-3 text-emerald-400 shrink-0" />
+                            {s.completed ? (
+                              <CheckCircle2 className="h-3 w-3 text-emerald-400" />
+                            ) : (
+                              <span className="text-[10px] text-slate-500">—</span>
                             )}
                           </div>
                         );
@@ -171,66 +210,55 @@ export function WorkoutReportModal({
 
         {/* Notes if present */}
         {workout.notes && (
-          <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-3 space-y-1">
-            <span className="text-[11px] font-bold text-slate-400 uppercase">
-              Заметки к тренировке:
-            </span>
-            <p className="text-xs text-slate-200 italic leading-relaxed">
-              "{workout.notes}"
-            </p>
+          <div className="rounded-2xl border border-white/10 bg-slate-900/60 p-3 text-xs text-slate-300">
+            <span className="font-bold text-white block mb-0.5">{t.body.notes}:</span>
+            <p className="italic">{workout.notes}</p>
           </div>
         )}
       </div>
 
       {/* Modal Actions */}
-      <div className="pt-2 border-t border-white/10 space-y-2 shrink-0">
-        <div className="flex flex-col sm:flex-row gap-2">
-          <Button
-            variant="accent"
-            size="default"
-            className="flex-1 font-bold text-xs flex items-center justify-center gap-1.5 bg-gradient-to-r from-emerald-500 to-cyan-500 text-slate-950 hover:opacity-90 shadow-md shadow-emerald-500/20"
-            onClick={handleSendToCoach}
-          >
-            <Send className="h-3.5 w-3.5 shrink-0" />
-            <span>
-              {coachTelegramUsername ? "Отправить тренеру в Telegram" : "Поделиться отчетом в Telegram"}
-            </span>
-          </Button>
+      <div className="pt-2 border-t border-white/10 flex flex-col sm:flex-row gap-2 shrink-0">
+        <Button
+          variant="outline"
+          size="sm"
+          className="text-xs font-semibold border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/10 flex items-center justify-center gap-1.5"
+          onClick={handleSendToCoach}
+        >
+          <Send className="h-3.5 w-3.5" />
+          <span>{coachTelegramUsername ? t.workout.sendCoachButton : t.common.share}</span>
+        </Button>
 
-          <Button
-            variant="outline"
-            size="default"
-            className="flex-1 font-bold text-xs flex items-center justify-center gap-1.5 border-pink-500/40 text-pink-300 hover:bg-pink-500/10"
-            onClick={() => setIsStoryModalOpen(true)}
-          >
-            <Camera className="h-3.5 w-3.5 text-pink-400 shrink-0" />
-            <span>Stories для Instagram</span>
-          </Button>
-        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="text-xs font-semibold border-pink-500/30 text-pink-300 hover:bg-pink-500/10 flex items-center justify-center gap-1.5"
+          onClick={() => setIsStoryModalOpen(true)}
+        >
+          <Camera className="h-3.5 w-3.5 text-pink-400" />
+          <span>{t.workout.shareStoryButton}</span>
+        </Button>
 
-        <div className="flex items-center justify-between gap-2">
+        {onRestart && (
           <Button
             variant="outline"
             size="sm"
-            className="flex-1 font-semibold text-xs border-white/10"
-            onClick={() => onOpenChange(false)}
+            className="text-xs font-semibold border-rose-500/30 text-rose-300 hover:bg-rose-500/10 flex items-center justify-center gap-1.5"
+            onClick={() => setIsConfirmResetOpen(true)}
           >
-            <span>Закрыть отчет</span>
+            <RotateCcw className="h-3.5 w-3.5" />
+            <span>{repeatWorkoutText}</span>
           </Button>
+        )}
 
-          {onRestart && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-xs font-semibold text-slate-400 hover:text-rose-400 hover:bg-rose-500/10"
-              onClick={() => setIsConfirmResetOpen(true)}
-              title="Сбросить статус и пройти тренировку заново"
-            >
-              <RotateCcw className="h-3.5 w-3.5 mr-1" />
-              <span>Сбросить и пройти заново</span>
-            </Button>
-          )}
-        </div>
+        <Button
+          variant="accent"
+          size="sm"
+          className="font-bold text-xs sm:ml-auto"
+          onClick={() => onOpenChange(false)}
+        >
+          {t.common.close}
+        </Button>
       </div>
 
       <StoryShareModal
@@ -244,11 +272,10 @@ export function WorkoutReportModal({
         open={isConfirmResetOpen}
         onOpenChange={setIsConfirmResetOpen}
         workout={workout}
-        onConfirm={() => {
-          if (onRestart) {
-            onRestart(workout.id);
-            onOpenChange(false);
-          }
+        onConfirmReset={() => {
+          setIsConfirmResetOpen(false);
+          onOpenChange(false);
+          onRestart?.(workout.id);
         }}
       />
     </Dialog>

@@ -7,19 +7,31 @@ import { useBodyStore } from "@/lib/store/useBodyStore";
 import { Dialog, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useTranslation } from "@/lib/i18n";
 
 interface BodyLogModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  open?: boolean;
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  onClose?: () => void;
   initialData?: BodyMeasurement | null;
 }
 
 export function BodyLogModal({
   open,
+  isOpen,
   onOpenChange,
+  onClose,
   initialData,
 }: BodyLogModalProps) {
   const { addMeasurement, updateMeasurement } = useBodyStore();
+  const { t } = useTranslation();
+
+  const isModalOpen = open ?? isOpen ?? false;
+  const handleClose = () => {
+    onOpenChange?.(false);
+    onClose?.();
+  };
 
   const [date, setDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [weightKg, setWeightKg] = useState("80.0");
@@ -44,7 +56,7 @@ export function BodyLogModal({
       setDate(new Date().toISOString().split("T")[0]);
       setNotes("");
     }
-  }, [initialData, open]);
+  }, [initialData, isModalOpen]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,27 +76,27 @@ export function BodyLogModal({
     } else {
       addMeasurement(payload);
     }
-    onOpenChange(false);
+    handleClose();
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={isModalOpen} onOpenChange={(val) => { if (!val) handleClose(); else onOpenChange?.(true); }}>
       <DialogHeader>
-        <DialogTitle onClose={() => onOpenChange(false)}>
+        <DialogTitle onClose={handleClose}>
           <div className="flex items-center gap-2">
             <Ruler className="h-6 w-6 text-emerald-400" />
-            <span>{initialData ? "Редактировать замер" : "Новый замер тела"}</span>
+            <span>{initialData ? t.body.editRecord : t.body.addRecord}</span>
           </div>
         </DialogTitle>
         <DialogDescription>
-          Фиксируйте вес и объемы для оценки гипертрофии и рекомпозиции тела.
+          {t.body.subtitle}
         </DialogDescription>
       </DialogHeader>
 
       <form onSubmit={handleSubmit} className="space-y-3.5 my-2">
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
-            <label className="text-xs font-semibold text-slate-300">Дата</label>
+            <label className="text-xs font-semibold text-slate-300">{t.body.date}</label>
             <Input
               type="date"
               value={date}
@@ -95,7 +107,7 @@ export function BodyLogModal({
 
           <div className="space-y-1">
             <label className="text-xs font-semibold text-slate-300">
-              Вес тела (кг) <span className="text-emerald-400">*</span>
+              {t.body.weight} ({t.common.kg}) <span className="text-emerald-400">*</span>
             </label>
             <Input
               type="number"
@@ -110,7 +122,7 @@ export function BodyLogModal({
 
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
           <div className="space-y-1">
-            <label className="text-[11px] text-slate-400">Талия (см)</label>
+            <label className="text-[11px] text-slate-400">{t.body.waist} (см)</label>
             <Input
               type="number"
               step="0.5"
@@ -121,7 +133,7 @@ export function BodyLogModal({
           </div>
 
           <div className="space-y-1">
-            <label className="text-[11px] text-slate-400">Грудь (см)</label>
+            <label className="text-[11px] text-slate-400">{t.body.chest} (см)</label>
             <Input
               type="number"
               step="0.5"
@@ -132,7 +144,7 @@ export function BodyLogModal({
           </div>
 
           <div className="space-y-1">
-            <label className="text-[11px] text-slate-400">Бицепс (см)</label>
+            <label className="text-[11px] text-slate-400">{t.body.biceps} (см)</label>
             <Input
               type="number"
               step="0.5"
@@ -143,7 +155,7 @@ export function BodyLogModal({
           </div>
 
           <div className="space-y-1">
-            <label className="text-[11px] text-slate-400">Бедра (ягодицы)</label>
+            <label className="text-[11px] text-slate-400">{t.body.hips} (см)</label>
             <Input
               type="number"
               step="0.5"
@@ -154,7 +166,7 @@ export function BodyLogModal({
           </div>
 
           <div className="space-y-1">
-            <label className="text-[11px] text-slate-400">Бедро (нога)</label>
+            <label className="text-[11px] text-slate-400">{t.body.thigh} (см)</label>
             <Input
               type="number"
               step="0.5"
@@ -166,18 +178,18 @@ export function BodyLogModal({
         </div>
 
         <div className="space-y-1">
-          <label className="text-xs font-semibold text-slate-300">Заметка / Самочувствие</label>
+          <label className="text-xs font-semibold text-slate-300">{t.body.notes}</label>
           <Input
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="Утренний замер натощак..."
+            placeholder="..."
           />
         </div>
 
         <div className="pt-3">
           <Button variant="accent" size="lg" type="submit" className="w-full font-bold">
             <Save className="h-4 w-4 mr-2" />
-            <span>{initialData ? "Сохранить изменения" : "Добавить замер"}</span>
+            <span>{t.common.save}</span>
           </Button>
         </div>
       </form>

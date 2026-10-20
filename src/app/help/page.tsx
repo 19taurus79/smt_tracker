@@ -20,11 +20,49 @@ import {
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "@/lib/i18n";
 
 export default function HelpPage() {
+  const { t, language } = useTranslation();
   const [activeTab, setActiveTab] = useState<
     "method" | "exercises" | "cycles" | "progression" | "app"
   >("method");
+
+  const backLinkText =
+    language === "en"
+      ? "Back to Settings"
+      : language === "ru"
+      ? "Назад в Настройки"
+      : "Назад до Налаштувань";
+
+  const guideBadge =
+    language === "en"
+      ? "SMT Knowledge Base"
+      : language === "ru"
+      ? "База знаний СМТ"
+      : "База знань СМТ";
+
+  const guideTitle =
+    language === "en"
+      ? "SMT-1 Training Guide"
+      : language === "ru"
+      ? "Руководство по методике СМТ-1"
+      : "Керівництво по методиці СМТ";
+
+  const guideSubtitle =
+    language === "en"
+      ? "Heavy Duty Training (V. Goncharov): 30s rest intervals, 4 microcycles, supersets and auto-progression."
+      : language === "ru"
+      ? "Сверхмощный тренинг (В. Гончаров): правила 30-секундного отдыха, структура 4-х микроциклов, круговые суперсеты и авто-прогрессия весов."
+      : "Надпотужний тренінг (В. Гончаров): протокол 30-секундного відпочинку, 4 мікроцикли, колові суперсети та авто-прогресія.";
+
+  const tabs = [
+    { id: "method", label: language === "en" ? "SMT Method" : language === "ru" ? "Методика СМТ" : "Методика СМТ", icon: Flame },
+    { id: "exercises", label: language === "en" ? "Exercise List" : language === "ru" ? "Схема упражнений" : "Схема вправ", icon: Dumbbell },
+    { id: "cycles", label: language === "en" ? "4 Microcycles" : language === "ru" ? "4 Микроцикла" : "4 Мікроцикли", icon: Layers },
+    { id: "progression", label: language === "en" ? "Progression & Body" : language === "ru" ? "Прогрессия и Замеры" : "Прогресія та Заміри", icon: TrendingUp },
+    { id: "app", label: language === "en" ? "App & PWA Guide" : language === "ru" ? "Гид по приложению" : "Гід по додатку", icon: Smartphone },
+  ];
 
   return (
     <div className="space-y-4 pb-12 animate-in fade-in duration-300">
@@ -35,7 +73,7 @@ export default function HelpPage() {
           className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-white transition-colors"
         >
           <ArrowLeft className="h-4 w-4" />
-          <span>Назад в Настройки</span>
+          <span>{backLinkText}</span>
         </Link>
         <span className="text-[11px] text-emerald-400 font-mono">SMT_GUIDE.md</span>
       </div>
@@ -46,14 +84,13 @@ export default function HelpPage() {
           <div className="space-y-1.5">
             <div className="inline-flex items-center gap-2 rounded-full bg-emerald-500/10 border border-emerald-500/30 px-3 py-1 text-xs font-semibold text-emerald-400">
               <BookOpen className="h-3.5 w-3.5" />
-              <span>База знаний СМТ</span>
+              <span>{guideBadge}</span>
             </div>
             <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-              Руководство по методике СМТ-1
+              {guideTitle}
             </h1>
             <p className="text-xs sm:text-sm text-slate-400 max-w-xl">
-              Сверхмощный тренинг (В. Гончаров): правила 30-секундного отдыха, структура 4-х
-              микроциклов, круговые суперсеты и авто-прогрессия весов.
+              {guideSubtitle}
             </p>
           </div>
         </div>
@@ -61,13 +98,7 @@ export default function HelpPage() {
 
       {/* Tab Navigation */}
       <div className="flex border-b border-white/10 bg-slate-900/40 p-1.5 rounded-xl overflow-x-auto gap-1 scrollbar-none">
-        {[
-          { id: "method", label: "Методика СМТ", icon: Flame },
-          { id: "exercises", label: "Схема упражнений", icon: Dumbbell },
-          { id: "cycles", label: "4 Микроцикла", icon: Layers },
-          { id: "progression", label: "Прогрессия и Замеры", icon: TrendingUp },
-          { id: "app", label: "Гид по приложению", icon: Smartphone },
-        ].map((tab) => {
+        {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
           return (

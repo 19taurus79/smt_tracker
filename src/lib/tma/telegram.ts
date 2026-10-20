@@ -96,8 +96,12 @@ export function initTelegramWebApp(): void {
 export function triggerHaptic(type: "impact" | "success" | "warning" = "impact"): void {
   if (typeof window === "undefined") return;
 
-  const tg = window.Telegram?.WebApp;
-  if (tg?.HapticFeedback) {
+  const tg = window.Telegram?.WebApp as any;
+  const isSupportedTgHaptic =
+    tg?.HapticFeedback &&
+    (typeof tg.isVersionAtLeast === "function" ? tg.isVersionAtLeast("6.1") : true);
+
+  if (isSupportedTgHaptic) {
     try {
       if (type === "success") {
         tg.HapticFeedback.notificationOccurred("success");
@@ -112,16 +116,19 @@ export function triggerHaptic(type: "impact" | "success" | "warning" = "impact")
     }
   }
 
-  // Fallback for mobile browser / PWA
+  // Fallback for mobile browser / PWA / older TMA
   if (typeof navigator !== "undefined" && typeof navigator.vibrate === "function") {
     try {
       if (type === "success") {
-        navigator.vibrate([100, 50, 150]);
+        navigator.vibrate([80, 40, 100]);
+      } else if (type === "warning") {
+        navigator.vibrate([120, 60, 120]);
       } else {
-        navigator.vibrate(60);
+        navigator.vibrate(50);
       }
     } catch {
       // ignore
     }
   }
 }
+

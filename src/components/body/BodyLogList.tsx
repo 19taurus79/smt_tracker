@@ -7,18 +7,17 @@ import { useBodyStore } from "@/lib/store/useBodyStore";
 import { formatDate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { BodyLogModal } from "./BodyLogModal";
+import { useTranslation } from "@/lib/i18n";
 
 export function BodyLogList() {
   const { measurements, deleteMeasurement } = useBodyStore();
   const [editingItem, setEditingItem] = useState<BodyMeasurement | null>(null);
+  const { t, language } = useTranslation();
 
   if (measurements.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-white/10 p-8 text-center text-slate-400">
-        <p className="text-sm">История замеров пока пуста.</p>
-        <p className="text-xs text-slate-500 mt-1">
-          Нажмите кнопку «Добавить замер», чтобы внести первые данные.
-        </p>
+        <p className="text-sm">{t.body.noMeasurementsYet}</p>
       </div>
     );
   }
@@ -27,7 +26,6 @@ export function BodyLogList() {
     <>
       <div className="space-y-3">
         {measurements.map((item, idx) => {
-          // Compare with previous chronological entry (which is at idx + 1 because list is sorted desc)
           const prevItem = measurements[idx + 1];
           const weightDiff = prevItem
             ? Math.round((item.weightKg - prevItem.weightKg) * 10) / 10
@@ -64,7 +62,7 @@ export function BodyLogList() {
                     size="icon"
                     className="h-8 w-8 text-slate-400 hover:text-white"
                     onClick={() => setEditingItem(item)}
-                    title="Редактировать"
+                    title={t.body.editRecord}
                   >
                     <Edit3 className="h-4 w-4" />
                   </Button>
@@ -73,7 +71,7 @@ export function BodyLogList() {
                     size="icon"
                     className="h-8 w-8 text-slate-400 hover:text-rose-400"
                     onClick={() => deleteMeasurement(item.id)}
-                    title="Удалить"
+                    title={t.common.reset}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -83,9 +81,9 @@ export function BodyLogList() {
               {/* Metrics Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                 <div className="p-2 rounded-xl bg-white/[0.03]">
-                  <span className="text-slate-400 text-[11px]">Вес тела</span>
+                  <span className="text-slate-400 text-[11px]">{t.body.weight}</span>
                   <div className="flex items-center gap-1 font-bold text-white text-sm mt-0.5">
-                    <span>{item.weightKg} кг</span>
+                    <span>{item.weightKg} {t.common.kg}</span>
                     {weightDiff !== null && (
                       <span
                         className={`text-[10px] font-semibold flex items-center ${
@@ -104,7 +102,7 @@ export function BodyLogList() {
 
                 {item.waistCm && (
                   <div className="p-2 rounded-xl bg-white/[0.03]">
-                    <span className="text-slate-400 text-[11px]">Талия</span>
+                    <span className="text-slate-400 text-[11px]">{t.body.waist}</span>
                     <div className="flex items-center gap-1 font-bold text-white text-sm mt-0.5">
                       <span>{item.waistCm} см</span>
                       {waistDiff !== null && (
@@ -122,7 +120,7 @@ export function BodyLogList() {
 
                 {item.bicepsCm && (
                   <div className="p-2 rounded-xl bg-white/[0.03]">
-                    <span className="text-slate-400 text-[11px]">Бицепс</span>
+                    <span className="text-slate-400 text-[11px]">{t.body.biceps}</span>
                     <div className="flex items-center gap-1 font-bold text-white text-sm mt-0.5">
                       <span>{item.bicepsCm} см</span>
                       {bicepsDiff !== null && (
@@ -140,7 +138,7 @@ export function BodyLogList() {
 
                 {item.chestCm && (
                   <div className="p-2 rounded-xl bg-white/[0.03]">
-                    <span className="text-slate-400 text-[11px]">Грудь</span>
+                    <span className="text-slate-400 text-[11px]">{t.body.chest}</span>
                     <div className="font-bold text-white text-sm mt-0.5">
                       {item.chestCm} см
                     </div>

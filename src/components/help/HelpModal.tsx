@@ -21,6 +21,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { useTranslation } from "@/lib/i18n";
 
 interface HelpModalProps {
   isOpen: boolean;
@@ -28,11 +29,59 @@ interface HelpModalProps {
 }
 
 export function HelpModal({ isOpen, onClose }: HelpModalProps) {
+  const { t, language } = useTranslation();
   const [activeTab, setActiveTab] = useState<
     "method" | "exercises" | "cycles" | "progression" | "app"
   >("method");
 
   if (!isOpen) return null;
+
+  const modalTitle =
+    language === "en"
+      ? "SMT Method & Reference"
+      : language === "ru"
+      ? "Справка и Методика СМТ-1"
+      : "Довідка та Методика СМТ";
+
+  const modalSubtitle =
+    language === "en"
+      ? "Complete guide to V. Goncharov system and tracker features"
+      : language === "ru"
+      ? "Полное руководство по системе В. Гончарова и функциям приложения"
+      : "Повний посібник із системи В. Гончарова та функцій додатку";
+
+  const tabs = [
+    {
+      id: "method",
+      label: language === "en" ? "SMT Method" : language === "ru" ? "Методика СМТ" : "Методика СМТ",
+      icon: Flame,
+    },
+    {
+      id: "exercises",
+      label: language === "en" ? "Exercises" : language === "ru" ? "Упражнения" : "Вправи",
+      icon: Dumbbell,
+    },
+    {
+      id: "cycles",
+      label: language === "en" ? "4 Microcycles" : language === "ru" ? "4 Микроцикла" : "4 Мікроцикли",
+      icon: Layers,
+    },
+    {
+      id: "progression",
+      label:
+        language === "en"
+          ? "Progression & Body"
+          : language === "ru"
+          ? "Прогрессия и Замеры"
+          : "Прогресія та Заміри",
+      icon: TrendingUp,
+    },
+    {
+      id: "app",
+      label: language === "en" ? "App & PWA" : language === "ru" ? "Приложение и PWA" : "Додаток та PWA",
+      icon: Smartphone,
+    },
+  ];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
@@ -48,10 +97,10 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
             </div>
             <div>
               <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-                Справка и Методика СМТ-1
+                {modalTitle}
               </h2>
               <p className="text-[11px] text-slate-400">
-                Полное руководство по системе В. Гончарова и функциям приложения
+                {modalSubtitle}
               </p>
             </div>
           </div>
@@ -65,13 +114,7 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
 
         {/* Tab Navigation */}
         <div className="flex border-b border-white/10 bg-slate-900/40 px-3 py-2 overflow-x-auto gap-1 scrollbar-none">
-          {[
-            { id: "method", label: "Методика СМТ", icon: Flame },
-            { id: "exercises", label: "Упражнения", icon: Dumbbell },
-            { id: "cycles", label: "4 Микроцикла", icon: Layers },
-            { id: "progression", label: "Прогрессия и Замеры", icon: TrendingUp },
-            { id: "app", label: "Приложение и PWA", icon: Smartphone },
-          ].map((tab) => {
+          {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
             return (

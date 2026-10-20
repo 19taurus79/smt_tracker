@@ -7,6 +7,8 @@ import { useWorkoutStore } from "@/lib/store/useWorkoutStore";
 import { useSettingsStore } from "@/lib/store/useSettingsStore";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
+import { getLocalizedExerciseName } from "@/lib/i18n/exercises";
 
 interface SetRowProps {
   workoutId: string;
@@ -31,6 +33,7 @@ export function SetRow({
 }: SetRowProps) {
   const { activeWorkoutId, workouts, toggleSetCompletion, updateSet } = useWorkoutStore();
   const { defaultRestSeconds, soundEnabled, hapticsEnabled } = useSettingsStore();
+  const { t, language } = useTranslation();
 
   const currentWorkout = workouts.find((w) => w.id === workoutId);
   const isActive = activeWorkoutId === workoutId && currentWorkout?.status === "in_progress";
@@ -46,20 +49,6 @@ export function SetRow({
       soundEnabled,
       hapticsEnabled
     );
-  };
-
-  const handleWeightChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = parseFloat(e.target.value) || 0;
-    updateSet(workoutId, supersetId, exerciseId, set.setNumber, {
-      actualWeight: val,
-    });
-  };
-
-  const handleRepsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = parseInt(e.target.value, 10) || 0;
-    updateSet(workoutId, supersetId, exerciseId, set.setNumber, {
-      actualReps: val,
-    });
   };
 
   const currentWeight = set.actualWeight ?? set.targetWeight;
@@ -79,7 +68,6 @@ export function SetRow({
           : "bg-slate-950/50 border-white/5 text-slate-300 hover:border-white/10"
       )}
     >
-      {/* Mobile-First Layout: Top info row + Bottom action row on small screens, Single flex row on sm+ */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         {/* Left Info: Badge + Name + Target Plan */}
         <div className="flex items-center gap-2 min-w-0">
@@ -100,7 +88,7 @@ export function SetRow({
             {isSupersetRow && exerciseName && (
               <div className="flex items-center gap-1.5 truncate">
                 <span className="font-bold text-white text-xs truncate">
-                  {exerciseName}
+                  {getLocalizedExerciseName(exerciseName, language, false)}
                 </span>
                 <span
                   className={cn(
@@ -110,24 +98,24 @@ export function SetRow({
                       : "bg-cyan-500/20 text-cyan-400"
                   )}
                 >
-                  {isMain ? "Основное" : "Подсобка"}
+                  {isMain ? t.workout.mainExercise : t.workout.accessoryExercise}
                 </span>
               </div>
             )}
 
             <div className="text-[11px] text-slate-400 flex items-center gap-1">
-              <span>План:</span>
+              <span>{t.workout.target}:</span>
               <strong className={isMain ? "text-emerald-300" : "text-cyan-300"}>
-                {set.targetWeight} кг
+                {set.targetWeight} {t.common.kg}
               </strong>
               <span>×</span>
               <strong className="text-white">{set.targetReps}</strong>
-              <span>повт</span>
+              <span>{t.common.reps}</span>
             </div>
           </div>
         </div>
 
-        {/* Right Action: Actual Inputs + Done Button (Fixed width & alignment on mobile) */}
+        {/* Right Action: Actual Inputs + Done Button */}
         <div className="flex items-center justify-between sm:justify-end gap-1.5 pt-1 sm:pt-0 border-t border-white/5 sm:border-t-0">
           <div className="flex items-center gap-1">
             <input
@@ -143,9 +131,9 @@ export function SetRow({
               }}
               onFocus={(e) => e.target.select()}
               className="w-13 h-7 sm:h-8 rounded-lg border border-white/10 bg-slate-900 px-1 text-center font-bold text-xs text-white focus:outline-none focus:border-emerald-500"
-              title="Фактический вес (кг)"
+              title={`${t.workout.actual} (${t.common.kg})`}
             />
-            <span className="text-[10px] text-slate-500">кг</span>
+            <span className="text-[10px] text-slate-500">{t.common.kg}</span>
           </div>
 
           <div className="flex items-center gap-1">
@@ -161,15 +149,15 @@ export function SetRow({
               }}
               onFocus={(e) => e.target.select()}
               className="w-10 h-7 sm:h-8 rounded-lg border border-white/10 bg-slate-900 px-1 text-center font-bold text-xs text-white focus:outline-none focus:border-emerald-500"
-              title="Фактические повторения"
+              title={t.workout.actual}
             />
-            <span className="text-[10px] text-slate-500">повт</span>
+            <span className="text-[10px] text-slate-500">{t.common.reps}</span>
           </div>
 
           {/* Action Done Button */}
           <div
             className={!isActive && !set.completed ? "cursor-not-allowed" : undefined}
-            title={!isActive && !set.completed ? "Сначала нажмите «Начать тренировку», чтобы зачесть подход" : undefined}
+            title={!isActive && !set.completed ? t.workout.cannotCompleteWithoutStart : undefined}
           >
             <Button
               size="sm"
@@ -178,21 +166,13 @@ export function SetRow({
               className={cn(
                 "h-7 sm:h-8 px-2.5 sm:px-3 rounded-lg text-xs font-bold transition-all ml-auto sm:ml-1",
                 set.completed
-                  ? "bg-emerald-500 text-slate-950 hover:bg-emerald-400"
-                  : !isActive
-                  ? "opacity-35 cursor-not-allowed border-white/10 text-slate-500 hover:bg-transparent"
-                  : "border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10"
+                  ? "bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-md shadow-emerald-500/20"
+                  : "border-white/15 hover:border-emerald-500/40 text-slate-300 hover:text-white"
               )}
               onClick={handleToggle}
             >
-              {set.completed ? (
-                <div className="flex items-center gap-1">
-                  <Check className="h-3 w-3 stroke-[3]" />
-                  <span>Сделан</span>
-                </div>
-              ) : (
-                <span>Зачесть</span>
-              )}
+              <Check className="h-3.5 w-3.5 mr-1" />
+              <span>{set.completed ? t.workout.setCompleted : t.workout.setNotCompleted}</span>
             </Button>
           </div>
         </div>

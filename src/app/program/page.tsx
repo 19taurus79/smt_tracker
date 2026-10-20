@@ -9,10 +9,12 @@ import { WorkoutCard } from "@/components/program/WorkoutCard";
 import { WorkoutReportModal } from "@/components/program/WorkoutReportModal";
 import { InitialSetupModal } from "@/components/program/InitialSetupModal";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "@/lib/i18n";
 
 export default function ProgramPage() {
   const router = useRouter();
-  const { workouts, restartWorkout } = useWorkoutStore();
+  const { workouts, restartWorkout, startWorkout } = useWorkoutStore();
+  const { t } = useTranslation();
   const [selectedMkc, setSelectedMkc] = useState<number | "all">("all");
   const [isSetupOpen, setIsSetupOpen] = useState(false);
   const [selectedReportWorkout, setSelectedReportWorkout] = useState<WorkoutSession | null>(null);
@@ -44,10 +46,10 @@ export default function ProgramPage() {
         <div>
           <h1 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
             <Calendar className="h-6 w-6 text-emerald-400" />
-            <span>Сетка программы СМТ-1</span>
+            <span>{t.program.title}</span>
           </h1>
           <p className="text-xs text-slate-400 mt-0.5">
-            12 недель • 4 микроцикла • 36 тренировок • Авто-прибавка +2.5 кг
+            {t.program.subtitle}
           </p>
         </div>
 
@@ -58,7 +60,7 @@ export default function ProgramPage() {
           onClick={() => setIsSetupOpen(true)}
         >
           <Sparkles className="h-4 w-4 mr-1.5" />
-          <span>Настроить 1ПМ / Пересчитать</span>
+          <span>{t.program.setupButton}</span>
         </Button>
       </div>
 
@@ -72,7 +74,7 @@ export default function ProgramPage() {
               : "bg-white/5 text-slate-400 hover:text-white hover:bg-white/10"
           }`}
         >
-          Все ({workouts.length})
+          {t.program.tabAll} ({workouts.length})
         </button>
 
         <button
@@ -83,7 +85,7 @@ export default function ProgramPage() {
               : "bg-white/5 text-slate-400 hover:text-white hover:bg-white/10"
           }`}
         >
-          МКЦ-1 (4x10/4x15)
+          {t.program.tabMkc1}
         </button>
 
         <button
@@ -94,7 +96,7 @@ export default function ProgramPage() {
               : "bg-white/5 text-slate-400 hover:text-white hover:bg-white/10"
           }`}
         >
-          МКЦ-2 (4x8/4x12)
+          {t.program.tabMkc2}
         </button>
 
         <button
@@ -105,7 +107,7 @@ export default function ProgramPage() {
               : "bg-white/5 text-slate-400 hover:text-white hover:bg-white/10"
           }`}
         >
-          МКЦ-3 (4x6/4x9)
+          {t.program.tabMkc3}
         </button>
 
         <button
@@ -116,22 +118,12 @@ export default function ProgramPage() {
               : "bg-white/5 text-slate-400 hover:text-white hover:bg-white/10"
           }`}
         >
-          МКЦ-4 (4x4/4x6)
+          {t.program.tabMkc4}
         </button>
       </div>
 
-      {/* Program Summary Pill */}
-      <div className="flex items-center justify-between text-xs text-slate-400 px-1">
-        <span>
-          Отображается: <strong className="text-white">{filteredWorkouts.length}</strong> тренировок
-        </span>
-        <span>
-          Завершено: <strong className="text-emerald-400">{completedCount}</strong> из {workouts.length}
-        </span>
-      </div>
-
-      {/* Grid of Workouts */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+      {/* Workouts Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         {filteredWorkouts.map((workout) => (
           <WorkoutCard
             key={workout.id}
@@ -142,14 +134,15 @@ export default function ProgramPage() {
       </div>
 
       {/* Modals */}
-      <InitialSetupModal open={isSetupOpen} onOpenChange={setIsSetupOpen} />
+      <InitialSetupModal isOpen={isSetupOpen} onClose={() => setIsSetupOpen(false)} />
       <WorkoutReportModal
         open={Boolean(selectedReportWorkout)}
         onOpenChange={(open) => !open && setSelectedReportWorkout(null)}
         workout={selectedReportWorkout}
         onRestart={(workoutId) => {
-          restartWorkout(workoutId);
-          router.push("/workout");
+          setSelectedReportWorkout(null);
+          startWorkout(workoutId);
+          router.push(`/workout?id=${workoutId}`);
         }}
       />
     </div>

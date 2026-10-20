@@ -31,6 +31,7 @@ export interface TranslationDict {
     time: string;
     tonnage: string;
     density: string;
+    cm: string;
   };
   header: {
     title: string;
@@ -40,20 +41,40 @@ export interface TranslationDict {
   dashboard: {
     greeting: string;
     nextWorkout: string;
+    workoutActiveBadge: string;
+    allCompletedBadge: string;
     startWorkout: string;
+    continueWorkout: string;
     viewWorkout: string;
+    viewPlan: string;
+    viewReport: string;
+    warmupBtn: string;
     completedBadge: string;
     streakDays: string;
     totalTonnage: string;
+    totalVolume: string;
     avgDensity: string;
+    avgPower: string;
+    powerDensity: string;
+    currentWeight: string;
+    noMeasurements: string;
     activeMicrocycle: string;
     programProgress: string;
     quickStats: string;
     all36Workouts: string;
+    progress: string;
+    setup1pm: string;
+    setup1pmDesc: string;
+    logBody: string;
+    logBodyDesc: string;
+    charts: string;
+    chartsDesc: string;
+    latestCompleted: string;
   };
   workout: {
     pageTitle: string;
     noActive: string;
+    noWorkoutsAvailable: string;
     selectFromProgram: string;
     goToProgram: string;
     start: string;
@@ -65,6 +86,7 @@ export interface TranslationDict {
     warmupDesc: string;
     startWarmup: string;
     finishWarmup: string;
+    finishAndStart: string;
     resetSession: string;
     resetConfirmTitle: string;
     resetConfirmDesc: string;
@@ -72,6 +94,7 @@ export interface TranslationDict {
     restTimer: string;
     restTitle: string;
     restSubtitle: string;
+    restNextSetReady: string;
     skipRest: string;
     plus30Sec: string;
     setCompleted: string;
@@ -83,8 +106,16 @@ export interface TranslationDict {
     actual: string;
     block: string;
     superset: string;
+    mainExercise: string;
+    accessoryExercise: string;
+    singleBlock: string;
+    supersetBlock: string;
+    stopwatchActive: string;
+    stopwatchPaused: string;
     finishModalTitle: string;
     finishModalDesc: string;
+    notesPlaceholder: string;
+    applyWeightsAndSave: string;
     sendCoachButton: string;
     shareStoryButton: string;
     workoutSavedSuccess: string;
@@ -92,6 +123,12 @@ export interface TranslationDict {
   program: {
     title: string;
     subtitle: string;
+    setupButton: string;
+    tabAll: string;
+    tabMkc1: string;
+    tabMkc2: string;
+    tabMkc3: string;
+    tabMkc4: string;
     microcycle1: string;
     microcycle2: string;
     microcycle3: string;
@@ -109,6 +146,8 @@ export interface TranslationDict {
   analytics: {
     title: string;
     subtitle: string;
+    tabWorkouts: string;
+    tabBody: string;
     toggleForecast: string;
     forecastEnabled: string;
     forecastDisabled: string;
@@ -138,6 +177,7 @@ export interface TranslationDict {
     muscleGain: string;
     sendReportToCoach: string;
     noMeasurementsYet: string;
+    totalChange: string;
   };
   settings: {
     title: string;
@@ -167,13 +207,22 @@ export interface TranslationDict {
     storyBotUsername: string;
     storyBotUsernameDesc: string;
     athleteProfile: string;
+    athleteProfileDesc: string;
     gender: string;
     genderMale: string;
     genderFemale: string;
     userAge: string;
+    testSound: string;
+    soundTestSuccess: string;
     backupAndData: string;
+    backupDesc: string;
     exportJson: string;
     importJson: string;
+    guideSectionTitle: string;
+    guideOpenInteractive: string;
+    guideReadSeparate: string;
+    demoLoadedToast: string;
+    resetSuccessToast: string;
     loadDemo: string;
     resetWorkouts: string;
     resetConfirm: string;

@@ -1,11 +1,13 @@
 "use client";
 
-import React from "react";
+import React, { useMemo } from "react";
 import { CheckCircle2, Circle, Flame, ArrowRight } from "lucide-react";
 import { useWorkoutStore } from "@/lib/store/useWorkoutStore";
 import { Dialog, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { useTranslation } from "@/lib/i18n";
+import { getLocalizedWarmupList } from "@/lib/i18n/exercises";
 
 export function WarmupModal() {
   const {
@@ -15,9 +17,21 @@ export function WarmupModal() {
     toggleWarmupItem,
     completeWarmupAndStart,
   } = useWorkoutStore();
+  const { t, language } = useTranslation();
 
-  const completedCount = warmupItems.filter((i) => i.completed).length;
-  const totalCount = warmupItems.length;
+  const localizedItems = useMemo(() => {
+    const list = getLocalizedWarmupList(language);
+    return list.map((item) => {
+      const stored = warmupItems.find((w) => w.id === item.id);
+      return {
+        ...item,
+        completed: stored?.completed ?? false,
+      };
+    });
+  }, [warmupItems, language]);
+
+  const completedCount = localizedItems.filter((i) => i.completed).length;
+  const totalCount = localizedItems.length;
 
   return (
     <Dialog open={isWarmupModalOpen} onOpenChange={closeWarmupModal}>
@@ -25,25 +39,25 @@ export function WarmupModal() {
         <DialogTitle onClose={closeWarmupModal}>
           <div className="flex items-center gap-2">
             <Flame className="h-6 w-6 text-amber-400" />
-            <span>Суставная разминка</span>
+            <span>{t.workout.warmupTitle}</span>
           </div>
         </DialogTitle>
         <DialogDescription>
-          Подготовьте связки и сердечно-сосудистую систему перед взрывной работой СМТ.
+          {t.workout.warmupDesc}
         </DialogDescription>
       </DialogHeader>
 
       <div className="space-y-4 my-2">
         <div className="flex items-center justify-between text-xs text-slate-300">
-          <span>Готовность разминки</span>
+          <span>{t.workout.warmup}</span>
           <span className="font-semibold text-emerald-400">
-            {completedCount} из {totalCount}
+            {completedCount} / {totalCount}
           </span>
         </div>
         <Progress value={completedCount} max={totalCount} />
 
         <div className="space-y-2.5 max-h-[50vh] overflow-y-auto pr-1">
-          {warmupItems.map((item) => (
+          {localizedItems.map((item) => (
             <div
               key={item.id}
               onClick={() => toggleWarmupItem(item.id)}
@@ -82,7 +96,7 @@ export function WarmupModal() {
           className="w-full flex items-center justify-center gap-2 font-bold px-3 py-3 text-xs sm:text-sm text-center leading-snug"
           onClick={completeWarmupAndStart}
         >
-          <span>Завершить разминку и начать тренировку</span>
+          <span>{t.workout.finishAndStart}</span>
           <ArrowRight className="h-4 w-4 shrink-0" />
         </Button>
       </div>

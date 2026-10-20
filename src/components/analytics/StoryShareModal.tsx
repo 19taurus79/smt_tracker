@@ -8,6 +8,7 @@ import { BodyMeasurement } from "@/types/body";
 import { formatTime, formatDate } from "@/lib/utils";
 import { Download, Sparkles, Check, Zap, Trophy, Flame, Activity, Award, Dumbbell } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
+import { getLocalizedExerciseName } from "@/lib/i18n/exercises";
 import { useSettingsStore } from "@/lib/store/useSettingsStore";
 import { useWorkoutStore } from "@/lib/store/useWorkoutStore";
 import { calculateAthleticScore } from "@/lib/scoring/athleticScore";
@@ -79,7 +80,7 @@ export function StoryShareModal({
       const reps = ex.sets[0]?.actualReps ?? ex.sets[0]?.targetReps ?? 10;
       const totalSets = ex.sets.filter((s) => s.completed).length || ex.sets.length;
       return {
-        name: ex.name,
+        name: getLocalizedExerciseName(ex.exerciseId || ex.name, language, false),
         detail: `${weight} ${t.common.kg} × ${reps} ${t.common.reps} (${totalSets} ${t.common.sets})`,
         weight,
         reps,
@@ -288,7 +289,7 @@ export function StoryShareModal({
       if (latestMeasurement?.waistCm) {
         ctx.fillStyle = "#38bdf8";
         ctx.font = "900 68px system-ui, -apple-system, sans-serif";
-        ctx.fillText(`${latestMeasurement.waistCm} см`, 560, 630);
+        ctx.fillText(`${latestMeasurement.waistCm} ${t.common.cm}`, 560, 630);
         ctx.fillStyle = "#94a3b8";
         ctx.font = "600 28px system-ui, -apple-system, sans-serif";
         ctx.fillText(labels.waist, 560, 675);

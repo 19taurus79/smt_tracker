@@ -1,12 +1,14 @@
 import { WorkoutSession } from "@/types/smt";
-import { BodyMeasurement } from "@/types/body";
+import { BodyMeasurement, AppLanguage } from "@/types/body";
 import { formatTime, formatDate } from "@/lib/utils";
+import { getLocalizedExerciseName, formatWorkoutTitle } from "@/lib/i18n/exercises";
 
 export interface CoachReportPayload {
   workout: WorkoutSession;
   traineeName?: string;
   weightIncrement?: number;
   latestMeasurement?: BodyMeasurement;
+  language?: AppLanguage;
 }
 
 export function generateWorkoutCoachMessage({
@@ -14,59 +16,112 @@ export function generateWorkoutCoachMessage({
   traineeName,
   weightIncrement = 2.5,
   latestMeasurement,
+  language = "uk",
 }: CoachReportPayload): string {
+  const localeStr = language === "uk" ? "uk-UA" : language === "en" ? "en-US" : "ru-RU";
   const dateStr = workout.completedAt
-    ? formatDate(workout.completedAt)
-    : new Date().toLocaleDateString("ru-RU");
+    ? new Date(workout.completedAt).toLocaleDateString(localeStr, {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      })
+    : new Date().toLocaleDateString(localeStr);
 
   const durationStr = formatTime(workout.durationSeconds || 0);
-  const tonnageStr = workout.tonnageKg ? `${workout.tonnageKg.toLocaleString("ru-RU")} кг` : "—";
-  const powerStr = workout.powerKgPerMin ? `${workout.powerKgPerMin} кг/мин` : "—";
+  const kgUnit = language === "en" ? "kg" : "кг";
+  const minUnit = language === "en" ? "min" : "хв";
+  const cmUnit = language === "en" ? "cm" : "см";
+  const setsUnit = language === "en" ? "sets" : language === "ru" ? "подх" : "підх";
+
+  const tonnageStr = workout.tonnageKg ? `${workout.tonnageKg.toLocaleString(localeStr)} ${kgUnit}` : "—";
+  const powerStr = workout.powerKgPerMin ? `${workout.powerKgPerMin} ${kgUnit}/${minUnit}` : "—";
+  const workoutTitleStr = formatWorkoutTitle(workout.workoutNumber, workout.microcycle, workout.week, language);
+
+  const headerTitle =
+    language === "en"
+      ? "🔥 *SMT: WORKOUT REPORT*"
+      : language === "ru"
+      ? "🔥 *СМТ: ОТЧЕТ О ТРЕНИРОВКЕ*"
+      : "🔥 *СМТ: ЗВІТ ПРО ТРЕНУВАННЯ*";
+
+  const athleteLabel = language === "en" ? "👤 *Athlete:*" : language === "ru" ? "👤 *Атлет:*" : "👤 *Атлет:*";
+  const dateLabel = language === "en" ? "📅 *Date:*" : language === "ru" ? "📅 *Дата:*" : "📅 *Дата:*";
+  const sessionLabel = language === "en" ? "🏋️ *Session:*" : language === "ru" ? "🏋️ *Тренировка:*" : "🏋️ *Тренування:*";
+  const timeLabel = language === "en" ? "⏱ *Duration:*" : language === "ru" ? "⏱ *Время:*" : "⏱ *Час:*";
+  const tonnageLabel = language === "en" ? "⚡ *Tonnage:*" : language === "ru" ? "⚡ *Тоннаж:*" : "⚡ *Тоннаж:*";
+  const powerLabel = language === "en" ? "*Power:*" : language === "ru" ? "*Мощность:*" : "*Потужність:*";
+  const weightsLabel =
+    language === "en"
+      ? "📋 *Executed Weights:*"
+      : language === "ru"
+      ? "📋 *Выполненные веса:*"
+      : "📋 *Виконані ваги:*";
 
   const lines: string[] = [
-    "🔥 *СМТ-1: ОТЧЕТ О ТРЕНИРОВКЕ*",
-    traineeName ? `👤 *Атлет:* ${traineeName}` : "",
-    `📅 *Дата:* ${dateStr}`,
-    `🏋️ *Тренировка:* #${workout.workoutNumber} (МКЦ-${workout.microcycle}, Неделя ${workout.week})`,
-    `⏱ *Время:* ${durationStr}`,
-    `⚡ *Тоннаж:* ${tonnageStr} | *Мощность:* ${powerStr}`,
+    headerTitle,
+    traineeName ? `${athleteLabel} ${traineeName}` : "",
+    `${dateLabel} ${dateStr}`,
+    `${sessionLabel} ${workoutTitleStr}`,
+    `${timeLabel} ${durationStr}`,
+    `${tonnageLabel} ${tonnageStr} | ${powerLabel} ${powerStr}`,
     "",
-    "📋 *Выполненные веса:*",
+    weightsLabel,
   ];
 
   for (const ss of workout.supersets) {
     if (ss.exercises.length === 1) {
       const ex = ss.exercises[0];
+      const exName = getLocalizedExerciseName(ex.exerciseId || ex.name, language, false);
       const weight = ex.sets[0]?.actualWeight ?? ex.sets[0]?.targetWeight ?? 0;
       const reps = ex.sets[0]?.actualReps ?? ex.sets[0]?.targetReps ?? 10;
       const setsCount = ex.sets.filter((s) => s.completed).length || ex.sets.length;
-      lines.push(`• *${ex.name}:* ${weight} кг × ${reps} (${setsCount} подх)`);
+      lines.push(`• *${exName}:* ${weight} ${kgUnit} × ${reps} (${setsCount} ${setsUnit})`);
     } else {
-      lines.push(`• *${ss.label}:*`);
+      const ssNum = ss.label.replace(/[^0-9]/g, "");
+      const ssLabel = language === "en" ? `Superset ${ssNum}` : ss.label;
+      lines.push(`• *${ssLabel}:*`);
       for (const ex of ss.exercises) {
+        const exName = getLocalizedExerciseName(ex.exerciseId || ex.name, language, false);
         const weight = ex.sets[0]?.actualWeight ?? ex.sets[0]?.targetWeight ?? 0;
         const reps = ex.sets[0]?.actualReps ?? ex.sets[0]?.targetReps ?? 10;
-        lines.push(`   └ ${ex.name}: ${weight} кг × ${reps}`);
+        lines.push(`   └ ${exName}: ${weight} ${kgUnit} × ${reps}`);
       }
     }
   }
 
   if (weightIncrement > 0) {
+    const incLabel =
+      language === "en"
+        ? `📈 *Auto-increment next cycle:* +${weightIncrement} ${kgUnit}`
+        : language === "ru"
+        ? `📈 *Авто-прибавка на следующий цикл:* +${weightIncrement} ${kgUnit}`
+        : `📈 *Авто-прибавка на наступний цикл:* +${weightIncrement} ${kgUnit}`;
     lines.push("");
-    lines.push(`📈 *Авто-прибавка на следующий цикл:* +${weightIncrement} кг`);
+    lines.push(incLabel);
   }
 
   if (latestMeasurement) {
+    const bodyHeader =
+      language === "en"
+        ? "📏 *Athlete Current Measurements:*"
+        : language === "ru"
+        ? "📏 *Текущие замеры атлета:*"
+        : "📏 *Поточні заміри атлета:*";
+    const weightLabel = language === "en" ? "• Body Weight:" : language === "ru" ? "• Вес тела:" : "• Вага тіла:";
+    const waistLabel = language === "en" ? "• Waist:" : language === "ru" ? "• Талия:" : "• Талія:";
+    const bicepsLabel = language === "en" ? "• Biceps:" : language === "ru" ? "• Бицепс:" : "• Біцепс:";
+
     lines.push("");
-    lines.push("📏 *Текущие замеры атлета:*");
-    lines.push(`• Вес тела: ${latestMeasurement.weightKg} кг`);
-    if (latestMeasurement.waistCm) lines.push(`• Талия: ${latestMeasurement.waistCm} см`);
-    if (latestMeasurement.bicepsCm) lines.push(`• Бицепс: ${latestMeasurement.bicepsCm} см`);
+    lines.push(bodyHeader);
+    lines.push(`${weightLabel} ${latestMeasurement.weightKg} ${kgUnit}`);
+    if (latestMeasurement.waistCm) lines.push(`${waistLabel} ${latestMeasurement.waistCm} ${cmUnit}`);
+    if (latestMeasurement.bicepsCm) lines.push(`${bicepsLabel} ${latestMeasurement.bicepsCm} ${cmUnit}`);
   }
 
   if (workout.notes) {
+    const commentLabel = language === "en" ? "💬 *Notes:*" : language === "ru" ? "💬 *Комментарий:*" : "💬 *Коментар:*";
     lines.push("");
-    lines.push(`💬 *Комментарий:* ${workout.notes}`);
+    lines.push(`${commentLabel} ${workout.notes}`);
   }
 
   return lines.filter(Boolean).join("\n");
@@ -75,13 +130,34 @@ export function generateWorkoutCoachMessage({
 export function generateMeasurementCoachMessage(
   measurement: BodyMeasurement,
   previous?: BodyMeasurement,
-  traineeName?: string
+  traineeName?: string,
+  language: AppLanguage = "uk"
 ): string {
+  const localeStr = language === "uk" ? "uk-UA" : language === "en" ? "en-US" : "ru-RU";
   const dateStr = formatDate(measurement.date);
+  const kgUnit = language === "en" ? "kg" : "кг";
+  const cmUnit = language === "en" ? "cm" : "см";
+
+  const headerTitle =
+    language === "en"
+      ? "📏 *SMT: BODY MEASUREMENTS REPORT*"
+      : language === "ru"
+      ? "📏 *СМТ: ОТЧЕТ О ЗАМЕРАХ ТЕЛА*"
+      : "📏 *СМТ: ЗВІТ ПРО ЗАМІРИ ТІЛА*";
+
+  const athleteLabel = language === "en" ? "👤 *Athlete:*" : language === "ru" ? "👤 *Атлет:*" : "👤 *Атлет:*";
+  const dateLabel = language === "en" ? "📅 *Date:*" : language === "ru" ? "📅 *Дата:*" : "📅 *Дата:*";
+  const weightLabel = language === "en" ? "⚖️ *Body Weight:*" : language === "ru" ? "⚖️ *Вес тела:*" : "⚖️ *Вага тіла:*";
+  const waistLabel = language === "en" ? "🎯 *Waist:*" : language === "ru" ? "🎯 *Талия:*" : "🎯 *Талія:*";
+  const chestLabel = language === "en" ? "💪 *Chest:*" : language === "ru" ? "💪 *Грудь:*" : "💪 *Груди:*";
+  const bicepsLabel = language === "en" ? "💪 *Biceps:*" : language === "ru" ? "💪 *Бицепс:*" : "💪 *Біцепс:*";
+  const thighLabel = language === "en" ? "🦵 *Thigh:*" : language === "ru" ? "🦵 *Бедро:*" : "🦵 *Стегно:*";
+  const noteLabel = language === "en" ? "💬 *Notes:*" : language === "ru" ? "💬 *Заметка:*" : "💬 *Нотатка:*";
+
   const lines: string[] = [
-    "📏 *СМТ-1: ОТЧЕТ О ЗАМЕРАХ ТЕЛА*",
-    traineeName ? `👤 *Атлет:* ${traineeName}` : "",
-    `📅 *Дата:* ${dateStr}`,
+    headerTitle,
+    traineeName ? `${athleteLabel} ${traineeName}` : "",
+    `${dateLabel} ${dateStr}`,
     "",
   ];
 
@@ -90,8 +166,8 @@ export function generateMeasurementCoachMessage(
       ? Math.round((measurement.weightKg - previous.weightKg) * 10) / 10
       : null;
   const weightDeltaStr =
-    weightDelta !== null ? (weightDelta > 0 ? ` (+${weightDelta} кг)` : ` (${weightDelta} кг)`) : "";
-  lines.push(`⚖️ *Вес тела:* ${measurement.weightKg} кг${weightDeltaStr}`);
+    weightDelta !== null ? (weightDelta > 0 ? ` (+${weightDelta} ${kgUnit})` : ` (${weightDelta} ${kgUnit})`) : "";
+  lines.push(`${weightLabel} ${measurement.weightKg} ${kgUnit}${weightDeltaStr}`);
 
   if (measurement.waistCm) {
     const waistDelta =
@@ -99,25 +175,25 @@ export function generateMeasurementCoachMessage(
         ? Math.round((measurement.waistCm - previous.waistCm) * 10) / 10
         : null;
     const waistDeltaStr =
-      waistDelta !== null ? (waistDelta > 0 ? ` (+${waistDelta} см)` : ` (${waistDelta} см)`) : "";
-    lines.push(`🎯 *Талия:* ${measurement.waistCm} см${waistDeltaStr}`);
+      waistDelta !== null ? (waistDelta > 0 ? ` (+${waistDelta} ${cmUnit})` : ` (${waistDelta} ${cmUnit})`) : "";
+    lines.push(`${waistLabel} ${measurement.waistCm} ${cmUnit}${waistDeltaStr}`);
   }
 
   if (measurement.chestCm) {
-    lines.push(`💪 *Грудь:* ${measurement.chestCm} см`);
+    lines.push(`${chestLabel} ${measurement.chestCm} ${cmUnit}`);
   }
 
   if (measurement.bicepsCm) {
-    lines.push(`💪 *Бицепс:* ${measurement.bicepsCm} см`);
+    lines.push(`${bicepsLabel} ${measurement.bicepsCm} ${cmUnit}`);
   }
 
   if (measurement.thighCm) {
-    lines.push(`🦵 *Бедро:* ${measurement.thighCm} см`);
+    lines.push(`${thighLabel} ${measurement.thighCm} ${cmUnit}`);
   }
 
   if (measurement.notes) {
     lines.push("");
-    lines.push(`💬 *Заметка:* ${measurement.notes}`);
+    lines.push(`${noteLabel} ${measurement.notes}`);
   }
 
   return lines.filter(Boolean).join("\n");

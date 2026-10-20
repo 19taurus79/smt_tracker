@@ -9,9 +9,10 @@ import { Badge } from "@/components/ui/badge";
 import { isTelegramWebApp, initTelegramWebApp } from "@/lib/tma/telegram";
 import { HelpModal } from "@/components/help/HelpModal";
 import { useTranslation } from "@/lib/i18n";
+import { formatWorkoutTitle } from "@/lib/i18n/exercises";
 
 export function TopHeader() {
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const { activeWorkoutId, workoutElapsedSeconds, workouts, isStopwatchRunning } =
     useWorkoutStore();
   const [inTelegram, setInTelegram] = useState(false);
@@ -47,7 +48,9 @@ export function TopHeader() {
               >
                 <Timer className="h-3.5 w-3.5" />
                 <span>{formatTime(workoutElapsedSeconds)}</span>
-                <span className="hidden sm:inline">({activeWorkout.title})</span>
+                <span className="hidden sm:inline">
+                  ({formatWorkoutTitle(activeWorkout.workoutNumber, activeWorkout.microcycle, activeWorkout.week, language)})
+                </span>
               </Link>
             )}
 

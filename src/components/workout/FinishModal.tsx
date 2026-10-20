@@ -24,6 +24,8 @@ import { Button } from "@/components/ui/button";
 import { calculateWorkoutTonnage, calculateWorkoutPower } from "@/lib/smt/calculator";
 import { StoryShareModal } from "@/components/analytics/StoryShareModal";
 import { generateWorkoutCoachMessage, shareToTelegramCoach } from "@/lib/coach/telegramCoach";
+import { useTranslation } from "@/lib/i18n";
+import { getLocalizedExerciseName } from "@/lib/i18n/exercises";
 
 interface FinishModalProps {
   open: boolean;
@@ -42,11 +44,11 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
   const { weightIncrementKg, soundEnabled, hapticsEnabled, coachTelegramUsername, traineeName } =
     useSettingsStore();
   const { measurements } = useBodyStore();
+  const { t, language } = useTranslation();
 
   const [notes, setNotes] = useState("");
   // Proposed increments per exercise ID: { [exerciseId]: incrementKg }
   const [exerciseIncrements, setExerciseIncrements] = useState<Record<string, number>>({});
-  // Фиксируем время в момент открытия модалки, чтобы мощность не падала во время редактирования
   const [frozenDuration, setFrozenDuration] = useState<number>(0);
   const [sendToCoach, setSendToCoach] = useState(false);
   const [isStoryModalOpen, setIsStoryModalOpen] = useState(false);
@@ -106,43 +108,35 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
     return list;
   }, [currentWorkout]);
 
-  // Initialize proposals when modal opens
+  // Pre-fill increment recommendations
   useEffect(() => {
-    if (open) {
+    if (open && uniqueExercises.length > 0) {
       const initial: Record<string, number> = {};
-      uniqueExercises.forEach((ex) => {
-        // Propose standard increment (+2.5 kg or user setting) if all sets were completed cleanly
+      for (const ex of uniqueExercises) {
         initial[ex.id] = ex.allCompleted ? weightIncrementKg : 0;
-      });
+      }
       setExerciseIncrements(initial);
 
-      try {
-        confetti({
-          particleCount: isEndOfMicrocycle ? 120 : 80,
-          spread: 80,
-          origin: { y: 0.6 },
-        });
-      } catch {
-        // ignore
-      }
+      // Trigger celebratory confetti
+      confetti({
+        particleCount: 75,
+        spread: 60,
+        origin: { y: 0.65 },
+        colors: ["#10b981", "#38bdf8", "#f59e0b", "#ec4899"],
+      });
     }
-  }, [open, uniqueExercises, weightIncrementKg, isEndOfMicrocycle]);
+  }, [open, uniqueExercises, weightIncrementKg]);
 
-  const handleToggleExerciseIncrement = (exerciseId: string, currentInc: number) => {
+  const toggleExerciseIncrement = (exerciseId: string, currentVal: number) => {
     setExerciseIncrements((prev) => ({
       ...prev,
-      [exerciseId]: currentInc > 0 ? 0 : weightIncrementKg,
-    }));
-  };
-
-  const handleChangeIncrementValue = (exerciseId: string, value: number) => {
-    setExerciseIncrements((prev) => ({
-      ...prev,
-      [exerciseId]: value,
+      [exerciseId]: prev[exerciseId] > 0 ? 0 : weightIncrementKg,
     }));
   };
 
   const handleComplete = () => {
+    if (!currentWorkout) return;
+
     finishWorkout(
       notes,
       exerciseIncrements,
@@ -165,6 +159,7 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
         traineeName,
         weightIncrement: weightIncrementKg,
         latestMeasurement: measurements[0],
+        language,
       });
       shareToTelegramCoach(msg, coachTelegramUsername);
     }
@@ -183,15 +178,15 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
             <Trophy className="h-6 w-6 text-amber-400" />
             <span>
               {isEndOfMicrocycle
-                ? `🎉 Микроцикл ${currentWorkout.microcycle} завершен!`
-                : "Тренировка завершена!"}
+                ? `🎉 ${t.common.microcycle} ${currentWorkout.microcycle} ${t.program.statusCompleted}!`
+                : t.workout.finishModalTitle}
             </span>
           </div>
         </DialogTitle>
         <DialogDescription>
           {isEndOfMicrocycle
-            ? `Поздравляем с окончанием 9 тренировок МКЦ-${currentWorkout.microcycle}! Скорректируйте предложенные веса на следующий микроцикл:`
-            : "Отличная работа по СМТ-1. Проверьте результаты и выберите прибавки к весам:"}
+            ? `${t.workout.finishModalDesc} ${t.common.microcycle}-${currentWorkout.microcycle}.`
+            : t.workout.finishModalDesc}
         </DialogDescription>
       </DialogHeader>
 
@@ -200,13 +195,13 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
         <div className="grid grid-cols-3 gap-2.5">
           <div className="flex flex-col items-center justify-center p-3 rounded-2xl bg-white/5 border border-white/10 text-center">
             <Dumbbell className="h-5 w-5 text-emerald-400 mb-1" />
-            <span className="text-[11px] text-slate-400 font-medium">Тоннаж</span>
-            <span className="text-base font-black text-white">{tonnage} кг</span>
+            <span className="text-[11px] text-slate-400 font-medium">{t.common.tonnage}</span>
+            <span className="text-base font-black text-white">{tonnage} {t.common.kg}</span>
           </div>
 
           <div className="flex flex-col items-center justify-center p-3 rounded-2xl bg-white/5 border border-white/10 text-center">
             <Clock className="h-5 w-5 text-cyan-400 mb-1" />
-            <span className="text-[11px] text-slate-400 font-medium">Время</span>
+            <span className="text-[11px] text-slate-400 font-medium">{t.common.time}</span>
             <span className="text-base font-black text-white">
               {formatTime(effectiveDuration)}
             </span>
@@ -214,33 +209,30 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
 
           <div className="flex flex-col items-center justify-center p-3 rounded-2xl bg-white/5 border border-white/10 text-center">
             <Zap className="h-5 w-5 text-amber-400 mb-1" />
-            <span className="text-[11px] text-slate-400 font-medium">Мощность</span>
+            <span className="text-[11px] text-slate-400 font-medium">{t.common.density}</span>
             <span className="text-base font-black text-white">
-              {power} <span className="text-[10px] text-slate-400 font-normal">кг/м</span>
+              {power} <span className="text-[10px] text-slate-400 font-normal">{t.common.kg}/{t.common.min}</span>
             </span>
           </div>
         </div>
 
-        {/* Progression Proposal Section (User Controls Which Weights Increase) */}
+        {/* Progression Proposal Section */}
         <div className="rounded-2xl border border-emerald-500/30 bg-emerald-950/20 p-3.5 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-emerald-400" />
               <span className="font-bold text-xs sm:text-sm text-white">
-                {isEndOfMicrocycle
-                  ? "Предложение прибавки на следующий микроцикл"
+                {language === "uk"
+                  ? "Пропозиція збільшення робочих ваг"
+                  : language === "en"
+                  ? "Weight Progression Proposal"
                   : "Предложение прибавки к весам"}
               </span>
             </div>
             <span className="text-[10px] text-emerald-400 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-              Выбор за вами
+              +{weightIncrementKg} {t.common.kg}
             </span>
           </div>
-
-          <p className="text-[11px] text-slate-300 leading-relaxed">
-            Отметьте галочками упражнения, для которых хотите применить прибавку, либо измените шаг
-            веса индивидуально:
-          </p>
 
           <div className="space-y-2">
             {uniqueExercises.map((ex) => {
@@ -251,52 +243,42 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
               return (
                 <div
                   key={ex.id}
-                  className={`p-2.5 rounded-xl border transition-all text-xs ${
+                  onClick={() => toggleExerciseIncrement(ex.id, currentInc)}
+                  className={`flex items-center justify-between p-2.5 rounded-xl border transition-all cursor-pointer select-none ${
                     willIncrease
-                      ? "bg-slate-900/90 border-emerald-500/40"
-                      : "bg-slate-950/60 border-white/5 opacity-70"
+                      ? "bg-emerald-950/40 border-emerald-500/40 text-white"
+                      : "bg-slate-900/60 border-white/5 text-slate-400 hover:border-white/15"
                   }`}
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <label className="flex items-center gap-2 cursor-pointer select-none min-w-0">
-                      <input
-                        type="checkbox"
-                        checked={willIncrease}
-                        onChange={() => handleToggleExerciseIncrement(ex.id, currentInc)}
-                        className="h-4 w-4 rounded border-white/20 bg-slate-950 text-emerald-500 focus:ring-0"
-                      />
-                      <div className="truncate">
-                        <span className="font-bold text-white block truncate">{ex.name}</span>
-                        <span className="text-[10px] text-slate-400">
-                          {willIncrease ? (
-                            <span className="text-emerald-300 font-semibold">
-                              {ex.currentWeight} кг → {nextWeight} кг (+{currentInc} кг)
-                            </span>
-                          ) : (
-                            <span>{ex.currentWeight} кг (без изменений)</span>
-                          )}
-                        </span>
-                      </div>
-                    </label>
-
-                    {/* Quick increment buttons */}
-                    <div className="flex items-center gap-1 shrink-0">
-                      {[1.25, 2.5, 5.0].map((step) => (
-                        <button
-                          key={step}
-                          type="button"
-                          onClick={() => handleChangeIncrementValue(ex.id, step)}
-                          className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition-all ${
-                            currentInc === step
-                              ? "bg-emerald-500 text-slate-950"
-                              : "bg-white/5 text-slate-400 hover:text-white hover:bg-white/10"
-                          }`}
-                        >
-                          +{step}
-                        </button>
-                      ))}
+                  <div className="flex items-center gap-2.5">
+                    <input
+                      type="checkbox"
+                      checked={willIncrease}
+                      onChange={() => {}}
+                      className="h-4 w-4 rounded border-white/20 bg-slate-900 text-emerald-500 focus:ring-0 cursor-pointer"
+                    />
+                    <div>
+                      <span className="font-bold text-xs block text-white">
+                        {getLocalizedExerciseName(ex.name, language, false)}
+                      </span>
+                      <span className="text-[10px] text-slate-400">
+                        {ex.currentWeight} {t.common.kg} →{" "}
+                        <strong className={willIncrease ? "text-emerald-400 font-bold" : "text-slate-300"}>
+                          {nextWeight} {t.common.kg}
+                        </strong>
+                      </span>
                     </div>
                   </div>
+
+                  <span
+                    className={`text-xs font-bold px-2 py-0.5 rounded-lg ${
+                      willIncrease
+                        ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                        : "text-slate-500"
+                    }`}
+                  >
+                    {willIncrease ? `+${currentInc} ${t.common.kg}` : `0 ${t.common.kg}`}
+                  </span>
                 </div>
               );
             })}
@@ -306,13 +288,13 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
         {/* Notes */}
         <div className="space-y-1.5">
           <label className="text-xs font-semibold text-slate-300">
-            Заметки к тренировке (самочувствие, темп, отдых 30с)
+            {t.body.notes}
           </label>
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={2}
-            placeholder="Например: все круги суперсетов закрыты на отлично, отдых выдержан..."
+            placeholder={t.workout.notesPlaceholder}
             className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-emerald-500"
           />
         </div>
@@ -329,11 +311,15 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
             <div>
               <span className="text-xs font-bold text-white flex items-center gap-1.5">
                 <Send className="h-3.5 w-3.5 text-cyan-400" />
-                <span>Отправить отчет тренеру в Telegram</span>
+                <span>{t.workout.sendCoachButton}</span>
               </span>
               <span className="text-[10px] text-slate-400 block mt-0.5">
                 {coachTelegramUsername
-                  ? `Чат с ${coachTelegramUsername.startsWith("@") ? coachTelegramUsername : "@" + coachTelegramUsername}`
+                  ? `@${coachTelegramUsername.replace("@", "")}`
+                  : language === "uk"
+                  ? "У Telegram відкриється вибір контакту"
+                  : language === "en"
+                  ? "Telegram contact picker will open"
                   : "В Telegram откроется выбор контакта"}
               </span>
             </div>
@@ -347,7 +333,7 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
             onClick={() => setIsStoryModalOpen(true)}
           >
             <Camera className="h-3.5 w-3.5 mr-1 text-pink-400" />
-            <span>Stories Instagram</span>
+            <span>{t.workout.shareStoryButton}</span>
           </Button>
         </div>
       </div>
@@ -360,7 +346,7 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
           onClick={handleComplete}
         >
           <CheckCircle className="h-4 w-4 shrink-0" />
-          <span>Применить выбранные веса и сохранить</span>
+          <span>{t.workout.applyWeightsAndSave}</span>
         </Button>
       </div>
 

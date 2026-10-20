@@ -7,10 +7,15 @@ import { SetRow } from "./SetRow";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { useWorkoutStore } from "@/lib/store/useWorkoutStore";
 import { useSettingsStore } from "@/lib/store/useSettingsStore";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "@/lib/i18n";
+import {
+  getLocalizedExerciseName,
+  formatSupersetLabel,
+  formatSupersetType,
+} from "@/lib/i18n/exercises";
 
 interface SupersetCardProps {
   workoutId: string;
@@ -20,6 +25,7 @@ interface SupersetCardProps {
 export function SupersetCard({ workoutId, superset }: SupersetCardProps) {
   const { activeWorkoutId, workouts, completeSupersetRound, updateSet } = useWorkoutStore();
   const { defaultRestSeconds, soundEnabled, hapticsEnabled } = useSettingsStore();
+  const { t, language } = useTranslation();
 
   const currentWorkout = workouts.find((w) => w.id === workoutId);
   const isActive = activeWorkoutId === workoutId && currentWorkout?.status === "in_progress";
@@ -62,10 +68,12 @@ export function SupersetCard({ workoutId, superset }: SupersetCardProps) {
               )}
             </div>
             <div>
-              <CardTitle className="text-base sm:text-lg">{superset.label}</CardTitle>
+              <CardTitle className="text-base sm:text-lg">
+                {formatSupersetLabel(superset.label, language)}
+              </CardTitle>
               {superset.description && (
                 <p className="text-xs text-slate-400 mt-0.5">
-                  {superset.description}
+                  {formatSupersetType(isSingle, language)}
                 </p>
               )}
             </div>
@@ -75,7 +83,7 @@ export function SupersetCard({ workoutId, superset }: SupersetCardProps) {
             variant={isAllDone ? "success" : isSingle ? "secondary" : "default"}
             className="text-xs font-bold shrink-0"
           >
-            {isSingle ? "Одиночный блок" : "Суперсет"} • {completedSets}/{totalSets}
+            {formatSupersetType(isSingle, language)} • {completedSets}/{totalSets}
           </Badge>
         </div>
 
@@ -89,19 +97,19 @@ export function SupersetCard({ workoutId, superset }: SupersetCardProps) {
                 </span>
                 <div>
                   <span className="font-bold text-white text-xs block truncate max-w-[140px] sm:max-w-none">
-                    {ex1.name}
+                    {getLocalizedExerciseName(ex1.name, language, false)}
                   </span>
                   <span className="text-[10px] text-emerald-400">
-                    Основное (База 40%)
+                    {t.workout.mainExercise}
                   </span>
                 </div>
               </div>
               <div className="text-right">
                 <span className="text-sm font-black text-emerald-300">
-                  {ex1.sets[0]?.targetWeight} кг
+                  {ex1.sets[0]?.targetWeight} {t.common.kg}
                 </span>
                 <span className="text-[10px] text-slate-400 block">
-                  × {ex1.sets[0]?.targetReps} повт
+                  × {ex1.sets[0]?.targetReps} {t.common.reps}
                 </span>
               </div>
             </div>
@@ -113,19 +121,19 @@ export function SupersetCard({ workoutId, superset }: SupersetCardProps) {
                 </span>
                 <div>
                   <span className="font-bold text-white text-xs block truncate max-w-[140px] sm:max-w-none">
-                    {ex2.name}
+                    {getLocalizedExerciseName(ex2.name, language, false)}
                   </span>
                   <span className="text-[10px] text-cyan-400">
-                    Подсобка (30%)
+                    {t.workout.accessoryExercise}
                   </span>
                 </div>
               </div>
               <div className="text-right">
                 <span className="text-sm font-black text-cyan-300">
-                  {ex2.sets[0]?.targetWeight} кг
+                  {ex2.sets[0]?.targetWeight} {t.common.kg}
                 </span>
                 <span className="text-[10px] text-slate-400 block">
-                  × {ex2.sets[0]?.targetReps} повт
+                  × {ex2.sets[0]?.targetReps} {t.common.reps}
                 </span>
               </div>
             </div>
@@ -156,6 +164,27 @@ export function SupersetCard({ workoutId, superset }: SupersetCardProps) {
               const set2 = ex2.sets[roundIdx];
               const isRoundDone = !!(set1?.completed && set2?.completed);
 
+              const roundHeader =
+                language === "uk"
+                  ? `Коло ${roundNum} з ${roundCount}`
+                  : language === "en"
+                  ? `Round ${roundNum} of ${roundCount}`
+                  : `Круг ${roundNum} из ${roundCount}`;
+
+              const roundFlowNotice =
+                language === "uk"
+                  ? `1А → 1Б одразу без відпочинку • потім відпочинок ${defaultRestSeconds}с`
+                  : language === "en"
+                  ? `1A → 1B immediately • then ${defaultRestSeconds}s rest`
+                  : `1А → 1Б сразу без отдыха • затем отдых ${defaultRestSeconds}с`;
+
+              const transitionText =
+                language === "uk"
+                  ? "Одразу без відпочинку переходимо до 1Б"
+                  : language === "en"
+                  ? "Switch to 1B immediately without rest"
+                  : "Сразу без отдыха переходим к 1Б";
+
               return (
                 <div
                   key={`round-${roundIdx}`}
@@ -170,10 +199,10 @@ export function SupersetCard({ workoutId, superset }: SupersetCardProps) {
                   <div className="flex items-center justify-between text-xs font-bold">
                     <span className="flex items-center gap-1.5 text-white">
                       <Zap className="h-4 w-4 text-amber-400" />
-                      <span>Круг {roundNum} из {roundCount}</span>
+                      <span>{roundHeader}</span>
                     </span>
                     <span className="text-[11px] text-amber-400/90 font-semibold flex items-center gap-1">
-                      1А → 1Б сразу без отдыха • затем отдых 30с
+                      {roundFlowNotice}
                     </span>
                   </div>
 
@@ -186,10 +215,10 @@ export function SupersetCard({ workoutId, superset }: SupersetCardProps) {
                         </span>
                         <div className="truncate">
                           <span className="font-bold text-white text-xs block truncate">
-                            {ex1.name}
+                            {getLocalizedExerciseName(ex1.name, language, false)}
                           </span>
                           <span className="text-[10px] text-emerald-400">
-                            План: {set1.targetWeight} кг × {set1.targetReps}
+                            {t.workout.target}: {set1.targetWeight} {t.common.kg} × {set1.targetReps}
                           </span>
                         </div>
                       </div>
@@ -210,7 +239,7 @@ export function SupersetCard({ workoutId, superset }: SupersetCardProps) {
                             onFocus={(e) => e.target.select()}
                             className="w-11 bg-transparent text-center text-xs font-bold text-white focus:outline-none"
                           />
-                          <span className="text-[10px] text-slate-500">кг</span>
+                          <span className="text-[10px] text-slate-500">{t.common.kg}</span>
                         </div>
 
                         <div className="flex items-center gap-1 bg-black/40 px-2 py-1 rounded-lg border border-white/5">
@@ -227,7 +256,7 @@ export function SupersetCard({ workoutId, superset }: SupersetCardProps) {
                             onFocus={(e) => e.target.select()}
                             className="w-8 bg-transparent text-center text-xs font-bold text-white focus:outline-none"
                           />
-                          <span className="text-[10px] text-slate-500">повт</span>
+                          <span className="text-[10px] text-slate-500">{t.common.reps}</span>
                         </div>
                       </div>
                     </div>
@@ -236,7 +265,7 @@ export function SupersetCard({ workoutId, superset }: SupersetCardProps) {
                   {/* Transition Indicator: No rest between 1A and 1B */}
                   <div className="flex items-center justify-center gap-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider py-0.5">
                     <ArrowDown className="h-3 w-3 text-cyan-400 animate-bounce" />
-                    <span>Сразу без отдыха переходим к 1Б</span>
+                    <span>{transitionText}</span>
                   </div>
 
                   {/* Exercise 1B in Round */}
@@ -248,10 +277,10 @@ export function SupersetCard({ workoutId, superset }: SupersetCardProps) {
                         </span>
                         <div className="truncate">
                           <span className="font-bold text-white text-xs block truncate">
-                            {ex2.name}
+                            {getLocalizedExerciseName(ex2.name, language, false)}
                           </span>
                           <span className="text-[10px] text-cyan-400">
-                            План: {set2.targetWeight} кг × {set2.targetReps}
+                            {t.workout.target}: {set2.targetWeight} {t.common.kg} × {set2.targetReps}
                           </span>
                         </div>
                       </div>
@@ -272,7 +301,7 @@ export function SupersetCard({ workoutId, superset }: SupersetCardProps) {
                             onFocus={(e) => e.target.select()}
                             className="w-11 bg-transparent text-center text-xs font-bold text-white focus:outline-none"
                           />
-                          <span className="text-[10px] text-slate-500">кг</span>
+                          <span className="text-[10px] text-slate-500">{t.common.kg}</span>
                         </div>
 
                         <div className="flex items-center gap-1 bg-black/40 px-2 py-1 rounded-lg border border-white/5">
@@ -289,7 +318,7 @@ export function SupersetCard({ workoutId, superset }: SupersetCardProps) {
                             onFocus={(e) => e.target.select()}
                             className="w-8 bg-transparent text-center text-xs font-bold text-white focus:outline-none"
                           />
-                          <span className="text-[10px] text-slate-500">повт</span>
+                          <span className="text-[10px] text-slate-500">{t.common.reps}</span>
                         </div>
                       </div>
                     </div>
@@ -298,7 +327,7 @@ export function SupersetCard({ workoutId, superset }: SupersetCardProps) {
                   {/* Single Unified Round Completion Button */}
                   <div
                     className={!isActive && !isRoundDone ? "cursor-not-allowed" : undefined}
-                    title={!isActive && !isRoundDone ? "Сначала нажмите «Начать тренировку», чтобы зачесть круг" : undefined}
+                    title={!isActive && !isRoundDone ? t.workout.cannotCompleteWithoutStart : undefined}
                   >
                     <Button
                       disabled={!isActive}
@@ -324,16 +353,34 @@ export function SupersetCard({ workoutId, superset }: SupersetCardProps) {
                       {isRoundDone ? (
                         <span className="flex items-center justify-center gap-1.5">
                           <Check className="h-3.5 w-3.5 shrink-0" />
-                          <span>Круг {roundNum} выполнен (нажмите для отмены)</span>
+                          <span>
+                            {language === "uk"
+                              ? `Коло ${roundNum} виконано (натисніть для скасування)`
+                              : language === "en"
+                              ? `Round ${roundNum} done (click to undo)`
+                              : `Круг ${roundNum} выполнен (нажмите для отмены)`}
+                          </span>
                         </span>
                       ) : !isActive ? (
                         <span className="flex items-center justify-center gap-1.5 text-slate-500">
-                          <span>Завершить Круг {roundNum} (нажмите «Начать тренировку»)</span>
+                          <span>
+                            {language === "uk"
+                              ? `Завершити Коло ${roundNum} (натисніть «Почати тренування»)`
+                              : language === "en"
+                              ? `Finish Round ${roundNum} (press 'Start Workout')`
+                              : `Завершить Круг ${roundNum} (нажмите «Начать тренировку»)`}
+                          </span>
                         </span>
                       ) : (
                         <span className="flex items-center justify-center gap-1.5">
                           <Check className="h-3.5 w-3.5 shrink-0" />
-                          <span>Завершить Круг {roundNum} (1А + 1Б) → Отдых {defaultRestSeconds}с</span>
+                          <span>
+                            {language === "uk"
+                              ? `Завершити Коло ${roundNum} (1А + 1Б) → Відпочинок ${defaultRestSeconds}с`
+                              : language === "en"
+                              ? `Finish Round ${roundNum} (1A + 1B) → Rest ${defaultRestSeconds}s`
+                              : `Завершить Круг ${roundNum} (1А + 1Б) → Отдых ${defaultRestSeconds}с`}
+                          </span>
                         </span>
                       )}
                     </Button>

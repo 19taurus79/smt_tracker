@@ -9,6 +9,11 @@ import { formatTime } from "@/lib/utils";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "@/lib/i18n";
+import {
+  getLocalizedExerciseName,
+  formatWorkoutTitle,
+} from "@/lib/i18n/exercises";
 
 interface WorkoutCardProps {
   workout: WorkoutSession;
@@ -16,18 +21,9 @@ interface WorkoutCardProps {
   onOpenReport?: (workout: WorkoutSession) => void;
 }
 
-function getShortExerciseName(name: string): string {
-  if (name.includes("узким")) return "Жим узким";
-  if (name.includes("лежа")) return "Жим лежа";
-  if (name.includes("Подтягивания") || name.includes("тяга")) return "Подтягивания";
-  if (name.includes("бицепс")) return "Бицепс";
-  if (name.includes("Приседания")) return "Присед";
-  if (name.includes("Армейский") || name.includes("стоя")) return "Жим стоя";
-  return name.split(" ")[0];
-}
-
 export function WorkoutCard({ workout, onStart, onOpenReport }: WorkoutCardProps) {
-  const { startWorkout, setViewingWorkoutId, activeWorkoutId } = useWorkoutStore();
+  const { setViewingWorkoutId, activeWorkoutId } = useWorkoutStore();
+  const { t, language } = useTranslation();
 
   const isCurrentActive = activeWorkoutId === workout.id;
   const isCompleted = workout.status === "completed";
@@ -50,10 +46,15 @@ export function WorkoutCard({ workout, onStart, onOpenReport }: WorkoutCardProps
             </span>
             <div>
               <h4 className="text-sm sm:text-base font-bold text-white leading-tight">
-                {workout.title}
+                {formatWorkoutTitle(
+                  workout.workoutNumber,
+                  workout.microcycle,
+                  workout.week,
+                  language
+                )}
               </h4>
               <p className="text-[10px] sm:text-[11px] text-slate-400">
-                Микроцикл {workout.microcycle} • Неделя {workout.week}
+                {t.common.microcycle} {workout.microcycle} • {t.common.week} {workout.week}
               </p>
             </div>
           </div>
@@ -69,16 +70,16 @@ export function WorkoutCard({ workout, onStart, onOpenReport }: WorkoutCardProps
             className="text-[10px] sm:text-xs shrink-0"
           >
             {isCompleted
-              ? "Завершена"
+              ? t.program.statusCompleted
               : isCurrentActive
-              ? "В процессе"
-              : "Запланирована"}
+              ? t.program.statusInProgress
+              : t.program.statusUpcoming}
           </Badge>
         </div>
       </CardHeader>
 
       <CardContent className="p-3.5 sm:p-5 pt-0 space-y-2.5">
-        {/* Exercise Preview Chips with smart short names */}
+        {/* Exercise Preview Chips with smart localized short names */}
         <div className="flex flex-wrap gap-1 text-[11px]">
           {workout.supersets.map((ss) => (
             <div
@@ -89,7 +90,7 @@ export function WorkoutCard({ workout, onStart, onOpenReport }: WorkoutCardProps
                 {ss.exercises
                   .map(
                     (e) =>
-                      `${getShortExerciseName(e.name)} (${e.sets[0]?.targetWeight} кг)`
+                      `${getLocalizedExerciseName(e.name, language, true)} (${e.sets[0]?.targetWeight} ${t.common.kg})`
                   )
                   .join(" + ")}
               </span>
@@ -98,56 +99,60 @@ export function WorkoutCard({ workout, onStart, onOpenReport }: WorkoutCardProps
         </div>
 
         {/* Stats Row if Completed */}
-        {isCompleted && (workout.tonnageKg !== undefined || workout.completedAt) && (
-          <div className="grid grid-cols-3 gap-2 pt-1 border-t border-white/5 text-[10px] sm:text-[11px] text-slate-400">
-            <div>
-              Тоннаж: <strong className="text-emerald-400">{workout.tonnageKg || 0} кг</strong>
-            </div>
-            <div>
-              Время: <strong className="text-cyan-400">{formatTime(workout.durationSeconds || 0)}</strong>
-            </div>
-            <div>
-              Мощность: <strong className="text-amber-400">{workout.powerKgPerMin || 0} кг/м</strong>
-            </div>
+        {isCompleted && (
+          <div className="flex items-center justify-between text-xs text-slate-400 pt-1 border-t border-white/5">
+            <span>
+              {t.common.tonnage}: <strong className="text-white">{workout.tonnageKg ?? 0} {t.common.kg}</strong>
+            </span>
+            <span>
+              {t.common.density}: <strong className="text-white">{workout.powerKgPerMin ?? 0} {t.common.kg}/{t.common.min}</strong>
+            </span>
+            <span>
+              {t.common.time}: <strong className="text-white">{formatTime(workout.durationSeconds ?? 0)}</strong>
+            </span>
           </div>
         )}
 
         {/* Action Button */}
-        <div className="pt-1 flex justify-end">
+        <div className="pt-1 flex gap-2">
           {isCompleted ? (
             <Button
-              type="button"
               variant="outline"
               size="sm"
+              className="w-full text-xs font-semibold border-white/10 hover:border-emerald-500/40"
               onClick={() => onOpenReport?.(workout)}
-              className="h-7 sm:h-8 text-xs font-semibold text-slate-300 hover:text-white hover:border-emerald-500/40"
             >
               <FileText className="h-3.5 w-3.5 mr-1 text-emerald-400" />
-              <span>Открыть отчет</span>
+              <span>{t.dashboard.viewReport}</span>
             </Button>
           ) : isCurrentActive ? (
             <Link
               href={`/workout?id=${workout.id}`}
               onClick={() => setViewingWorkoutId(workout.id)}
+              className="w-full"
             >
-              <Button variant="default" size="sm" className="h-7 sm:h-8 text-xs font-bold animate-pulse">
+              <Button
+                variant="accent"
+                size="sm"
+                className="w-full text-xs font-bold shadow-md shadow-emerald-500/20"
+              >
                 <Play className="h-3.5 w-3.5 mr-1 fill-current" />
-                <span>Продолжить тренировку</span>
+                <span>{t.workout.resume}</span>
               </Button>
             </Link>
           ) : (
             <Link
               href={`/workout?id=${workout.id}`}
               onClick={() => setViewingWorkoutId(workout.id)}
+              className="w-full"
             >
               <Button
                 variant="outline"
                 size="sm"
-                className="h-7 sm:h-8 text-xs font-semibold hover:border-emerald-500/50 hover:text-emerald-400"
+                className="w-full text-xs font-semibold border-white/10 hover:border-emerald-500/40"
               >
-                <Eye className="h-3.5 w-3.5 mr-1 text-emerald-400" />
-                <span>Ознакомиться</span>
-                <ChevronRight className="h-3.5 w-3.5 ml-0.5" />
+                <Eye className="h-3.5 w-3.5 mr-1" />
+                <span>{t.program.viewWorkout}</span>
               </Button>
             </Link>
           )}

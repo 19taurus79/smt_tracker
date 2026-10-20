@@ -27,25 +27,20 @@ import { InitialSetupModal } from "@/components/program/InitialSetupModal";
 import { BodyLogModal } from "@/components/body/BodyLogModal";
 import { WorkoutReportModal } from "@/components/program/WorkoutReportModal";
 import { WorkoutSession } from "@/types/smt";
-
-function getShortExerciseName(name: string): string {
-  if (name.includes("узким")) return "Жим узким";
-  if (name.includes("лежа")) return "Жим лежа";
-  if (name.includes("Подтягивания") || name.includes("тяга")) return "Подтягивания";
-  if (name.includes("бицепс")) return "Бицепс";
-  if (name.includes("Приседания")) return "Присед";
-  if (name.includes("Армейский") || name.includes("стоя")) return "Жим стоя";
-  return name.split(" ")[0];
-}
+import { useTranslation } from "@/lib/i18n";
+import {
+  getLocalizedExerciseName,
+  formatWorkoutTitle,
+  formatSupersetLabel,
+} from "@/lib/i18n/exercises";
 
 export default function HomePage() {
   const router = useRouter();
+  const { t, language } = useTranslation();
   const {
     workouts,
     activeWorkoutId,
     setViewingWorkoutId,
-    startWorkout,
-    restartWorkout,
     openWarmupModal,
   } = useWorkoutStore();
 
@@ -105,38 +100,48 @@ export default function HomePage() {
             <div className="flex items-center justify-between">
               <Badge variant="default" className="text-[10px] sm:text-xs uppercase tracking-wider font-bold">
                 {activeWorkoutId
-                  ? "🔥 Тренировка активна"
+                  ? t.dashboard.workoutActiveBadge
                   : isHeroCompleted
-                  ? "🎉 Все 36 тренировок завершены"
-                  : "Следующая тренировка"}
+                  ? t.dashboard.allCompletedBadge
+                  : t.dashboard.nextWorkout}
               </Badge>
               <span className="text-[11px] sm:text-xs text-slate-400 font-medium">
-                МКЦ {currentOrNextWorkout.microcycle} • #{currentOrNextWorkout.workoutNumber}/36
+                {t.common.microcycle} {currentOrNextWorkout.microcycle} • #{currentOrNextWorkout.workoutNumber}/36
               </span>
             </div>
             <CardTitle className="text-lg sm:text-2xl mt-1.5 text-white font-black leading-tight">
-              {currentOrNextWorkout.title}
+              {formatWorkoutTitle(
+                currentOrNextWorkout.workoutNumber,
+                currentOrNextWorkout.microcycle,
+                currentOrNextWorkout.week,
+                language
+              )}
             </CardTitle>
           </CardHeader>
 
           <CardContent className="p-4 sm:p-6 pt-1 space-y-3 sm:space-y-4">
             <div className="flex flex-wrap gap-1.5 text-xs">
-              {currentOrNextWorkout.supersets.map((ss) => (
-                <div
-                  key={ss.id}
-                  className="rounded-xl bg-white/5 border border-white/10 px-2.5 py-1 text-slate-200 text-[11px] sm:text-xs"
-                >
-                  <span className="text-emerald-400 font-bold">
-                    {ss.label.split(":")[0]}:
-                  </span>{" "}
-                  {ss.exercises
-                    .map(
-                      (e) =>
-                        `${getShortExerciseName(e.name)} (${e.sets[0]?.targetWeight} кг)`
-                    )
-                    .join(" + ")}
-                </div>
-              ))}
+              {currentOrNextWorkout.supersets.map((ss, idx) => {
+                const isSingle = ss.type === "single" || ss.exercises.length === 1;
+                const prefix = isSingle
+                  ? (language === "en" ? `Block ${idx + 1}:` : `Блок ${idx + 1}:`)
+                  : (language === "en" ? `Superset ${idx + 1}:` : `Суперсет ${idx + 1}:`);
+
+                return (
+                  <div
+                    key={ss.id}
+                    className="rounded-xl bg-white/5 border border-white/10 px-2.5 py-1 text-slate-200 text-[11px] sm:text-xs"
+                  >
+                    <span className="text-emerald-400 font-bold mr-1">{prefix}</span>
+                    {ss.exercises
+                      .map(
+                        (e) =>
+                          `${getLocalizedExerciseName(e.name, language, true)} (${e.sets[0]?.targetWeight} ${t.common.kg})`
+                      )
+                      .join(" + ")}
+                  </div>
+                );
+              })}
             </div>
 
             <div className="pt-1 flex flex-col sm:flex-row gap-2">
@@ -148,7 +153,7 @@ export default function HomePage() {
                   onClick={() => setSelectedReportWorkout(currentOrNextWorkout)}
                 >
                   <Trophy className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 text-amber-300" />
-                  <span>Посмотреть отчет</span>
+                  <span>{t.dashboard.viewReport}</span>
                 </Button>
               ) : activeWorkoutId ? (
                 <Link
@@ -158,7 +163,7 @@ export default function HomePage() {
                 >
                   <Button variant="accent" size="lg" className="w-full font-bold shadow-lg shadow-emerald-500/20 h-11 sm:h-13 text-sm animate-pulse">
                     <Play className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 fill-current" />
-                    <span>Продолжить тренировку</span>
+                    <span>{t.dashboard.continueWorkout}</span>
                   </Button>
                 </Link>
               ) : (
@@ -173,7 +178,7 @@ export default function HomePage() {
                     className="w-full font-bold shadow-lg shadow-emerald-500/20 h-11 sm:h-13 text-sm"
                   >
                     <Eye className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5" />
-                    <span>Ознакомиться с планом</span>
+                    <span>{t.dashboard.viewPlan}</span>
                   </Button>
                 </Link>
               )}
@@ -185,7 +190,7 @@ export default function HomePage() {
                 className="sm:w-auto font-semibold border-amber-500/30 text-amber-300 hover:bg-amber-500/10 h-11 sm:h-13 text-sm"
               >
                 <Flame className="h-4 w-4 mr-1.5 text-amber-400" />
-                <span>Разминка</span>
+                <span>{t.dashboard.warmupBtn}</span>
               </Button>
             </div>
           </CardContent>
@@ -196,7 +201,7 @@ export default function HomePage() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
         <div className="rounded-2xl border border-white/10 bg-slate-900/60 p-3 sm:p-4">
           <div className="flex items-center justify-between text-slate-400 mb-1">
-            <span className="text-xs font-medium">Прогресс</span>
+            <span className="text-xs font-medium">{t.dashboard.progress}</span>
             <Calendar className="h-4 w-4 text-emerald-400" />
           </div>
           <div className="text-lg sm:text-2xl font-black text-white">
@@ -207,36 +212,36 @@ export default function HomePage() {
 
         <div className="rounded-2xl border border-white/10 bg-slate-900/60 p-3 sm:p-4">
           <div className="flex items-center justify-between text-slate-400 mb-1">
-            <span className="text-xs font-medium">Тоннаж</span>
+            <span className="text-xs font-medium">{t.common.tonnage}</span>
             <Dumbbell className="h-4 w-4 text-cyan-400" />
           </div>
           <div className="text-lg sm:text-2xl font-black text-white">
-            {Math.round(totalTonnage)} <span className="text-xs font-normal text-slate-500">кг</span>
+            {Math.round(totalTonnage).toLocaleString()} <span className="text-xs font-normal text-slate-500">{t.common.kg}</span>
           </div>
-          <span className="text-[10px] text-slate-400 mt-0.5 block">Суммарный объем</span>
+          <span className="text-[10px] text-slate-400 mt-0.5 block">{t.dashboard.totalVolume}</span>
         </div>
 
         <div className="rounded-2xl border border-white/10 bg-slate-900/60 p-3 sm:p-4">
           <div className="flex items-center justify-between text-slate-400 mb-1">
-            <span className="text-xs font-medium">Ср. Мощность</span>
+            <span className="text-xs font-medium">{t.dashboard.avgPower}</span>
             <Zap className="h-4 w-4 text-amber-400" />
           </div>
           <div className="text-lg sm:text-2xl font-black text-white">
-            {avgPower} <span className="text-xs font-normal text-slate-500">кг/м</span>
+            {avgPower} <span className="text-xs font-normal text-slate-500">{t.common.kg}/{t.common.min}</span>
           </div>
-          <span className="text-[10px] text-slate-400 mt-0.5 block">Плотность СМТ</span>
+          <span className="text-[10px] text-slate-400 mt-0.5 block">{t.dashboard.powerDensity}</span>
         </div>
 
         <div className="rounded-2xl border border-white/10 bg-slate-900/60 p-3 sm:p-4">
           <div className="flex items-center justify-between text-slate-400 mb-1">
-            <span className="text-xs font-medium">Текущий вес</span>
+            <span className="text-xs font-medium">{t.dashboard.currentWeight}</span>
             <Ruler className="h-4 w-4 text-emerald-400" />
           </div>
           <div className="text-lg sm:text-2xl font-black text-white">
-            {latestBody ? latestBody.weightKg : "—"} <span className="text-xs font-normal text-slate-500">кг</span>
+            {latestBody ? latestBody.weightKg : "—"} <span className="text-xs font-normal text-slate-500">{t.common.kg}</span>
           </div>
           <span className="text-[10px] text-slate-400 mt-0.5 block">
-            {latestBody ? formatDate(latestBody.date) : "Нет замеров"}
+            {latestBody ? formatDate(latestBody.date) : t.dashboard.noMeasurements}
           </span>
         </div>
       </div>
@@ -252,8 +257,8 @@ export default function HomePage() {
             <Sparkles className="h-4 w-4" />
           </div>
           <div className="text-left">
-            <div className="text-xs font-bold text-white">1ПМ & Конструктор СМТ</div>
-            <div className="text-[10px] text-slate-400">Настройка упражнений и весов</div>
+            <div className="text-xs font-bold text-white">{t.dashboard.setup1pm}</div>
+            <div className="text-[10px] text-slate-400">{t.dashboard.setup1pmDesc}</div>
           </div>
         </Button>
 
@@ -266,8 +271,8 @@ export default function HomePage() {
             <Ruler className="h-4 w-4" />
           </div>
           <div className="text-left">
-            <div className="text-xs font-bold text-white">Внести замер тела</div>
-            <div className="text-[10px] text-slate-400">Вес, талия, бицепс, грудь</div>
+            <div className="text-xs font-bold text-white">{t.dashboard.logBody}</div>
+            <div className="text-[10px] text-slate-400">{t.dashboard.logBodyDesc}</div>
           </div>
         </Button>
 
@@ -280,8 +285,8 @@ export default function HomePage() {
               <TrendingUp className="h-4 w-4" />
             </div>
             <div className="text-left">
-              <div className="text-xs font-bold text-white">Графики и прогресс</div>
-              <div className="text-[10px] text-slate-400">Тоннаж, мощность, рекомпозиция</div>
+              <div className="text-xs font-bold text-white">{t.dashboard.charts}</div>
+              <div className="text-[10px] text-slate-400">{t.dashboard.chartsDesc}</div>
             </div>
           </Button>
         </Link>
@@ -294,31 +299,35 @@ export default function HomePage() {
             <div className="flex items-center justify-between">
               <CardTitle className="text-xs sm:text-sm font-bold flex items-center gap-1.5">
                 <Trophy className="h-3.5 w-3.5 text-amber-400" />
-                <span>Последняя завершенная тренировка</span>
+                <span>{t.dashboard.latestCompleted}</span>
               </CardTitle>
               <span className="text-[10px] sm:text-xs text-slate-400">
                 {latestCompleted.completedAt ? formatDate(latestCompleted.completedAt) : ""}
               </span>
             </div>
           </CardHeader>
-          <CardContent className="p-3.5 sm:p-5 pt-1">
-            <div className="flex items-center justify-between gap-2">
+          <CardContent className="p-3.5 sm:p-5 pt-2">
+            <div className="flex items-center justify-between">
               <div>
-                <h4 className="font-semibold text-white text-xs sm:text-sm">{latestCompleted.title}</h4>
-                <p className="text-[11px] text-slate-400 mt-0.5">
-                  Тоннаж: <strong className="text-emerald-400">{latestCompleted.tonnageKg} кг</strong> •
-                  Мощность: <strong className="text-amber-400">{latestCompleted.powerKgPerMin} кг/м</strong>
+                <p className="text-sm font-extrabold text-white">
+                  {formatWorkoutTitle(
+                    latestCompleted.workoutNumber,
+                    latestCompleted.microcycle,
+                    latestCompleted.week,
+                    language
+                  )}
+                </p>
+                <p className="text-xs text-slate-400">
+                  {t.common.tonnage}: {latestCompleted.tonnageKg ?? 0} {t.common.kg} • {t.common.density}: {latestCompleted.powerKgPerMin ?? 0} {t.common.kg}/{t.common.min} • {t.common.time}: {formatTime(latestCompleted.durationSeconds ?? 0)}
                 </p>
               </div>
-
               <Button
-                variant="outline"
                 size="sm"
-                className="text-xs h-7 sm:h-8 font-semibold text-slate-300 hover:text-white hover:border-emerald-500/40"
+                variant="outline"
+                className="text-xs border-white/10 hover:border-emerald-500/40"
                 onClick={() => setSelectedReportWorkout(latestCompleted)}
               >
-                <Trophy className="h-3.5 w-3.5 mr-1 text-amber-400" />
-                <span>Отчет</span>
+                {t.dashboard.viewReport}
               </Button>
             </div>
           </CardContent>
@@ -327,16 +336,12 @@ export default function HomePage() {
 
       {/* Modals */}
       <WarmupModal />
-      <InitialSetupModal open={isSetupOpen} onOpenChange={setIsSetupOpen} />
-      <BodyLogModal open={isBodyModalOpen} onOpenChange={setIsBodyModalOpen} />
+      <InitialSetupModal isOpen={isSetupOpen} onClose={() => setIsSetupOpen(false)} />
+      <BodyLogModal isOpen={isBodyModalOpen} onClose={() => setIsBodyModalOpen(false)} />
       <WorkoutReportModal
         open={Boolean(selectedReportWorkout)}
         onOpenChange={(open) => !open && setSelectedReportWorkout(null)}
         workout={selectedReportWorkout}
-        onRestart={(workoutId) => {
-          restartWorkout(workoutId);
-          router.push("/workout");
-        }}
       />
     </div>
   );

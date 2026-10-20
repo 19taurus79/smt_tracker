@@ -7,11 +7,13 @@ import { PowerChart } from "@/components/analytics/PowerChart";
 import { KeyLiftsChart } from "@/components/analytics/KeyLiftsChart";
 import { BodyCompChart } from "@/components/analytics/BodyCompChart";
 import { useSettingsStore } from "@/lib/store/useSettingsStore";
+import { useTranslation } from "@/lib/i18n";
 
 export default function AnalyticsPage() {
   const [activeTab, setActiveTab] = useState<"workouts" | "body">("workouts");
   const [mounted, setMounted] = useState(false);
   const { showForecastInAnalytics, setShowForecastInAnalytics } = useSettingsStore();
+  const { t } = useTranslation();
 
   useEffect(() => {
     setMounted(true);
@@ -31,10 +33,10 @@ export default function AnalyticsPage() {
       <div>
         <h1 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
           <TrendingUp className="h-6 w-6 text-emerald-400" />
-          <span>Аналитика и Графики прогресса</span>
+          <span>{t.analytics.title}</span>
         </h1>
         <p className="text-xs text-slate-400 mt-0.5">
-          Отслеживание тоннажа, мощности СМТ-1 и рекомпозиции тела
+          {t.analytics.subtitle}
         </p>
       </div>
 
@@ -51,7 +53,7 @@ export default function AnalyticsPage() {
             }`}
           >
             <Dumbbell className="h-4 w-4" />
-            <span>Тренировки СМТ</span>
+            <span>{t.analytics.tabWorkouts}</span>
           </button>
 
           <button
@@ -63,7 +65,7 @@ export default function AnalyticsPage() {
             }`}
           >
             <Ruler className="h-4 w-4" />
-            <span>Тело и Замеры</span>
+            <span>{t.analytics.tabBody}</span>
           </button>
         </div>
 
@@ -76,17 +78,23 @@ export default function AnalyticsPage() {
                 ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/25"
                 : "bg-slate-900/80 text-slate-400 border-white/10 hover:text-white hover:border-white/20"
             }`}
-            title={showForecastInAnalytics ? "Скрыть прогноз будущих тренировок" : "Показать прогноз будущих тренировок"}
+            title={showForecastInAnalytics ? t.analytics.forecastDisabled : t.analytics.forecastEnabled}
           >
             {showForecastInAnalytics ? (
               <>
                 <Eye className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
-                <span>Прогноз: <strong className="text-emerald-300 font-bold">Включен (полупрозрачный)</strong></span>
+                <span>
+                  {t.analytics.toggleForecast}:{" "}
+                  <strong className="text-emerald-300 font-bold">{t.analytics.forecastEnabled}</strong>
+                </span>
               </>
             ) : (
               <>
                 <EyeOff className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                <span>Прогноз: <strong className="text-slate-300 font-bold">Выключен (только факт)</strong></span>
+                <span>
+                  {t.analytics.toggleForecast}:{" "}
+                  <strong className="text-slate-300 font-bold">{t.analytics.forecastDisabled}</strong>
+                </span>
               </>
             )}
           </button>

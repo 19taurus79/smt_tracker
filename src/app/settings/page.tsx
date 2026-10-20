@@ -142,7 +142,7 @@ export default function SettingsPage() {
     soundPlayer.playBeep(880, 0.15);
     setTimeout(() => soundPlayer.playBeep(1760, 0.4), 180);
     triggerHaptic("success");
-    showToast("Звуковой сигнал проверен");
+    showToast(t.settings.soundTestSuccess);
   };
 
   const inTelegram = mounted ? isTelegramWebApp() : false;
@@ -229,7 +229,7 @@ export default function SettingsPage() {
           <span>{t.settings.athleteProfile}</span>
         </CardTitle>
         <p className="text-xs text-slate-400">
-          Використовується для точного розрахунку «Індексу Атлетичності» у картках Stories
+          {t.settings.athleteProfileDesc}
         </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
@@ -455,7 +455,7 @@ export default function SettingsPage() {
               className="text-xs font-semibold"
             >
               <Volume2 className="h-4 w-4 mr-1.5" />
-              <span>Звук: {soundEnabled ? t.common.confirm : t.common.cancel}</span>
+              <span>{t.settings.soundEffects}: {soundEnabled ? t.common.confirm : t.common.cancel}</span>
             </Button>
 
             <Button
@@ -465,7 +465,7 @@ export default function SettingsPage() {
               className="text-xs font-semibold"
             >
               <Vibrate className="h-4 w-4 mr-1.5" />
-              <span>Вібрація: {hapticsEnabled ? t.common.confirm : t.common.cancel}</span>
+              <span>{t.settings.hapticFeedback}: {hapticsEnabled ? t.common.confirm : t.common.cancel}</span>
             </Button>
           </div>
 
@@ -475,7 +475,7 @@ export default function SettingsPage() {
             onClick={handleTestSound}
             className="text-xs text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10"
           >
-            Тест сигналу таймера
+            {t.settings.testSound}
           </Button>
         </div>
       </Card>
@@ -487,7 +487,7 @@ export default function SettingsPage() {
           <span>{t.settings.backupAndData}</span>
         </CardTitle>
         <p className="text-xs text-slate-400">
-          Зберігайте ваші тренування та заміри або відновлюйте на іншому пристрої.
+          {t.settings.backupDesc}
         </p>
 
         <div className="flex flex-col sm:flex-row gap-2.5 pt-2">
@@ -520,7 +520,7 @@ export default function SettingsPage() {
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm sm:text-base flex items-center gap-2 text-white">
             <BookOpen className="h-4 w-4 text-emerald-400" />
-            <span>Довідка та методика</span>
+            <span>{t.settings.guideSectionTitle}</span>
           </CardTitle>
           <span className="text-[10px] text-emerald-400 font-mono">GUIDE.md</span>
         </div>
@@ -532,7 +532,7 @@ export default function SettingsPage() {
             className="text-xs font-bold"
           >
             <BookOpen className="h-4 w-4 mr-1.5" />
-            <span>Відкрити інтерактивну довідку</span>
+            <span>{t.settings.guideOpenInteractive}</span>
           </Button>
 
           <Link href="/help">
@@ -541,7 +541,7 @@ export default function SettingsPage() {
               size="sm"
               className="text-xs font-semibold w-full sm:w-auto border-white/15 hover:bg-white/10"
             >
-              <span>Читати на окремій сторінці</span>
+              <span>{t.settings.guideReadSeparate}</span>
             </Button>
           </Link>
         </div>
@@ -561,7 +561,7 @@ export default function SettingsPage() {
             onClick={() => {
               loadDemoData();
               loadDemoMeasurements();
-              showToast("Демо-дані успішно завантажено!");
+              showToast(t.settings.demoLoadedToast);
             }}
             className="text-xs font-semibold hover:border-purple-500/40 hover:text-purple-300"
           >
@@ -576,7 +576,7 @@ export default function SettingsPage() {
               if (confirm(t.settings.resetConfirm)) {
                 resetAllWorkouts();
                 clearMeasurements();
-                showToast("Дані успішно скинуто.");
+                showToast(t.settings.resetSuccessToast);
               }
             }}
             className="text-xs font-semibold"

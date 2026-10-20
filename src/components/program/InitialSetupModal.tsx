@@ -18,6 +18,8 @@ import { Dialog, DialogHeader, DialogTitle, DialogDescription } from "@/componen
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { OneRepMaxModal } from "./OneRepMaxModal";
+import { useTranslation } from "@/lib/i18n";
+import { getLocalizedExerciseName } from "@/lib/i18n/exercises";
 
 interface ExerciseCardRowProps {
   exercise: ExerciseDefinition;
@@ -38,6 +40,7 @@ function ExerciseCardRow({
   onDelete,
   onOpenCalc,
 }: ExerciseCardRowProps) {
+  const { t, language } = useTranslation();
   const pct = exercise.startingPercentage || (exercise.category === "main" ? 0.40 : 0.30);
 
   const defaultCalculatedStart = roundToWeightStep(
@@ -50,14 +53,12 @@ function ExerciseCardRow({
       ? exercise.customStartWeight
       : defaultCalculatedStart;
 
-  // Локальные строковые стейты для плавного ввода, удаления и поддержки запятой/точки
   const [startWeightStr, setStartWeightStr] = useState<string>(String(currentStartWeight));
   const [oneRepMaxStr, setOneRepMaxStr] = useState<string>(String(exercise.oneRepMax));
 
   const isStartFocused = useRef(false);
   const is1RMFocused = useRef(false);
 
-  // Синхронизируем извне только если поле не находится под активным фокусом пользователя
   useEffect(() => {
     if (!isStartFocused.current) {
       setStartWeightStr(String(currentStartWeight));
@@ -70,15 +71,11 @@ function ExerciseCardRow({
     }
   }, [exercise.oneRepMax]);
 
-  // Обработка ввода стартового веса (МКЦ-1)
   const handleStartWeightChange = (val: string) => {
     setStartWeightStr(val);
 
     const clean = val.replace(",", ".").trim();
-    if (clean === "") {
-      // Пользователь стер значение для ввода нового — позволяем оставаться пустым!
-      return;
-    }
+    if (clean === "") return;
 
     const parsed = parseFloat(clean);
     if (!isNaN(parsed) && parsed >= 0) {
@@ -110,14 +107,11 @@ function ExerciseCardRow({
     }
   };
 
-  // Обработка ввода 1ПМ
   const handle1RMChange = (val: string) => {
     setOneRepMaxStr(val);
 
     const clean = val.replace(",", ".").trim();
-    if (clean === "") {
-      return;
-    }
+    if (clean === "") return;
 
     const parsed = parseFloat(clean);
     if (!isNaN(parsed) && parsed >= 0) {
@@ -173,6 +167,30 @@ function ExerciseCardRow({
     });
   };
 
+  const displayName = getLocalizedExerciseName(exercise.name, language, false);
+
+  const formatOptions =
+    language === "uk"
+      ? [
+          { val: `single-${exercise.id}`, label: "Одиночний блок (усі підходи поспіль)" },
+          { val: "ss-back-biceps", label: "Суперсет 1: Спина + Біцепс" },
+          { val: "ss-legs-shoulders", label: "Суперсет 2: Ноги + Плечі" },
+          { val: "ss-custom-1", label: "Суперсет: Своя група 1" },
+        ]
+      : language === "en"
+      ? [
+          { val: `single-${exercise.id}`, label: "Single block (all sets consecutive)" },
+          { val: "ss-back-biceps", label: "Superset 1: Back + Biceps" },
+          { val: "ss-legs-shoulders", label: "Superset 2: Legs + Shoulders" },
+          { val: "ss-custom-1", label: "Superset: Custom Group 1" },
+        ]
+      : [
+          { val: `single-${exercise.id}`, label: "Одиночный блок (все подходы подряд)" },
+          { val: "ss-back-biceps", label: "Суперсет 1: Спина + Бицепс" },
+          { val: "ss-legs-shoulders", label: "Суперсет 2: Ноги + Плечи" },
+          { val: "ss-custom-1", label: "Суперсет: Своя группа 1" },
+        ];
+
   return (
     <div className="rounded-2xl border border-white/10 bg-slate-900/80 p-3 space-y-2.5">
       {/* Exercise Name and Delete */}
@@ -183,9 +201,9 @@ function ExerciseCardRow({
 
         <Input
           type="text"
-          value={exercise.name}
+          value={displayName}
           onChange={(e) => onUpdate({ ...exercise, name: e.target.value })}
-          placeholder="Название упражнения"
+          placeholder="Назва вправи"
           className="h-8 font-bold text-xs sm:text-sm bg-slate-950/70 border-white/10 text-white flex-1"
         />
 
@@ -196,43 +214,45 @@ function ExerciseCardRow({
             size="icon"
             className="h-7 w-7 text-slate-400 hover:text-rose-400 shrink-0"
             onClick={() => onDelete(exercise.id)}
-            title="Удалить упражнение"
+            title={t.common.reset}
           >
             <Trash2 className="h-3.5 w-3.5" />
           </Button>
         )}
       </div>
 
-      {/* Formats and Category (Stack on mobile, row on tablet) */}
+      {/* Formats and Category */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
         <div>
           <label className="text-[10px] text-slate-400 font-medium block mb-1">
-            Формат выполнения
+            {language === "uk" ? "Формат виконання" : language === "en" ? "Execution format" : "Формат выполнения"}
           </label>
           <select
             value={exercise.blockGroup || (exercise.blockType === "single" ? `single-${exercise.id}` : "ss-1")}
             onChange={(e) => handleBlockGroupChange(e.target.value)}
             className="w-full h-8 rounded-lg border border-white/10 bg-slate-950 px-2 text-xs text-white focus:outline-none focus:border-emerald-500 truncate"
           >
-            <option value={`single-${exercise.id}`}>Одиночный блок (все подходы подряд)</option>
-            <option value="ss-back-biceps">Суперсет 1: Спина + Бицепс</option>
-            <option value="ss-legs-shoulders">Суперсет 2: Ноги + Плечи</option>
-            <option value="ss-custom-1">Суперсет: Своя группа 1</option>
-            <option value="ss-custom-2">Суперсет: Своя группа 2</option>
+            {formatOptions.map((opt) => (
+              <option key={opt.val} value={opt.val}>{opt.label}</option>
+            ))}
           </select>
         </div>
 
         <div>
           <label className="text-[10px] text-slate-400 font-medium block mb-1">
-            Категория нагрузки
+            {language === "uk" ? "Категорія навантаження" : language === "en" ? "Load category" : "Категория нагрузки"}
           </label>
           <select
             value={exercise.category}
             onChange={(e) => handleCategoryChange(e.target.value as ExerciseCategory)}
             className="w-full h-8 rounded-lg border border-white/10 bg-slate-950 px-2 text-xs text-white focus:outline-none focus:border-emerald-500 truncate"
           >
-            <option value="main">Базовое (40% • 4x10)</option>
-            <option value="accessory">Подсобное (30% • 4x15)</option>
+            <option value="main">
+              {language === "uk" ? "Базове (40% • 4x10)" : language === "en" ? "Main (40% • 4x10)" : "Базовое (40% • 4x10)"}
+            </option>
+            <option value="accessory">
+              {language === "uk" ? "Підсобне (30% • 4x15)" : language === "en" ? "Accessory (30% • 4x15)" : "Подсобное (30% • 4x15)"}
+            </option>
           </select>
         </div>
       </div>
@@ -241,7 +261,7 @@ function ExerciseCardRow({
       <div className="grid grid-cols-2 gap-2 pt-2 border-t border-white/5">
         <div className="bg-black/30 p-2 rounded-xl border border-white/5 space-y-1">
           <label className="text-[10px] text-emerald-400 font-semibold block">
-            Стартовый вес (МКЦ-1)
+            {language === "uk" ? "Стартова вага (МКЦ-1)" : language === "en" ? "Starting weight (MC-1)" : "Стартовый вес (МКЦ-1)"}
           </label>
           <div className="flex items-center gap-1">
             <Input
@@ -256,25 +276,23 @@ function ExerciseCardRow({
               onBlur={handleStartWeightBlur}
               placeholder="30"
               className="h-8 text-center font-bold text-xs bg-slate-950 text-emerald-300 border-white/10 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
-              title="Рабочий вес для первой тренировки (можно удалить или изменить)"
             />
-            <span className="text-[10px] text-slate-500">кг</span>
+            <span className="text-[10px] text-slate-500">{t.common.kg}</span>
           </div>
         </div>
 
         <div className="bg-black/30 p-2 rounded-xl border border-white/5 space-y-1">
           <div className="flex items-center justify-between">
             <label className="text-[10px] text-slate-400 font-semibold block">
-              Базовый 1ПМ
+              {language === "uk" ? "Базовий 1ПМ" : language === "en" ? "Base 1RM" : "Базовый 1ПМ"}
             </label>
             <button
               type="button"
               onClick={() => onOpenCalc(exercise.id, exercise.name)}
               className="text-[10px] text-cyan-400 hover:text-cyan-300 flex items-center gap-0.5"
-              title="Калькулятор по повторениям"
             >
               <Calculator className="h-3 w-3" />
-              <span>расчет</span>
+              <span>{language === "uk" ? "розрахунок" : language === "en" ? "calc" : "расчет"}</span>
             </button>
           </div>
           <div className="flex items-center gap-1">
@@ -290,9 +308,8 @@ function ExerciseCardRow({
               onBlur={handle1RMBlur}
               placeholder="80"
               className="h-8 text-center font-bold text-xs bg-slate-950 text-white border-white/10 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500"
-              title="Разовый максимум 1ПМ (кг)"
             />
-            <span className="text-[10px] text-slate-500">кг</span>
+            <span className="text-[10px] text-slate-500">{t.common.kg}</span>
           </div>
         </div>
       </div>
@@ -301,21 +318,35 @@ function ExerciseCardRow({
 }
 
 interface InitialSetupModalProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+  open?: boolean;
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  onClose?: () => void;
 }
 
-export function InitialSetupModal({ open, onOpenChange }: InitialSetupModalProps) {
+export function InitialSetupModal({
+  open: propOpen,
+  isOpen: propIsOpen,
+  onOpenChange,
+  onClose,
+}: InitialSetupModalProps) {
+  const isModalOpen = propOpen ?? propIsOpen ?? false;
+  const handleClose = () => {
+    if (onOpenChange) onOpenChange(false);
+    if (onClose) onClose();
+  };
+
   const { exercises, initializeProgram } = useWorkoutStore();
   const { weightIncrementKg } = useSettingsStore();
+  const { t, language } = useTranslation();
 
   const [localExercises, setLocalExercises] = useState<ExerciseDefinition[]>(exercises);
 
   useEffect(() => {
-    if (open) {
+    if (isModalOpen) {
       setLocalExercises(exercises);
     }
-  }, [open, exercises]);
+  }, [isModalOpen, exercises]);
 
   const [calcModalExercise, setCalcModalExercise] = useState<{
     id: string;
@@ -332,7 +363,7 @@ export function InitialSetupModal({ open, onOpenChange }: InitialSetupModalProps
     const newId = `ex-${Date.now()}`;
     const newEx: ExerciseDefinition = {
       id: newId,
-      name: "Новое упражнение",
+      name: language === "uk" ? "Нова вправа" : language === "en" ? "New Exercise" : "Новое упражнение",
       category: "main",
       oneRepMax: 60,
       startingPercentage: 0.40,
@@ -371,24 +402,21 @@ export function InitialSetupModal({ open, onOpenChange }: InitialSetupModalProps
 
   const handleGenerate = () => {
     initializeProgram(localExercises, weightIncrementKg);
-    onOpenChange(false);
+    handleClose();
   };
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={isModalOpen} onOpenChange={handleClose}>
         <DialogHeader>
-          <DialogTitle onClose={() => onOpenChange(false)}>
+          <DialogTitle onClose={handleClose}>
             <div className="flex items-center gap-2">
               <Dumbbell className="h-5 w-5 text-emerald-400" />
-              <span>Конструктор программы СМТ-1</span>
+              <span>{t.dashboard.setup1pm}</span>
             </div>
           </DialogTitle>
           <DialogDescription>
-            Настройка упражнений, формата выполнения и весов. Стартовый вес можно
-            редактировать или очистить вручную: база{" "}
-            <strong className="text-emerald-400">40%</strong> и подсобка{" "}
-            <strong className="text-cyan-400">30%</strong>.
+            {t.dashboard.setup1pmDesc}
           </DialogDescription>
         </DialogHeader>
 
@@ -417,7 +445,7 @@ export function InitialSetupModal({ open, onOpenChange }: InitialSetupModalProps
               className="text-xs font-semibold text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10 h-7"
             >
               <Plus className="h-3 w-3 mr-1" />
-              <span>Добавить</span>
+              <span>{language === "uk" ? "Додати вправу" : language === "en" ? "Add Exercise" : "Добавить"}</span>
             </Button>
 
             <Button
@@ -428,7 +456,7 @@ export function InitialSetupModal({ open, onOpenChange }: InitialSetupModalProps
               className="text-xs text-slate-400 hover:text-white h-7"
             >
               <RotateCcw className="h-3 w-3 mr-1" />
-              <span>Сбросить к СМТ-1</span>
+              <span>{language === "uk" ? "Скинути до СМТ" : language === "en" ? "Reset to SMT" : "Сбросить к СМТ-1"}</span>
             </Button>
           </div>
         </div>
@@ -442,7 +470,9 @@ export function InitialSetupModal({ open, onOpenChange }: InitialSetupModalProps
             onClick={handleGenerate}
           >
             <Sparkles className="h-4 w-4" />
-            <span>Сформировать 36 тренировок</span>
+            <span>
+              {language === "uk" ? "Сформувати 36 тренувань" : language === "en" ? "Generate 36 Workouts" : "Сформировать 36 тренировок"}
+            </span>
           </Button>
         </div>
       </Dialog>
