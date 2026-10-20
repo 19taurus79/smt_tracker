@@ -8,8 +8,10 @@ import { formatTime } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { isTelegramWebApp, initTelegramWebApp } from "@/lib/tma/telegram";
 import { HelpModal } from "@/components/help/HelpModal";
+import { useTranslation } from "@/lib/i18n";
 
 export function TopHeader() {
+  const { t } = useTranslation();
   const { activeWorkoutId, workoutElapsedSeconds, workouts, isStopwatchRunning } =
     useWorkoutStore();
   const [inTelegram, setInTelegram] = useState(false);
@@ -32,7 +34,7 @@ export function TopHeader() {
             </div>
             <div className="flex flex-col">
               <span className="font-extrabold text-base tracking-tight text-white flex items-center gap-1.5">
-                СМТ-1 <span className="text-emerald-400 font-medium text-xs">ТРЕКЕР</span>
+                {t.header.title} <span className="text-emerald-400 font-medium text-xs">{t.header.tracker}</span>
               </span>
             </div>
           </Link>
@@ -57,7 +59,7 @@ export function TopHeader() {
 
             <button
               onClick={() => setIsHelpOpen(true)}
-              title="Справка по СМТ-1"
+              title={t.header.helpTooltip}
               className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/5 text-slate-300 hover:text-white hover:bg-white/10 hover:border-emerald-500/40 transition-colors"
             >
               <HelpCircle className="h-4 w-4 text-emerald-400" />

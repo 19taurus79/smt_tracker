@@ -10,7 +10,10 @@ export interface BodyMeasurement {
   notes?: string;
 }
 
+export type AppLanguage = "uk" | "en" | "ru";
+
 export interface AppSettings {
+  language: AppLanguage;      // default: "uk"
   defaultRestSeconds: number; // e.g. 30
   weightIncrementKg: number;  // e.g. 2.5
   soundEnabled: boolean;
@@ -20,4 +23,8 @@ export interface AppSettings {
   keepScreenAwake?: boolean; // держать экран включенным во время тренировки
   coachTelegramUsername?: string; // ник тренера в Telegram (@coach_alex)
   traineeName?: string; // имя подопечного для отчетов тренеру
+  gender?: "male" | "female"; // для точного индекса атлетичности
+  userAge?: number;
+  storyBotUsername?: string; // ник бота/канала для виральной плашки в Stories
 }
+

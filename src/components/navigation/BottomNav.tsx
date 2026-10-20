@@ -13,24 +13,26 @@ import {
 } from "lucide-react";
 import { useWorkoutStore } from "@/lib/store/useWorkoutStore";
 import { cn } from "@/lib/utils";
-
-const NAV_ITEMS = [
-  { href: "/", label: "Главная", icon: Home },
-  { href: "/workout", label: "Тренинг", icon: Dumbbell, hasBadge: true },
-  { href: "/program", label: "Сетка", icon: Calendar },
-  { href: "/body", label: "Замеры", icon: Ruler },
-  { href: "/analytics", label: "Графики", icon: TrendingUp },
-  { href: "/settings", label: "Опции", icon: Settings },
-];
+import { useTranslation } from "@/lib/i18n";
 
 export function BottomNav() {
   const pathname = usePathname();
   const { activeWorkoutId } = useWorkoutStore();
+  const { t } = useTranslation();
+
+  const navItems = [
+    { href: "/", label: t.nav.home, icon: Home },
+    { href: "/workout", label: t.nav.workout, icon: Dumbbell, hasBadge: true },
+    { href: "/program", label: t.nav.program, icon: Calendar },
+    { href: "/body", label: t.nav.body, icon: Ruler },
+    { href: "/analytics", label: t.nav.analytics, icon: TrendingUp },
+    { href: "/settings", label: t.nav.settings, icon: Settings },
+  ];
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-slate-950/95 backdrop-blur-2xl ios-safe-bottom">
       <div className="mx-auto flex h-14 sm:h-16 max-w-lg items-center justify-around px-1">
-        {NAV_ITEMS.map((item) => {
+        {navItems.map((item) => {
           const isActive = pathname === item.href;
           const Icon = item.icon;
           const showPill = item.hasBadge && activeWorkoutId;

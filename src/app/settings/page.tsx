@@ -19,6 +19,8 @@ import {
   Sun,
   Send,
   User,
+  Globe,
+  Share2,
 } from "lucide-react";
 import { useWorkoutStore } from "@/lib/store/useWorkoutStore";
 import { useBodyStore } from "@/lib/store/useBodyStore";
@@ -29,8 +31,11 @@ import { shareToTelegramCoach } from "@/lib/coach/telegramCoach";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { HelpModal } from "@/components/help/HelpModal";
+import { useTranslation } from "@/lib/i18n";
+import { AppLanguage } from "@/types/body";
 
 export default function SettingsPage() {
+  const { t, language, setLanguage } = useTranslation();
   const { workouts, exercises, setWorkouts, loadDemoData, resetAllWorkouts } =
     useWorkoutStore();
   const { measurements, setMeasurements, clearMeasurements, loadDemoMeasurements } =
@@ -53,6 +58,12 @@ export default function SettingsPage() {
     setCoachTelegramUsername,
     traineeName,
     setTraineeName,
+    gender,
+    setGender,
+    userAge,
+    setUserAge,
+    storyBotUsername,
+    setStoryBotUsername,
   } = useSettingsStore();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -90,11 +101,11 @@ export default function SettingsPage() {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      showToast("Резервная копия успешно экспортирована в JSON!");
+      showToast(t.common.success);
       triggerHaptic("success");
     } catch (e) {
       console.error(e);
-      showToast("Ошибка при экспорте данных.");
+      showToast(t.common.error);
     }
   };
 
@@ -116,37 +127,26 @@ export default function SettingsPage() {
           setMeasurements(parsed.measurements);
         }
 
-        showToast("Данные успешно импортированы!");
+        showToast(t.common.success);
         triggerHaptic("success");
       } catch (err) {
-        console.error(err);
-        showToast("Ошибка: некорректный формат JSON-файла.");
+        console.error("Ошибка при разборе JSON:", err);
+        showToast(t.common.error);
       }
     };
     reader.readAsText(file);
-
-    // Сбрасываем значение input
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleTestSound = () => {
-    soundPlayer.unlockAudio();
-    soundPlayer.playRestComplete();
+    soundPlayer.playBeep(880, 0.15);
+    setTimeout(() => soundPlayer.playBeep(1760, 0.4), 180);
     triggerHaptic("success");
+    showToast("Звуковой сигнал проверен");
   };
 
-  if (!mounted) {
-    return (
-      <div className="flex h-[70vh] items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
-      </div>
-    );
-  }
-
-  const inTelegram = isTelegramWebApp();
-  const tgUser = typeof window !== "undefined" ? window.Telegram?.WebApp?.initDataUnsafe?.user : null;
+  const inTelegram = mounted ? isTelegramWebApp() : false;
+  const tgUser = mounted && typeof window !== "undefined" ? (window as any).Telegram?.WebApp?.initDataUnsafe?.user : null;
 
   return (
     <div className="space-y-5 animate-in fade-in duration-200">
@@ -154,11 +154,9 @@ export default function SettingsPage() {
       <div>
         <h1 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
           <Settings className="h-6 w-6 text-emerald-400" />
-          <span>Настройки и Резервные копии</span>
+          <span>{t.settings.title}</span>
         </h1>
-        <p className="text-xs text-slate-400 mt-0.5">
-          Управление базой данных, параметрами таймера и интеграцией с Telegram
-        </p>
+        <p className="text-xs text-slate-400 mt-0.5">{t.settings.subtitle}</p>
       </div>
 
       {/* Toast Alert */}
@@ -169,37 +167,130 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* Telegram Status Card */}
-      <Card className="border-white/10 bg-slate-900/60 p-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-500/20 text-cyan-400 shrink-0">
-            <Info className="h-5 w-5" />
-          </div>
+      {/* 1. Language Selector Card */}
+      <Card className="border-emerald-500/30 bg-slate-900/60 p-4 sm:p-5 space-y-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm sm:text-base flex items-center gap-2 text-white">
+            <Globe className="h-4 w-4 text-emerald-400" />
+            <span>{t.settings.language}</span>
+          </CardTitle>
+          <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider">
+            {language}
+          </span>
+        </div>
+        <p className="text-xs text-slate-400">{t.settings.languageDesc}</p>
+
+        <div className="grid grid-cols-3 gap-2 pt-1">
+          <button
+            type="button"
+            onClick={() => setLanguage("uk")}
+            className={`py-2.5 px-3 rounded-xl border text-center transition-all flex flex-col items-center justify-center gap-1 ${
+              language === "uk"
+                ? "bg-emerald-500/20 border-emerald-500 text-white shadow-lg shadow-emerald-500/20 font-bold"
+                : "bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10"
+            }`}
+          >
+            <span className="text-base">🇺🇦</span>
+            <span className="text-xs">{t.settings.langUk}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setLanguage("en")}
+            className={`py-2.5 px-3 rounded-xl border text-center transition-all flex flex-col items-center justify-center gap-1 ${
+              language === "en"
+                ? "bg-emerald-500/20 border-emerald-500 text-white shadow-lg shadow-emerald-500/20 font-bold"
+                : "bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10"
+            }`}
+          >
+            <span className="text-base">🇬🇧</span>
+            <span className="text-xs">{t.settings.langEn}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setLanguage("ru")}
+            className={`py-2.5 px-3 rounded-xl border text-center transition-all flex flex-col items-center justify-center gap-1 ${
+              language === "ru"
+                ? "bg-emerald-500/20 border-emerald-500 text-white shadow-lg shadow-emerald-500/20 font-bold"
+                : "bg-white/5 border-white/10 text-slate-400 hover:text-white hover:bg-white/10"
+            }`}
+          >
+            <span className="text-base">🇷🇺</span>
+            <span className="text-xs">{t.settings.langRu}</span>
+          </button>
+        </div>
+      </Card>
+
+      {/* 2. Athlete Profile (for Athletic Score) */}
+      <Card className="border-white/10 bg-slate-900/60 p-4 sm:p-5 space-y-3">
+        <CardTitle className="text-sm sm:text-base flex items-center gap-2 text-white">
+          <User className="h-4 w-4 text-cyan-400" />
+          <span>{t.settings.athleteProfile}</span>
+        </CardTitle>
+        <p className="text-xs text-slate-400">
+          Використовується для точного розрахунку «Індексу Атлетичності» у картках Stories
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
           <div>
-            <h3 className="text-sm font-bold text-white">
-              {inTelegram ? "Telegram Mini App активен" : "Автономный режим (PWA / Браузер)"}
-            </h3>
-            <p className="text-xs text-slate-400 mt-0.5">
-              {inTelegram && tgUser
-                ? `Пользователь: ${tgUser.first_name} ${tgUser.last_name || ""} (@${tgUser.username || "id" + tgUser.id})`
-                : "Данные сохраняются локально в вашем браузере (Local-First)."}
-            </p>
+            <label className="text-xs font-semibold text-slate-300 block mb-1.5">
+              {t.settings.gender}
+            </label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setGender("male")}
+                className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
+                  gender === "male"
+                    ? "bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20"
+                    : "bg-white/5 text-slate-400 hover:text-white hover:bg-white/10"
+                }`}
+              >
+                {t.settings.genderMale}
+              </button>
+              <button
+                type="button"
+                onClick={() => setGender("female")}
+                className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
+                  gender === "female"
+                    ? "bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20"
+                    : "bg-white/5 text-slate-400 hover:text-white hover:bg-white/10"
+                }`}
+              >
+                {t.settings.genderFemale}
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-slate-300 block mb-1.5">
+              {t.settings.userAge}
+            </label>
+            <input
+              type="number"
+              min={14}
+              max={90}
+              value={userAge || 28}
+              onChange={(e) => setUserAge(Number(e.target.value))}
+              className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-400"
+            />
           </div>
         </div>
       </Card>
 
-      {/* Workout Preferences */}
+      {/* 3. Workout Preferences */}
       <Card className="border-white/10 bg-slate-900/60 p-4 sm:p-5 space-y-4">
         <CardTitle className="text-sm sm:text-base flex items-center gap-2">
           <Timer className="h-4 w-4 text-emerald-400" />
-          <span>Параметры тренировки</span>
+          <span>{t.settings.trainingParams}</span>
         </CardTitle>
 
         <div className="space-y-3">
           {/* Default Rest Timer */}
           <div>
             <label className="text-xs font-semibold text-slate-300 block mb-1.5">
-              Время отдыха по умолчанию в СМТ (сек)
+              {t.settings.defaultRest} ({t.common.sec})
             </label>
             <div className="flex gap-2">
               {[15, 30, 45, 60, 90].map((sec) => (
@@ -221,7 +312,7 @@ export default function SettingsPage() {
           {/* Weight Increment */}
           <div>
             <label className="text-xs font-semibold text-slate-300 block mb-1.5">
-              Шаг авто-прибавки веса (кг)
+              {t.settings.weightIncrement} ({t.common.kg})
             </label>
             <div className="flex gap-2">
               {[1.25, 2.5, 5.0].map((step) => (
@@ -234,7 +325,7 @@ export default function SettingsPage() {
                       : "bg-white/5 text-slate-400 hover:text-white hover:bg-white/10"
                   }`}
                 >
-                  +{step} кг
+                  +{step} {t.common.kg}
                 </button>
               ))}
             </div>
@@ -245,10 +336,10 @@ export default function SettingsPage() {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <span className="text-xs font-semibold text-slate-300 block">
-                  Прогноз программы в аналитике
+                  {t.analytics.toggleForecast}
                 </span>
                 <span className="text-[11px] text-slate-400 block mt-0.5">
-                  Показывать плановые веса и тоннаж СМТ-1 полупрозрачными линиями
+                  {t.analytics.forecastEnabled}
                 </span>
               </div>
               <button
@@ -260,7 +351,7 @@ export default function SettingsPage() {
                     : "bg-white/5 text-slate-400 border-white/10 hover:text-white"
                 }`}
               >
-                {showForecastInAnalytics ? "Включен" : "Выключен"}
+                {showForecastInAnalytics ? t.common.confirm : t.common.cancel}
               </button>
             </div>
           </div>
@@ -270,10 +361,10 @@ export default function SettingsPage() {
             <div className="flex items-center justify-between gap-3">
               <div>
                 <span className="text-xs font-semibold text-slate-300 block">
-                  Не выключать экран во время тренировки (Wake Lock)
+                  {t.settings.screenWakeLock}
                 </span>
                 <span className="text-[11px] text-slate-400 block mt-0.5">
-                  Предотвращает автоматическую блокировку экрана, пока идет таймер тренировки
+                  {t.settings.screenWakeLockDesc}
                 </span>
               </div>
               <button
@@ -285,44 +376,40 @@ export default function SettingsPage() {
                     : "bg-white/5 text-slate-400 border-white/10 hover:text-white"
                 }`}
               >
-                {keepScreenAwake ? "Включен" : "Выключен"}
+                {keepScreenAwake ? t.common.confirm : t.common.cancel}
               </button>
             </div>
           </div>
         </div>
       </Card>
 
-      {/* Telegram Coach Settings */}
+      {/* 4. Telegram Coach & Story Bot Settings */}
       <Card className="border-cyan-500/30 bg-slate-900/60 p-4 sm:p-5 space-y-4">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm sm:text-base flex items-center gap-2 text-white">
             <Send className="h-4 w-4 text-cyan-400" />
-            <span>Связь с тренером (Отчеты в Telegram)</span>
+            <span>{t.settings.coachIntegration}</span>
           </CardTitle>
-          <span className="text-[10px] text-cyan-400 font-mono">1-Click Отчеты</span>
+          <span className="text-[10px] text-cyan-400 font-mono">1-Click</span>
         </div>
-
-        <p className="text-xs text-slate-300 leading-relaxed">
-          Укажите ник вашего тренера в Telegram и ваше имя. После каждой тренировки или замера вы сможете мгновенно в один клик отправлять готовый подробный отчет с тоннажем, мощностью и замерами.
-        </p>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
           <div>
             <label className="text-xs font-semibold text-slate-300 block mb-1">
-              Ваше имя (атлет)
+              {t.settings.traineeName}
             </label>
             <input
               type="text"
               value={traineeName}
               onChange={(e) => setTraineeName(e.target.value)}
-              placeholder="Например: Александр"
+              placeholder="Наприклад: Олександр"
               className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-400"
             />
           </div>
 
           <div>
             <label className="text-xs font-semibold text-slate-300 block mb-1">
-              Telegram тренера (@username)
+              {t.settings.coachUsername}
             </label>
             <input
               type="text"
@@ -334,32 +421,29 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-1 border-t border-white/5">
-          <span className="text-[11px] text-slate-400">
-            {coachTelegramUsername
-              ? `Отчеты будут открывать чат с ${coachTelegramUsername.startsWith("@") ? coachTelegramUsername : "@" + coachTelegramUsername}`
-              : "Если ник не указан, Telegram предложит выбрать контакт тренера"}
+        {/* Story Bot / Channel Username */}
+        <div className="pt-2 border-t border-white/5">
+          <label className="text-xs font-semibold text-slate-300 block mb-1">
+            {t.settings.storyBotUsername}
+          </label>
+          <input
+            type="text"
+            value={storyBotUsername || ""}
+            onChange={(e) => setStoryBotUsername(e.target.value)}
+            placeholder="@smt_workout_bot"
+            className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-400"
+          />
+          <span className="text-[10px] text-slate-400 block mt-1">
+            {t.settings.storyBotUsernameDesc}
           </span>
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-xs font-semibold border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/10 self-start sm:self-auto"
-            onClick={() => {
-              const testMsg = `🏋️ ТЕСТОВЫЙ ОТЧЕТ СМТ-1\n👤 Атлет: ${traineeName || "Подопечный"}\n✅ Связь с тренером успешно настроена!`;
-              shareToTelegramCoach(testMsg, coachTelegramUsername);
-            }}
-          >
-            <Send className="h-3 w-3 mr-1.5" />
-            <span>Тест связи</span>
-          </Button>
         </div>
       </Card>
 
-      {/* Sound & Haptics */}
+      {/* 5. Sound & Haptics */}
       <Card className="border-white/10 bg-slate-900/60 p-4 sm:p-5 space-y-3">
         <CardTitle className="text-sm sm:text-base flex items-center gap-2">
           <Volume2 className="h-4 w-4 text-cyan-400" />
-          <span>Звуки и Вибрация</span>
+          <span>{t.settings.audioAndHaptics}</span>
         </CardTitle>
 
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-1">
@@ -371,7 +455,7 @@ export default function SettingsPage() {
               className="text-xs font-semibold"
             >
               <Volume2 className="h-4 w-4 mr-1.5" />
-              <span>Звук: {soundEnabled ? "Вкл" : "Выкл"}</span>
+              <span>Звук: {soundEnabled ? t.common.confirm : t.common.cancel}</span>
             </Button>
 
             <Button
@@ -381,7 +465,7 @@ export default function SettingsPage() {
               className="text-xs font-semibold"
             >
               <Vibrate className="h-4 w-4 mr-1.5" />
-              <span>Вибрация: {hapticsEnabled ? "Вкл" : "Выкл"}</span>
+              <span>Вібрація: {hapticsEnabled ? t.common.confirm : t.common.cancel}</span>
             </Button>
           </div>
 
@@ -391,69 +475,25 @@ export default function SettingsPage() {
             onClick={handleTestSound}
             className="text-xs text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10"
           >
-            Тест сигнала таймера
-          </Button>
-        </div>
-
-        <div className="pt-1 border-t border-white/5 text-[11px] text-slate-400">
-          <p>
-            💡 <strong className="text-slate-300">На заметку (iPhone / iOS):</strong> звук веб-таймера воспроизводится только если боковой физический переключатель режима (Silent Switch) не находится в бесшумном положении (без оранжевой полоски).
-          </p>
-        </div>
-      </Card>
-
-      {/* PWA Installation Card */}
-      <Card className="border-cyan-500/30 bg-gradient-to-br from-cyan-950/20 via-slate-900/60 to-slate-900/60 p-4 sm:p-5 space-y-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-sm sm:text-base flex items-center gap-2 text-white">
-            <Smartphone className="h-4 w-4 text-cyan-400" />
-            <span>Установка на экран телефона (PWA)</span>
-          </CardTitle>
-          <span className="text-[10px] text-cyan-400 font-mono">Нативное приложение</span>
-        </div>
-        <p className="text-xs text-slate-300">
-          Установите СМТ-1 Трекер как нативное приложение на рабочий стол вашего смартфона. Будет открываться во весь экран без адресной строки и работать автономно.
-        </p>
-        <div className="flex flex-col sm:flex-row gap-2.5 pt-1">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              const isIos = /iphone|ipad|ipod/.test(navigator.userAgent.toLowerCase());
-              if (isIos) {
-                alert("На iPhone (Safari):\n1. Нажмите иконку «Поделиться» (квадрат со стрелкой вверх внизу экрана)\n2. Выберите «На экран Домой» (Add to Home Screen)\n3. Нажмите «Добавить»");
-              } else {
-                alert("На Android (Chrome):\n1. Нажмите меню «⋮» в правом верхнем углу\n2. Выберите «Установить приложение» или «Добавить на главный экран»");
-              }
-            }}
-            className="text-xs font-bold border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/10"
-          >
-            <Smartphone className="h-4 w-4 mr-1.5" />
-            <span>Инструкция по установке на главный экран</span>
+            Тест сигналу таймера
           </Button>
         </div>
       </Card>
 
-      {/* Backup and Local-First JSON */}
+      {/* 6. Backup and JSON */}
       <Card className="border-white/10 bg-slate-900/60 p-4 sm:p-5 space-y-3">
         <CardTitle className="text-sm sm:text-base flex items-center gap-2">
           <Download className="h-4 w-4 text-amber-400" />
-          <span>Резервное копирование (JSON)</span>
+          <span>{t.settings.backupAndData}</span>
         </CardTitle>
         <p className="text-xs text-slate-400">
-          Сохраняйте ваши тренировки и историю замеров на устройство или восстанавливайте на любом
-          другом телефоне или планшете.
+          Зберігайте ваші тренування та заміри або відновлюйте на іншому пристрої.
         </p>
 
         <div className="flex flex-col sm:flex-row gap-2.5 pt-2">
-          <Button
-            variant="accent"
-            size="sm"
-            onClick={handleExportJSON}
-            className="flex-1 font-bold"
-          >
+          <Button variant="accent" size="sm" onClick={handleExportJSON} className="flex-1 font-bold">
             <Download className="h-4 w-4 mr-2" />
-            <span>Экспорт в JSON</span>
+            <span>{t.settings.exportJson}</span>
           </Button>
 
           <Button
@@ -463,7 +503,7 @@ export default function SettingsPage() {
             className="flex-1 font-semibold border-white/15 hover:bg-white/10"
           >
             <Upload className="h-4 w-4 mr-2" />
-            <span>Импорт из JSON</span>
+            <span>{t.settings.importJson}</span>
           </Button>
           <input
             type="file"
@@ -475,18 +515,15 @@ export default function SettingsPage() {
         </div>
       </Card>
 
-      {/* SMT Guide & Documentation */}
+      {/* 7. SMT Guide */}
       <Card className="border-emerald-500/30 bg-gradient-to-br from-emerald-950/20 via-slate-900/60 to-slate-900/60 p-4 sm:p-5 space-y-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm sm:text-base flex items-center gap-2 text-white">
             <BookOpen className="h-4 w-4 text-emerald-400" />
-            <span>Справка и методика СМТ-1</span>
+            <span>Довідка та методика</span>
           </CardTitle>
-          <span className="text-[10px] text-emerald-400 font-mono">SMT_GUIDE.md</span>
+          <span className="text-[10px] text-emerald-400 font-mono">GUIDE.md</span>
         </div>
-        <p className="text-xs text-slate-300 leading-relaxed">
-          Полное руководство по системе Владимира Гончарова: правила 30-секундного отдыха, круговые суперсеты, таблица 4-х микроциклов, авто-прогрессия весов (+2.5 кг) и инструкция к приложению.
-        </p>
         <div className="flex flex-col sm:flex-row gap-2.5 pt-1">
           <Button
             variant="accent"
@@ -495,7 +532,7 @@ export default function SettingsPage() {
             className="text-xs font-bold"
           >
             <BookOpen className="h-4 w-4 mr-1.5" />
-            <span>Открыть интерактивную справку</span>
+            <span>Відкрити інтерактивну довідку</span>
           </Button>
 
           <Link href="/help">
@@ -504,17 +541,17 @@ export default function SettingsPage() {
               size="sm"
               className="text-xs font-semibold w-full sm:w-auto border-white/15 hover:bg-white/10"
             >
-              <span>Читать на отдельной странице</span>
+              <span>Читати на окремій сторінці</span>
             </Button>
           </Link>
         </div>
       </Card>
 
-      {/* Demo & Data Management */}
+      {/* 8. Demo & Reset */}
       <Card className="border-white/10 bg-slate-900/60 p-4 sm:p-5 space-y-3">
         <CardTitle className="text-sm sm:text-base flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-purple-400" />
-          <span>Демо-данные и сброс</span>
+          <span>{t.settings.loadDemo}</span>
         </CardTitle>
 
         <div className="flex flex-col sm:flex-row gap-2.5 pt-1">
@@ -524,37 +561,34 @@ export default function SettingsPage() {
             onClick={() => {
               loadDemoData();
               loadDemoMeasurements();
-              showToast("Демо-тренировки и замеры успешно загружены!");
+              showToast("Демо-дані успішно завантажено!");
             }}
             className="text-xs font-semibold hover:border-purple-500/40 hover:text-purple-300"
           >
             <Sparkles className="h-4 w-4 mr-1.5 text-purple-400" />
-            <span>Загрузить готовые демо-данные</span>
+            <span>{t.settings.loadDemo}</span>
           </Button>
 
           <Button
             variant="destructive"
             size="sm"
             onClick={() => {
-              if (confirm("Вы уверены, что хотите сбросить все тренировки до начального состояния?")) {
+              if (confirm(t.settings.resetConfirm)) {
                 resetAllWorkouts();
                 clearMeasurements();
-                showToast("Все данные сброшены к чистой программе.");
+                showToast("Дані успішно скинуто.");
               }
             }}
             className="text-xs font-semibold"
           >
             <RotateCcw className="h-4 w-4 mr-1.5" />
-            <span>Сбросить все тренировки и замеры</span>
+            <span>{t.settings.resetWorkouts}</span>
           </Button>
         </div>
       </Card>
 
       {/* Help Modal */}
-      <HelpModal
-        isOpen={isHelpModalOpen}
-        onClose={() => setIsHelpModalOpen(false)}
-      />
+      <HelpModal isOpen={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} />
     </div>
   );
 }
