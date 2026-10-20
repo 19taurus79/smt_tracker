@@ -81,14 +81,6 @@ function WorkoutContent() {
     return () => clearInterval(interval);
   }, [isStopwatchRunning, tickStopwatch]);
 
-  if (!mounted) {
-    return (
-      <div className="flex h-[70vh] items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
-      </div>
-    );
-  }
-
   const targetId = queryId || viewingWorkoutId || activeWorkoutId;
   const currentWorkout =
     workouts.find((w) => w.id === targetId) ||
@@ -96,6 +88,35 @@ function WorkoutContent() {
     workouts.find((w) => w.status === "in_progress") ||
     workouts.find((w) => w.status === "upcoming") ||
     workouts[0];
+
+  const isCurrentActive =
+    !!currentWorkout &&
+    activeWorkoutId === currentWorkout.id &&
+    currentWorkout.status === "in_progress";
+  const isCompleted = currentWorkout?.status === "completed";
+  const isUpcoming = !isCurrentActive && !isCompleted;
+
+  // Manage Screen Wake Lock (unconditional hook)
+  useEffect(() => {
+    const isRunning = isCurrentActive && isStopwatchRunning && keepScreenAwake;
+    if (isRunning) {
+      wakeLockManager.acquire();
+    } else {
+      wakeLockManager.release();
+    }
+
+    return () => {
+      wakeLockManager.release();
+    };
+  }, [isCurrentActive, isStopwatchRunning, keepScreenAwake]);
+
+  if (!mounted) {
+    return (
+      <div className="flex h-[70vh] items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-emerald-500 border-t-transparent" />
+      </div>
+    );
+  }
 
   if (!currentWorkout) {
     return (
@@ -109,25 +130,6 @@ function WorkoutContent() {
       </div>
     );
   }
-
-  const isCurrentActive =
-    activeWorkoutId === currentWorkout.id && currentWorkout.status === "in_progress";
-  const isCompleted = currentWorkout.status === "completed";
-  const isUpcoming = !isCurrentActive && !isCompleted;
-
-  // Manage Screen Wake Lock
-  useEffect(() => {
-    const isRunning = isCurrentActive && isStopwatchRunning && keepScreenAwake;
-    if (isRunning) {
-      wakeLockManager.acquire();
-    } else {
-      wakeLockManager.release();
-    }
-
-    return () => {
-      wakeLockManager.release();
-    };
-  }, [isCurrentActive, isStopwatchRunning, keepScreenAwake]);
 
   // Calculate overall set progress for this workout
   let totalSets = 0;
