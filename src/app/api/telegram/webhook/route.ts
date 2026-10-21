@@ -179,6 +179,78 @@ export async function POST(req: Request) {
           });
         }
       }
+
+      // Handle /rules command
+      if (text.startsWith("/rules") || text.startsWith("/help")) {
+        const rulesMsg =
+          lang === "uk"
+            ? `⚡️ <b>ЗОЛОТІ ПРАВИЛА СМТ (Майк Казаков / Steelfactor)</b>\n\n1️⃣ <b>Відпочинок суворо 30 секунд:</b> між підходами та колами суперсетів пауза рівно 30 секунд. Якщо важко — зменшіть вагу, але тримайте темп!\n2️⃣ <b>Темп тренування:</b> 1 підхід = ~1 хвилина. Вся тренування з 24 підходів триває 24–30 хвилин.\n3️⃣ <b>Два етапи прогресу:</b> Етап 1 — виконати всі підходи з відпочинком 30с. Етап 2 — додати +2.5 кг на наступне тренування.\n4️⃣ <b>Незмінний комплекс:</b> всі 36 тренувань вправи не змінюються для максимальної нервово-м'язової адаптації.`
+            : `⚡️ <b>ЗОЛОТЫЕ ПРАВИЛА СМТ (Майк Казаков / Steelfactor)</b>\n\n1️⃣ <b>Отдых строго 30 секунд:</b> между подходами и кругами пауза ровно 30 секунд. Если тяжело — снизьте вес, но держите темп!\n2️⃣ <b>Темп тренировки:</b> 1 подход = ~1 минута. Вся тренировка из 24 подходов длится 24–30 минут.\n3️⃣ <b>Два этапа прогресса:</b> Этап 1 — закрыть все подходы с отдыхом 30с. Этап 2 — добавить +2.5 кг на следующую тренировку.\n4️⃣ <b>Неизменный комплекс:</b> все 36 тренировок упражнения не меняются для идеальной нервно-мышечной адаптации.`;
+
+        await tgApi("sendMessage", {
+          chat_id: chat.id,
+          text: rulesMsg,
+          parse_mode: "HTML",
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: lang === "uk" ? "🚀 Відкрити Трекер" : "🚀 Открыть Трекер",
+                  web_app: { url: APP_URL },
+                },
+              ],
+            ],
+          },
+        });
+        return NextResponse.json({ ok: true });
+      }
+
+      // Handle /coach command
+      if (text.startsWith("/coach")) {
+        const coachUser = (process.env.NEXT_PUBLIC_COACH_USERNAME || "coach_alex").replace(/^@/, "");
+        await tgApi("sendMessage", {
+          chat_id: chat.id,
+          text:
+            lang === "uk"
+              ? `👤 <b>Головний Тренер Челенджу:</b> @${coachUser}\n\nВи можете надіслати запитання щодо техніки, підбору робочих ваг або харчування:`
+              : `👤 <b>Главный Тренер Челленджа:</b> @${coachUser}\n\nВы можете задать вопрос по технике, подбору весов или питанию:`,
+          parse_mode: "HTML",
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: lang === "uk" ? "💬 Написати Тренеру" : "💬 Написать Тренеру",
+                  url: `https://t.me/${coachUser}`,
+                },
+              ],
+            ],
+          },
+        });
+        return NextResponse.json({ ok: true });
+      }
+
+      // Handle /app command
+      if (text.startsWith("/app")) {
+        await tgApi("sendMessage", {
+          chat_id: chat.id,
+          text:
+            lang === "uk"
+              ? "🏋️‍♂️ <b>SMT-1 Tracker & Challenge</b>\nНатисніть кнопку нижче, щоб відкрити персональний щоденник тренувань:"
+              : "🏋️‍♂️ <b>SMT-1 Tracker & Challenge</b>\nНажмите кнопку ниже, чтобы открыть персональный дневник тренировок:",
+          parse_mode: "HTML",
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: lang === "uk" ? "🚀 Запустити Трекер" : "🚀 Запустить Трекер",
+                  web_app: { url: APP_URL },
+                },
+              ],
+            ],
+          },
+        });
+        return NextResponse.json({ ok: true });
+      }
     }
 
     // 2. Handle button callback query (e.g. check_sub)
