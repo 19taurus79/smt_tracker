@@ -38,7 +38,8 @@ interface TelegramUpdate {
 }
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const CHANNEL_ID = process.env.TELEGRAM_CHALLENGE_CHANNEL_ID || "@smt_challenge";
+const rawChannel = process.env.TELEGRAM_CHALLENGE_CHANNEL_ID || "@smt_challenge";
+const CHANNEL_ID = rawChannel.startsWith("@") || rawChannel.startsWith("-") ? rawChannel : `@${rawChannel}`;
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://smt-tracker.vercel.app";
 
 async function tgApi(method: string, body: Record<string, unknown>) {

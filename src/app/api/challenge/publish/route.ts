@@ -20,8 +20,9 @@ interface PublishWorkoutBody {
 }
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const CHANNEL_ID = process.env.TELEGRAM_CHALLENGE_CHANNEL_ID || "@smt_challenge";
-const BOT_USERNAME = process.env.TELEGRAM_BOT_USERNAME || "smt_workout_bot";
+const rawChannel = process.env.TELEGRAM_CHALLENGE_CHANNEL_ID || "@smt_challenge";
+const CHANNEL_ID = rawChannel.startsWith("@") || rawChannel.startsWith("-") ? rawChannel : `@${rawChannel}`;
+const BOT_USERNAME = process.env.TELEGRAM_BOT_USERNAME || "athletic_smt_bot";
 
 export async function POST(req: Request) {
   try {

@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "bot:setup": "node scripts/setup-telegram-bot.mjs"
   },
   "dependencies": {
     "@twa-dev/sdk": "^8.0.2",
