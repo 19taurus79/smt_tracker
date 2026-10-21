@@ -3,7 +3,6 @@
 import React, { useState } from "react";
 import {
   X,
-  User,
   Calendar,
   Clock,
   Dumbbell,
@@ -13,11 +12,14 @@ import {
   FileEdit,
   Save,
   CheckCircle2,
-  AlertCircle,
-  Sparkles,
   Ruler,
-  ChevronRight,
   ExternalLink,
+  Ban,
+  Unlock,
+  Trash2,
+  Trophy,
+  Scale,
+  Sparkles,
 } from "lucide-react";
 import { Dialog, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -32,7 +34,7 @@ interface TraineeDetailModalProps {
 }
 
 export function TraineeDetailModal({ trainee, open, onOpenChange }: TraineeDetailModalProps) {
-  const { updateCoachNotes, updateTrainee } = useCoachStore();
+  const { updateCoachNotes, blockTrainee, unblockTrainee, deleteTrainee } = useCoachStore();
   const { t, language } = useTranslation();
 
   const [activeTab, setActiveTab] = useState<"workouts" | "body" | "notes">("workouts");
@@ -54,18 +56,8 @@ export function TraineeDetailModal({ trainee, open, onOpenChange }: TraineeDetai
     setTimeout(() => setNotesSaved(false), 2500);
   };
 
-  const getTierBadgeClass = (tierKey: string) => {
-    switch (tierKey) {
-      case "titan":
-        return "bg-amber-500/15 border-amber-500/40 text-amber-300";
-      case "iron_pro":
-        return "bg-cyan-500/15 border-cyan-500/40 text-cyan-300";
-      case "power_master":
-        return "bg-emerald-500/15 border-emerald-500/40 text-emerald-300";
-      default:
-        return "bg-slate-500/15 border-slate-500/40 text-slate-300";
-    }
-  };
+  const isBlocked = trainee.status === "blocked";
+  const isLead = trainee.status === "new_lead";
 
   const initials = trainee.name
     .split(" ")
@@ -75,98 +67,197 @@ export function TraineeDetailModal({ trainee, open, onOpenChange }: TraineeDetai
     .toUpperCase();
 
   const cleanTelegramUsername = trainee.username.replace(/^@/, "");
-  const telegramChatUrl = `https://t.me/${cleanTelegramUsername}`;
+  const telegramChatUrl = cleanTelegramUsername ? `https://t.me/${cleanTelegramUsername}` : "#";
+  const progressPercent = Math.min(100, Math.round((trainee.currentWorkoutNumber / 36) * 100));
+
+  const getTierColorInfo = (tierKey: string) => {
+    switch (tierKey) {
+      case "titan":
+        return {
+          bg: "bg-amber-500/15",
+          border: "border-amber-500/40",
+          text: "text-amber-300",
+          label: trainee.tierLabel || "Титан Сили ⚡",
+        };
+      case "iron_pro":
+        return {
+          bg: "bg-cyan-500/15",
+          border: "border-cyan-500/40",
+          text: "text-cyan-300",
+          label: trainee.tierLabel || "Залізний Профі 🦾",
+        };
+      case "power_master":
+        return {
+          bg: "bg-emerald-500/15",
+          border: "border-emerald-500/40",
+          text: "text-emerald-300",
+          label: trainee.tierLabel || "Майстер Потужності 💥",
+        };
+      case "lead":
+        return {
+          bg: "bg-rose-500/15",
+          border: "border-rose-500/40",
+          text: "text-rose-300",
+          label: "Новий Лід 🔥",
+        };
+      default:
+        return {
+          bg: "bg-slate-500/15",
+          border: "border-slate-500/40",
+          text: "text-slate-300",
+          label: trainee.tierLabel || "Активний Атлет 🏋️",
+        };
+    }
+  };
+
+  const tierInfo = getTierColorInfo(trainee.tierKey);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogHeader>
         <DialogTitle onClose={() => onOpenChange(false)}>
-          <div className="flex items-center gap-2.5">
-            <div className={`h-8 w-8 rounded-xl bg-gradient-to-tr ${trainee.avatarColor} flex items-center justify-center text-xs font-black text-white shadow-md`}>
+          <div className="flex items-center gap-3">
+            <div
+              className={`h-10 w-10 rounded-2xl bg-gradient-to-tr ${trainee.avatarColor} flex items-center justify-center text-sm font-black text-white shadow-md shrink-0`}
+            >
               {initials}
             </div>
-            <div className="flex flex-col">
-              <span className="text-sm font-extrabold text-white leading-tight">{trainee.name}</span>
-              <a
-                href={telegramChatUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="text-[11px] font-medium text-cyan-400 hover:text-cyan-300 flex items-center gap-1"
-              >
-                <span>@{cleanTelegramUsername}</span>
-                <ExternalLink className="h-2.5 w-2.5 inline" />
-              </a>
+            <div className="min-w-0">
+              <span className="text-base font-black text-white leading-tight block truncate">
+                {trainee.name}
+              </span>
+              {cleanTelegramUsername ? (
+                <a
+                  href={telegramChatUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 inline-flex items-center gap-1"
+                >
+                  <span>@{cleanTelegramUsername}</span>
+                  <ExternalLink className="h-2.5 w-2.5 inline" />
+                </a>
+              ) : (
+                <span className="text-xs text-slate-500 italic block">Без юзернейму</span>
+              )}
             </div>
           </div>
         </DialogTitle>
         <DialogDescription>
-          {language === "uk"
-            ? `Досьє підопічного • Тренування #${trainee.currentWorkoutNumber}/36 (МКЦ-${trainee.currentMicrocycle})`
-            : language === "en"
-            ? `Trainee Profile • Workout #${trainee.currentWorkoutNumber}/36 (MC-${trainee.currentMicrocycle})`
-            : `Досье подопечного • Тренировка #${trainee.currentWorkoutNumber}/36 (МКЦ-${trainee.currentMicrocycle})`}
+          Досьє атлета • Програма СМТ-1 (12 тижнів, 36 тренувань)
         </DialogDescription>
       </DialogHeader>
 
-      <div className="space-y-4 my-2 max-h-[70vh] overflow-y-auto pr-1">
-        {/* Trainee Hero Card */}
-        <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 space-y-3">
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <div className="flex items-center gap-2">
-              <span
-                className={`text-[11px] font-black uppercase px-2.5 py-0.5 rounded-full border ${getTierBadgeClass(
-                  trainee.tierKey
-                )}`}
-              >
-                {trainee.tierLabel}
-              </span>
-              <span className="text-[11px] text-slate-400">
-                Індекс: <strong className="text-white font-mono">{trainee.athleticScore}</strong>/100
+      <div className="space-y-4 my-2 max-h-[72vh] overflow-y-auto pr-1 pb-4">
+        {/* ======================================================== */}
+        {/* BENTO GRID: Атлетичний статус та метрики підопічного    */}
+        {/* ======================================================== */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+          {/* Bento 1: Индекс атлетичности */}
+          <div className="p-3.5 rounded-2xl bg-gradient-to-br from-slate-900/90 to-slate-950 border border-white/10 flex flex-col justify-between space-y-2">
+            <div className="flex items-center justify-between text-slate-400">
+              <span className="text-[10px] font-bold uppercase tracking-wider">Індекс сили</span>
+              <Trophy className="h-3.5 w-3.5 text-amber-400" />
+            </div>
+            <div>
+              <div className="flex items-baseline gap-1">
+                <span className="text-2xl font-black text-white font-mono">{trainee.athleticScore}</span>
+                <span className="text-[10px] text-slate-500 font-mono">/100</span>
+              </div>
+              <span className={`inline-block mt-1 text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${tierInfo.bg} ${tierInfo.border} ${tierInfo.text}`}>
+                {isBlocked ? "Блок 🚫" : tierInfo.label}
               </span>
             </div>
-
-            <a
-              href={telegramChatUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 hover:bg-cyan-500/30 text-xs font-bold transition-all shadow-sm shadow-cyan-500/20"
-            >
-              <MessageCircle className="h-3.5 w-3.5" />
-              <span>{language === "uk" ? "Написати в Telegram" : language === "en" ? "Chat in Telegram" : "Написать в Telegram"}</span>
-            </a>
           </div>
 
-          {/* Quick Metrics Grid */}
-          <div className="grid grid-cols-4 gap-2 text-center">
-            <div className="p-2 rounded-xl bg-slate-950/60 border border-white/5">
-              <span className="text-[9px] uppercase font-bold text-slate-400 block">МКЦ</span>
-              <span className="text-sm font-black text-white">{trainee.currentMicrocycle}</span>
+          {/* Bento 2: Прогресс в программе СМТ */}
+          <div className="p-3.5 rounded-2xl bg-gradient-to-br from-slate-900/90 to-slate-950 border border-white/10 flex flex-col justify-between space-y-2">
+            <div className="flex items-center justify-between text-slate-400">
+              <span className="text-[10px] font-bold uppercase tracking-wider">Прогрес СМТ</span>
+              <Dumbbell className="h-3.5 w-3.5 text-emerald-400" />
             </div>
-            <div className="p-2 rounded-xl bg-slate-950/60 border border-white/5">
-              <span className="text-[9px] uppercase font-bold text-slate-400 block">Тренувань</span>
-              <span className="text-sm font-black text-emerald-400">{trainee.totalWorkouts}</span>
-            </div>
-            <div className="p-2 rounded-xl bg-slate-950/60 border border-white/5">
-              <span className="text-[9px] uppercase font-bold text-slate-400 block">Вага тіла</span>
-              <span className="text-sm font-black text-white">{trainee.weightKg} кг</span>
-            </div>
-            <div className="p-2 rounded-xl bg-slate-950/60 border border-white/5">
-              <span className="text-[9px] uppercase font-bold text-slate-400 block">Динаміка</span>
-              <span className={`text-sm font-black ${trainee.weightDeltaKg >= 0 ? "text-emerald-400" : "text-amber-400"}`}>
-                {trainee.weightDeltaKg > 0 ? `+${trainee.weightDeltaKg}` : trainee.weightDeltaKg} кг
+            <div>
+              <div className="flex items-baseline gap-1">
+                <span className="text-xl font-black text-white font-mono">#{trainee.currentWorkoutNumber}</span>
+                <span className="text-[10px] text-slate-500 font-mono">/ 36</span>
+              </div>
+              <span className="text-[10px] text-emerald-400 font-bold block mt-0.5">
+                МКЦ-{trainee.currentMicrocycle} ({progressPercent}%)
               </span>
+              <div className="h-1.5 w-full rounded-full bg-slate-900 mt-1.5 overflow-hidden border border-white/5">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-cyan-500"
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Bento 3: Текущий вес и динамика */}
+          <div className="p-3.5 rounded-2xl bg-gradient-to-br from-slate-900/90 to-slate-950 border border-white/10 flex flex-col justify-between space-y-2">
+            <div className="flex items-center justify-between text-slate-400">
+              <span className="text-[10px] font-bold uppercase tracking-wider">Вага тіла</span>
+              <Scale className="h-3.5 w-3.5 text-cyan-400" />
+            </div>
+            <div>
+              <div className="flex items-baseline gap-1">
+                <span className="text-xl font-black text-white font-mono">{trainee.weightKg}</span>
+                <span className="text-[10px] text-slate-400 font-bold">кг</span>
+              </div>
+              <span
+                className={`inline-block mt-1 text-[10px] font-bold ${
+                  trainee.weightDeltaKg > 0
+                    ? "text-emerald-400"
+                    : trainee.weightDeltaKg < 0
+                    ? "text-cyan-400"
+                    : "text-slate-400"
+                }`}
+              >
+                {trainee.weightDeltaKg > 0
+                  ? `↑ +${trainee.weightDeltaKg} кг`
+                  : trainee.weightDeltaKg < 0
+                  ? `↓ ${trainee.weightDeltaKg} кг`
+                  : "0.0 кг (старт)"}
+              </span>
+            </div>
+          </div>
+
+          {/* Bento 4: Быстрая связь в Telegram */}
+          <div className="p-3.5 rounded-2xl bg-gradient-to-br from-slate-900/90 to-slate-950 border border-white/10 flex flex-col justify-between space-y-2">
+            <div className="flex items-center justify-between text-slate-400">
+              <span className="text-[10px] font-bold uppercase tracking-wider">Зв'язок</span>
+              <MessageCircle className="h-3.5 w-3.5 text-cyan-400" />
+            </div>
+            <div>
+              {cleanTelegramUsername ? (
+                <a
+                  href={telegramChatUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="w-full h-8 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/30 border border-cyan-500/40 text-cyan-300 text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm shadow-cyan-500/10"
+                >
+                  <MessageCircle className="h-3.5 w-3.5" />
+                  <span>Написати</span>
+                </a>
+              ) : (
+                <span className="text-[11px] text-slate-500 italic block mt-2">
+                  Юзернейм відсутній
+                </span>
+              )}
             </div>
           </div>
         </div>
 
-        {/* Tab navigation */}
-        <div className="flex border-b border-white/10 pb-1 gap-1">
+        {/* ======================================================== */}
+        {/* СЕГМЕНТОВАНИЙ BENTO-ПЕРЕМИКАЧ ВКЛАДОК                     */}
+        {/* ======================================================== */}
+        <div className="grid grid-cols-3 gap-1.5 p-1 rounded-2xl bg-slate-900/80 border border-white/10">
           <button
+            type="button"
             onClick={() => setActiveTab("workouts")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+            className={`h-9 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
               activeTab === "workouts"
-                ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
-                : "text-slate-400 hover:text-white"
+                ? "bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20"
+                : "text-slate-400 hover:text-white hover:bg-white/5"
             }`}
           >
             <Dumbbell className="h-3.5 w-3.5" />
@@ -174,11 +265,12 @@ export function TraineeDetailModal({ trainee, open, onOpenChange }: TraineeDetai
           </button>
 
           <button
+            type="button"
             onClick={() => setActiveTab("body")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+            className={`h-9 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
               activeTab === "body"
-                ? "bg-cyan-500/20 text-cyan-300 border border-cyan-500/30"
-                : "text-slate-400 hover:text-white"
+                ? "bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20"
+                : "text-slate-400 hover:text-white hover:bg-white/5"
             }`}
           >
             <Ruler className="h-3.5 w-3.5" />
@@ -186,11 +278,12 @@ export function TraineeDetailModal({ trainee, open, onOpenChange }: TraineeDetai
           </button>
 
           <button
+            type="button"
             onClick={() => setActiveTab("notes")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+            className={`h-9 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
               activeTab === "notes"
-                ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
-                : "text-slate-400 hover:text-white"
+                ? "bg-amber-400 text-slate-950 shadow-md shadow-amber-400/20"
+                : "text-slate-400 hover:text-white hover:bg-white/5"
             }`}
           >
             <FileEdit className="h-3.5 w-3.5" />
@@ -198,78 +291,89 @@ export function TraineeDetailModal({ trainee, open, onOpenChange }: TraineeDetai
           </button>
         </div>
 
-        {/* TAB 1: WORKOUTS HISTORY */}
+        {/* ======================================================== */}
+        {/* TAB 1: ІСТОРІЯ ТРЕНУВАНЬ (BENTO WORKOUT CARDS)           */}
+        {/* ======================================================== */}
         {activeTab === "workouts" && (
           <div className="space-y-3">
             {trainee.workoutHistory.length === 0 ? (
-              <div className="p-6 text-center text-slate-400 text-xs bg-white/5 rounded-2xl">
-                Немає записів тренувань
+              <div className="p-8 text-center text-slate-400 text-xs bg-slate-900/40 rounded-3xl border border-white/5 space-y-1">
+                <Dumbbell className="h-6 w-6 text-slate-500 mx-auto mb-2" />
+                <p className="font-semibold text-slate-300">Немає збережених тренувань</p>
+                <p className="text-slate-500 text-[11px]">
+                  Звіти з'являться тут автоматично після завершення першого тренування.
+                </p>
               </div>
             ) : (
               trainee.workoutHistory.map((w) => (
                 <div
                   key={w.id}
-                  className="p-3 rounded-2xl border border-white/10 bg-slate-950/70 space-y-2.5"
+                  className="p-4 rounded-3xl border border-white/10 bg-slate-900/70 space-y-3 shadow-lg"
                 >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-emerald-500/20 text-emerald-400 font-black text-xs">
+                  {/* Workout Header */}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2.5">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400 font-black text-xs shrink-0">
                         #{w.workoutNumber}
                       </span>
                       <div>
-                        <span className="text-xs font-bold text-white block">
+                        <h4 className="text-sm font-extrabold text-white leading-tight">
                           Тренування #{w.workoutNumber} (МКЦ-{w.microcycle})
-                        </span>
-                        <span className="text-[10px] text-slate-400 flex items-center gap-1">
-                          <Calendar className="h-2.5 w-2.5" />
+                        </h4>
+                        <span className="text-[11px] text-slate-400 flex items-center gap-1 mt-0.5">
+                          <Calendar className="h-3 w-3 text-slate-500" />
                           <span>{formatDate(w.date)}</span>
                         </span>
                       </div>
                     </div>
 
-                    <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${getTierBadgeClass(
-                        w.tierKey
-                      )}`}
-                    >
-                      {w.athleticScore} / 100
-                    </span>
-                  </div>
-
-                  {/* Metrics summary */}
-                  <div className="grid grid-cols-3 gap-1.5 text-center bg-white/5 rounded-xl p-1.5 text-[11px]">
-                    <div>
-                      <span className="text-[9px] text-slate-400 block">Тоннаж</span>
-                      <strong className="text-white">{w.tonnageKg.toLocaleString()} кг</strong>
-                    </div>
-                    <div>
-                      <span className="text-[9px] text-slate-400 block">Час</span>
-                      <strong className="text-white font-mono">{formatTime(w.durationSeconds)}</strong>
-                    </div>
-                    <div>
-                      <span className="text-[9px] text-slate-400 block">Потужність</span>
-                      <strong className="text-amber-400 font-mono">{w.powerKgPerMin} кг/хв</strong>
-                    </div>
-                  </div>
-
-                  {/* Exercises and weights */}
-                  {w.exercises && w.exercises.length > 0 && (
-                    <div className="space-y-1 pt-1 border-t border-white/5">
-                      <span className="text-[10px] uppercase font-bold text-slate-400 block">
-                        Виконані ваги:
+                    <div className="text-right">
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 font-mono font-bold text-xs">
+                        <span>{w.athleticScore}</span>
+                        <span className="text-[10px] text-cyan-400/70">/ 100</span>
                       </span>
-                      <div className="space-y-1">
+                    </div>
+                  </div>
+
+                  {/* 3 Metrics Pills (No abbreviations, clean and spacious) */}
+                  <div className="grid grid-cols-3 gap-2 text-center bg-slate-950/70 border border-white/5 rounded-2xl p-2 text-xs">
+                    <div>
+                      <span className="text-[9px] uppercase font-bold text-slate-400 block mb-0.5">Тоннаж</span>
+                      <strong className="text-white font-mono text-xs">{w.tonnageKg.toLocaleString()} кг</strong>
+                    </div>
+                    <div>
+                      <span className="text-[9px] uppercase font-bold text-slate-400 block mb-0.5">Тривалість</span>
+                      <strong className="text-white font-mono text-xs">{formatTime(w.durationSeconds)}</strong>
+                    </div>
+                    <div>
+                      <span className="text-[9px] uppercase font-bold text-slate-400 block mb-0.5">Потужність</span>
+                      <strong className="text-amber-400 font-mono text-xs">{w.powerKgPerMin} кг/хв</strong>
+                    </div>
+                  </div>
+
+                  {/* Exercises: Full names, NO truncate, beautiful clean chips */}
+                  {w.exercises && w.exercises.length > 0 && (
+                    <div className="space-y-1.5 pt-1 border-t border-white/5">
+                      <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
+                        Виконані вправи:
+                      </span>
+                      <div className="space-y-1.5">
                         {w.exercises.map((ex, idx) => (
                           <div
                             key={idx}
-                            className="flex items-center justify-between text-xs px-2 py-1 rounded-lg bg-white/5"
+                            className="flex items-center justify-between gap-3 text-xs p-2.5 rounded-xl bg-slate-950/60 border border-white/5"
                           >
-                            <span className="text-slate-300 font-medium truncate max-w-[200px]">
+                            <span className="text-slate-200 font-semibold leading-snug">
                               {ex.name}
                             </span>
-                            <span className="font-bold text-emerald-400 font-mono text-[11px]">
-                              {ex.weight} кг × {ex.reps} ({ex.setsCount} підх)
-                            </span>
+                            <div className="shrink-0 flex items-center gap-1.5">
+                              <span className="px-2 py-0.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-mono font-bold text-xs whitespace-nowrap">
+                                {ex.weight} кг × {ex.reps}
+                              </span>
+                              <span className="text-[11px] text-slate-400 font-medium whitespace-nowrap">
+                                ({ex.setsCount} підх)
+                              </span>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -278,11 +382,11 @@ export function TraineeDetailModal({ trainee, open, onOpenChange }: TraineeDetai
 
                   {/* Athlete Notes */}
                   {w.notes && (
-                    <div className="p-2 rounded-xl bg-slate-900/60 border border-white/5 text-xs text-slate-300 italic">
+                    <div className="p-3 rounded-2xl bg-slate-950/80 border border-white/5 text-xs text-slate-300 leading-relaxed italic space-y-1">
                       <span className="text-slate-500 font-semibold not-italic block text-[10px]">
                         Коментар атлета:
                       </span>
-                      "{w.notes}"
+                      <p>"{w.notes}"</p>
                     </div>
                   )}
                 </div>
@@ -291,54 +395,52 @@ export function TraineeDetailModal({ trainee, open, onOpenChange }: TraineeDetai
           </div>
         )}
 
-        {/* TAB 2: MEASUREMENTS */}
+        {/* ======================================================== */}
+        {/* TAB 2: ЗАМІРИ ТІЛА (BENTO MEASUREMENT CARDS)             */}
+        {/* ======================================================== */}
         {activeTab === "body" && (
           <div className="space-y-3">
             {trainee.measurementHistory.length === 0 ? (
-              <div className="p-6 text-center text-slate-400 text-xs bg-white/5 rounded-2xl">
-                Немає записів замірів
+              <div className="p-8 text-center text-slate-400 text-xs bg-slate-900/40 rounded-3xl border border-white/5 space-y-1">
+                <Ruler className="h-6 w-6 text-slate-500 mx-auto mb-2" />
+                <p className="font-semibold text-slate-300">Немає записів замірів</p>
+                <p className="text-slate-500 text-[11px]">
+                  Заміри ваги та обхватів атлета зберігатимуться тут по датах.
+                </p>
               </div>
             ) : (
               trainee.measurementHistory.map((m) => (
                 <div
                   key={m.id}
-                  className="p-3 rounded-2xl border border-white/10 bg-slate-950/70 space-y-2"
+                  className="p-4 rounded-3xl border border-white/10 bg-slate-900/70 space-y-2.5 shadow-lg"
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                      <Calendar className="h-3 w-3 text-cyan-400" />
+                      <Calendar className="h-3.5 w-3.5 text-cyan-400" />
                       <span>{formatDate(m.date)}</span>
                     </span>
-                    <span className="text-xs font-black text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
-                      {m.weightKg} кг
+                    <span className="text-xs font-black text-emerald-400 bg-emerald-500/15 px-3 py-1 rounded-full border border-emerald-500/30">
+                      Вага: {m.weightKg} кг
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-4 gap-1.5 text-center text-[11px] pt-1 border-t border-white/5">
-                    {m.waistCm && (
-                      <div className="p-1.5 rounded-lg bg-white/5">
-                        <span className="text-[9px] text-slate-400 block">Талія</span>
-                        <strong className="text-white">{m.waistCm} см</strong>
-                      </div>
-                    )}
-                    {m.chestCm && (
-                      <div className="p-1.5 rounded-lg bg-white/5">
-                        <span className="text-[9px] text-slate-400 block">Груди</span>
-                        <strong className="text-white">{m.chestCm} см</strong>
-                      </div>
-                    )}
-                    {m.bicepsCm && (
-                      <div className="p-1.5 rounded-lg bg-white/5">
-                        <span className="text-[9px] text-slate-400 block">Біцепс</span>
-                        <strong className="text-white">{m.bicepsCm} см</strong>
-                      </div>
-                    )}
-                    {m.thighCm && (
-                      <div className="p-1.5 rounded-lg bg-white/5">
-                        <span className="text-[9px] text-slate-400 block">Стегно</span>
-                        <strong className="text-white">{m.thighCm} см</strong>
-                      </div>
-                    )}
+                  <div className="grid grid-cols-4 gap-2 text-center text-xs pt-1 border-t border-white/5">
+                    <div className="p-2 rounded-xl bg-slate-950/60 border border-white/5">
+                      <span className="text-[9px] text-slate-400 uppercase font-bold block mb-0.5">Талія</span>
+                      <strong className="text-white font-mono">{m.waistCm ? `${m.waistCm} см` : "—"}</strong>
+                    </div>
+                    <div className="p-2 rounded-xl bg-slate-950/60 border border-white/5">
+                      <span className="text-[9px] text-slate-400 uppercase font-bold block mb-0.5">Груди</span>
+                      <strong className="text-white font-mono">{m.chestCm ? `${m.chestCm} см` : "—"}</strong>
+                    </div>
+                    <div className="p-2 rounded-xl bg-slate-950/60 border border-white/5">
+                      <span className="text-[9px] text-slate-400 uppercase font-bold block mb-0.5">Біцепс</span>
+                      <strong className="text-white font-mono">{m.bicepsCm ? `${m.bicepsCm} см` : "—"}</strong>
+                    </div>
+                    <div className="p-2 rounded-xl bg-slate-950/60 border border-white/5">
+                      <span className="text-[9px] text-slate-400 uppercase font-bold block mb-0.5">Стегно</span>
+                      <strong className="text-white font-mono">{m.thighCm ? `${m.thighCm} см` : "—"}</strong>
+                    </div>
                   </div>
                 </div>
               ))
@@ -346,14 +448,16 @@ export function TraineeDetailModal({ trainee, open, onOpenChange }: TraineeDetai
           </div>
         )}
 
-        {/* TAB 3: COACH NOTES */}
+        {/* ======================================================== */}
+        {/* TAB 3: ЗАМІТКИ ТРЕНЕРА                                   */}
+        {/* ======================================================== */}
         {activeTab === "notes" && (
           <div className="space-y-3">
-            <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-200 flex items-start gap-2">
+            <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-200 flex items-start gap-2.5">
               <Sparkles className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
-              <span>
-                Ці замітки доступні виключно тренеру. Записуйте тут індивідуальні коригування ваг, рекомендації по харчуванню та техніці виконання.
-              </span>
+              <p className="leading-relaxed">
+                Приватний блокнот тренера: зафіксуйте індивідуальні коригування робочих ваг, рекомендації по харчуванню та техніці виконання.
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -362,23 +466,23 @@ export function TraineeDetailModal({ trainee, open, onOpenChange }: TraineeDetai
                 onChange={(e) => setEditedNotes(e.target.value)}
                 rows={5}
                 placeholder="Введіть замітки по атлету (наприклад: підвищити жим на +2.5 кг, додати кардіо)..."
-                className="w-full rounded-2xl border border-white/10 bg-slate-950 p-3 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-500"
+                className="w-full rounded-2xl border border-white/10 bg-slate-950 p-3.5 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-500 leading-relaxed"
               />
 
               <Button
                 size="sm"
                 variant="accent"
-                className="w-full font-bold text-xs flex items-center justify-center gap-1.5"
+                className="w-full h-10 font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-500/10"
                 onClick={handleSaveNotes}
               >
                 {notesSaved ? (
                   <>
-                    <CheckCircle2 className="h-3.5 w-3.5 text-slate-950" />
+                    <CheckCircle2 className="h-4 w-4 text-slate-950" />
                     <span>Збережено!</span>
                   </>
                 ) : (
                   <>
-                    <Save className="h-3.5 w-3.5" />
+                    <Save className="h-4 w-4" />
                     <span>Зберегти замітки</span>
                   </>
                 )}
@@ -388,52 +492,61 @@ export function TraineeDetailModal({ trainee, open, onOpenChange }: TraineeDetai
         )}
       </div>
 
-      <div className="pt-2 border-t border-white/10 flex items-center justify-between gap-2">
+      {/* ======================================================== */}
+      {/* ФУТЕР МОДАЛКИ: Гармонійні кнопки однакової висоти h-10   */}
+      {/* ======================================================== */}
+      <div className="pt-3 border-t border-white/10 flex items-center justify-between gap-2.5">
         <div className="flex items-center gap-2">
-          <Button
+          <button
             type="button"
-            variant="outline"
-            size="sm"
-            className={`text-xs ${
-              trainee.status === "blocked"
-                ? "border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/10"
-                : "border-amber-500/30 text-amber-300 hover:bg-amber-500/10"
+            className={`h-9 px-3 rounded-xl border text-xs font-semibold transition-all flex items-center gap-1.5 ${
+              isBlocked
+                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20"
+                : "border-white/10 bg-white/5 text-slate-300 hover:text-white hover:bg-white/10"
             }`}
             onClick={() => {
-              if (trainee.status === "blocked") {
-                useCoachStore.getState().unblockTrainee(trainee.id);
+              if (isBlocked) {
+                unblockTrainee(trainee.id);
               } else {
-                useCoachStore.getState().blockTrainee(trainee.id);
+                blockTrainee(trainee.id);
               }
             }}
           >
-            {trainee.status === "blocked" ? "🔓 Розблокувати" : "🚫 Заблокувати"}
-          </Button>
+            {isBlocked ? (
+              <>
+                <Unlock className="h-3.5 w-3.5 text-emerald-400" />
+                <span>Розблокувати</span>
+              </>
+            ) : (
+              <>
+                <Ban className="h-3.5 w-3.5 text-amber-400" />
+                <span>Заблокувати</span>
+              </>
+            )}
+          </button>
 
-          <Button
+          <button
             type="button"
-            variant="outline"
-            size="sm"
-            className="text-xs border-rose-500/30 text-rose-300 hover:bg-rose-500/10"
+            className="h-9 px-3 rounded-xl border border-rose-500/20 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 text-xs font-semibold transition-all flex items-center gap-1.5"
             onClick={() => {
               if (confirm(`Ви дійсно бажаєте видалити атлета ${trainee.name}?`)) {
-                useCoachStore.getState().deleteTrainee(trainee.id);
+                deleteTrainee(trainee.id);
                 onOpenChange(false);
               }
             }}
           >
-            🗑 Видалити
-          </Button>
+            <Trash2 className="h-3.5 w-3.5 text-rose-400" />
+            <span>Видалити</span>
+          </button>
         </div>
 
-        <Button
-          variant="accent"
-          size="sm"
-          className="text-xs font-bold"
+        <button
+          type="button"
           onClick={() => onOpenChange(false)}
+          className="h-9 px-5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition-colors shadow-md shadow-emerald-500/20"
         >
           {t.common.close}
-        </Button>
+        </button>
       </div>
     </Dialog>
   );
