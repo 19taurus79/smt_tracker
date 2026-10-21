@@ -16,6 +16,7 @@ import {
   Eye,
   ChevronRight,
   RotateCcw,
+  Check,
 } from "lucide-react";
 import { useWorkoutStore } from "@/lib/store/useWorkoutStore";
 import { useBodyStore } from "@/lib/store/useBodyStore";
@@ -293,59 +294,67 @@ export default function HomePage() {
                 <Sparkles className="h-4 w-4 text-cyan-400" />
                 <span>
                   {language === "uk"
-                    ? "Вводний цикл: підготовка серця, зв'язок та розрахунок ваг"
+                    ? "Вводний цикл: підготовка серця, зв'язок та калібрування ваг"
                     : language === "en"
                     ? "Prep Cycle: Cardio conditioning & weight calibration"
-                    : "Вводный цикл: подготовка сердца, связок и расчет весов"}
+                    : "Вводный цикл: подготовка сердца, связок и калибровка весов"}
                 </span>
               </h3>
               <p className="text-xs text-slate-400 max-w-xl">
                 {language === "uk"
-                  ? "СМТ-1 має екстремальну щільність (паузи 30с). Пройдіть 3–6 вводних тренувань (жим, тяга, присед 4×10) зі скороченням пауз з 90с до 30с."
+                  ? "СМТ-1 має екстремальну щільність (паузи 30с). Пройдіть 6 вводних тренувань зі скороченням пауз з 90с до 30с, щоб плавно адаптувати зв'язки та серце й підібрати точні робочі ваги."
                   : language === "en"
-                  ? "SMT-1 is high density (strict 30s rest). Complete 3–6 prep sessions (bench, pull, squat 4×10) reducing rest from 90s to 30s."
-                  : "СМТ-1 обладает экстремальной плотностью (паузы 30с). Пройдите 3–6 вводных тренировок (жим, тяга, присед 4×10) с сокращением пауз с 90с до 30с."}
+                  ? "SMT-1 is high density (strict 30s rest). Complete 6 prep sessions reducing rest from 90s to 30s to condition joints, cardio and calibrate exact loads."
+                  : "СМТ-1 обладает экстремальной плотностью (паузы 30с). Пройдите 6 вводных тренировок с сокращением пауз с 90с до 30с, чтобы плавно адаптировать связки и сердце и подобрать точные рабочие веса."}
               </p>
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              {/* Primary Workout / Continue Button */}
               <Button
                 variant="accent"
                 size="sm"
-                className="bg-cyan-500 text-slate-950 hover:bg-cyan-400 font-bold text-xs"
+                className="bg-cyan-500 text-slate-950 hover:bg-cyan-400 font-bold text-xs shadow-md shadow-cyan-500/20 h-9 px-3.5"
                 onClick={() => setIsPrepWorkoutOpen(true)}
               >
-                <Play className="h-3.5 w-3.5 mr-1 fill-current" />
-                <span>{language === "uk" ? "Тренування" : language === "en" ? "Workout" : "Тренировка"}</span>
+                <Play className="h-3.5 w-3.5 mr-1.5 fill-current" />
+                <span>
+                  {prepSessions.every((s) => s.completed)
+                    ? (language === "uk" ? "Переглянути підсумок" : language === "en" ? "View Summary" : "Итоги подготовки")
+                    : prepSessions.some((s) => s.completed)
+                    ? (language === "uk"
+                        ? `⚡️ Тренування #${(prepSessions.find((s) => !s.completed)?.number || 1)}`
+                        : `⚡️ Тренировка #${(prepSessions.find((s) => !s.completed)?.number || 1)}`)
+                    : (language === "uk" ? "🏋️‍♂️ Почати підготовку" : language === "en" ? "Start Prep" : "🏋️‍♂️ Начать подготовку")}
+                </span>
               </Button>
 
+              {/* Ready / Dismiss Button (replaces close cross and premature calculator) */}
               <Button
                 variant="outline"
                 size="sm"
-                className="border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/10 text-xs font-semibold"
-                onClick={() => setIsPrepCalcOpen(true)}
-              >
-                <Zap className="h-3.5 w-3.5 mr-1 text-cyan-400" />
-                <span>{language === "uk" ? "Калькулятор" : language === "en" ? "Calculator" : "Калькулятор"}</span>
-              </Button>
-
-              <button
-                type="button"
+                className="border-white/20 text-slate-300 hover:text-white hover:bg-white/10 text-xs font-semibold h-9"
                 onClick={() => setPrepWidgetDismissed(true)}
-                className="h-8 w-8 rounded-lg bg-white/5 text-slate-400 hover:text-white flex items-center justify-center text-xs"
-                title={language === "uk" ? "Сховати віджет" : language === "en" ? "Dismiss" : "Скрыть виджет"}
+                title={language === "uk" ? "Я вже підготовлений, приховати вводний цикл" : "Я уже подготовлен, скрыть вводный цикл"}
               >
-                ✕
-              </button>
+                <Check className="h-3.5 w-3.5 mr-1 text-emerald-400" />
+                <span>
+                  {language === "uk"
+                    ? "Я вже готовий до СМТ-1"
+                    : language === "en"
+                    ? "I'm ready for SMT-1"
+                    : "Я уже готов к СМТ-1"}
+                </span>
+              </Button>
             </div>
           </div>
 
-          {/* Real-time Suggested Weights Strip (shown when at least 1 session is completed) */}
-          {hasCompletedAnyPrep && (
-            <div className="mt-3 pt-3 border-t border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          {/* SMT-1 Calculated Weights Strip (shown ONLY when all 6 prep sessions are completed) */}
+          {prepSessions.every((s) => s.completed) && (
+            <div className="mt-3 pt-3 border-t border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 animate-in fade-in">
               <div className="space-y-0.5">
                 <span className="text-[10px] text-cyan-300 font-bold uppercase tracking-wider block">
-                  💡 {language === "uk" ? "Автоматично розраховані стартові ваги СМТ-1:" : language === "en" ? "Auto-calculated starting loads:" : "Автоматически рассчитанные стартовые веса:"}
+                  🎉 {language === "uk" ? "Всі 6 тренувань виконано! Розраховані стартові ваги СМТ-1:" : "Все 6 тренировок выполнены! Рассчитанные стартовые веса СМТ-1:"}
                 </span>
                 <div className="text-xs text-slate-200 flex flex-wrap gap-2">
                   <span>Жим: <strong className="text-emerald-400">{suggestedWeights.benchPress.startWeight} кг</strong></span>

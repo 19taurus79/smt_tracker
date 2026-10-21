@@ -30,6 +30,7 @@ import { MASTER_COACH_USERNAME, isCoachAccount, generateTelegramLinkUrl } from "
 import { useWorkoutStore } from "@/lib/store/useWorkoutStore";
 import { useBodyStore } from "@/lib/store/useBodyStore";
 import { useSettingsStore } from "@/lib/store/useSettingsStore";
+import { usePrepStore } from "@/lib/store/usePrepStore";
 import { soundPlayer } from "@/lib/audio/sound";
 import { triggerHaptic, isTelegramWebApp } from "@/lib/tma/telegram";
 import { shareToTelegramCoach } from "@/lib/coach/telegramCoach";
@@ -74,6 +75,13 @@ export default function SettingsPage() {
     unlinkTelegramAccount,
     userRole,
   } = useSettingsStore();
+
+  const {
+    prepWidgetDismissed,
+    setPrepWidgetDismissed,
+    resetPrepSessions,
+    sessions: prepSessions,
+  } = usePrepStore();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [notification, setNotification] = useState<string | null>(null);
@@ -735,6 +743,101 @@ export default function SettingsPage() {
               <span>{t.settings.guideReadSeparate}</span>
             </Button>
           </Link>
+        </div>
+      </Card>
+
+      {/* 7.5 Adaptation Prep Cycle Control */}
+      <Card className="border-cyan-500/30 bg-slate-900/60 p-4 sm:p-5 space-y-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm sm:text-base flex items-center gap-2 text-white">
+            <Sparkles className="h-4 w-4 text-cyan-400" />
+            <span>
+              {language === "uk"
+                ? "Вводний цикл адаптації (6 тренувань)"
+                : language === "en"
+                ? "Prep Adaptation Cycle (6 sessions)"
+                : "Вводный цикл адаптации (6 тренировок)"}
+            </span>
+          </CardTitle>
+          <span className="text-[10px] text-cyan-400 font-mono">
+            {prepSessions.filter((s) => s.completed).length}/6 {language === "uk" ? "пройдено" : "пройдено"}
+          </span>
+        </div>
+        <p className="text-xs text-slate-400">
+          {language === "uk"
+            ? "Підготовка серця та судин до 30-секундних пауз СМТ-1. Якщо ви випадково приховали віджет на головній або бажаєте пройти адаптацію заново — керуйте цим тут."
+            : "Подготовка сердца и сосудов к 30-секундным паузам СМТ-1. Если вы случайно скрыли виджет на главной или хотите пройти адаптацию заново — управляйте этим здесь."}
+        </p>
+        <div className="flex flex-col sm:flex-row gap-2.5 pt-1">
+          {prepWidgetDismissed ? (
+            <Button
+              variant="accent"
+              size="sm"
+              onClick={() => {
+                setPrepWidgetDismissed(false);
+                showToast(
+                  language === "uk"
+                    ? "Віджет адаптації повернуто на головну!"
+                    : "Виджет адаптации возвращен на главную!"
+                );
+              }}
+              className="text-xs font-bold bg-cyan-500 text-slate-950 hover:bg-cyan-400"
+            >
+              <Sparkles className="h-4 w-4 mr-1.5" />
+              <span>
+                {language === "uk"
+                  ? "Показати віджет на головній"
+                  : "Показать виджет на главной"}
+              </span>
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setPrepWidgetDismissed(true);
+                showToast(
+                  language === "uk"
+                    ? "Віджет адаптації приховано з головної"
+                    : "Виджет адаптации скрыт с главной"
+                );
+              }}
+              className="text-xs font-semibold border-white/15"
+            >
+              <span>
+                {language === "uk"
+                  ? "Приховати віджет з головної"
+                  : "Скрыть виджет с главной"}
+              </span>
+            </Button>
+          )}
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              if (
+                confirm(
+                  language === "uk"
+                    ? "Скинути всі 6 вводних тренувань і почати адаптацію спочатку?"
+                    : "Сбросить все 6 вводных тренировок и начать адаптацию сначала?"
+                )
+              ) {
+                resetPrepSessions();
+                showToast(
+                  language === "uk"
+                    ? "Вводний цикл скинуто"
+                    : "Вводный цикл сброшен"
+                );
+              }
+            }}
+            className="text-xs font-semibold text-slate-400 hover:text-white border-white/10"
+          >
+            <RotateCcw className="h-3.5 w-3.5 mr-1" />
+            <span>
+              {language === "uk" ? "Скинути адаптацію" : "Сбросить адаптацию"}
+            </span>
+          </Button>
         </div>
       </Card>
 
