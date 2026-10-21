@@ -152,7 +152,7 @@ export function TraineeDetailModal({ trainee, open, onOpenChange }: TraineeDetai
         </DialogDescription>
       </DialogHeader>
 
-      <div className="space-y-3.5 my-1 max-h-[72vh] overflow-y-auto pr-0.5 pb-2">
+      <div className="space-y-3 my-1 max-h-[75vh] overflow-y-auto scrollbar-none no-scrollbar pb-2">
         {/* ======================================================== */}
         {/* BENTO GRID: Атлетичний статус та метрики підопічного    */}
         {/* ======================================================== */}
@@ -316,12 +316,12 @@ export function TraineeDetailModal({ trainee, open, onOpenChange }: TraineeDetai
               trainee.workoutHistory.map((w) => (
                 <div
                   key={w.id}
-                  className="p-4 rounded-3xl border border-white/10 bg-slate-900/70 space-y-3 shadow-lg"
+                  className="p-3 sm:p-3.5 rounded-2xl border border-white/10 bg-slate-900/60 space-y-2.5 shadow-md"
                 >
                   {/* Workout Header */}
                   <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2.5">
-                      <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400 font-black text-xs shrink-0">
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-7 w-7 items-center justify-center rounded-xl bg-emerald-500/20 text-emerald-400 font-black text-xs shrink-0">
                         #{w.workoutNumber}
                       </span>
                       <div>
@@ -343,8 +343,8 @@ export function TraineeDetailModal({ trainee, open, onOpenChange }: TraineeDetai
                     </div>
                   </div>
 
-                  {/* 3 Metrics Pills (No abbreviations, clean and spacious) */}
-                  <div className="grid grid-cols-3 gap-2 text-center bg-slate-950/70 border border-white/5 rounded-2xl p-2 text-xs">
+                  {/* 3 Metrics Pills (Compact & space-efficient) */}
+                  <div className="grid grid-cols-3 gap-1.5 text-center bg-slate-950/50 border border-white/5 rounded-xl p-2 text-xs">
                     <div>
                       <span className="text-[9px] uppercase font-bold text-slate-400 block mb-0.5">Тоннаж</span>
                       <strong className="text-white font-mono text-xs">{w.tonnageKg.toLocaleString()} кг</strong>
@@ -359,26 +359,26 @@ export function TraineeDetailModal({ trainee, open, onOpenChange }: TraineeDetai
                     </div>
                   </div>
 
-                  {/* Exercises: Full names, NO truncate, beautiful clean chips */}
+                  {/* Exercises: Unified Divider List (NO nested double-margin boxes!) */}
                   {w.exercises && w.exercises.length > 0 && (
-                    <div className="space-y-1.5 pt-1 border-t border-white/5">
+                    <div className="pt-1.5 border-t border-white/5 space-y-1.5">
                       <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
                         Виконані вправи:
                       </span>
-                      <div className="space-y-1.5">
+                      <div className="rounded-xl bg-slate-950/50 border border-white/5 divide-y divide-white/5 overflow-hidden">
                         {w.exercises.map((ex, idx) => (
                           <div
                             key={idx}
-                            className="flex items-center justify-between gap-3 text-xs p-2.5 rounded-xl bg-slate-950/60 border border-white/5"
+                            className="flex items-center justify-between gap-2.5 px-3 py-2 text-xs hover:bg-white/[0.02] transition-colors"
                           >
-                            <span className="text-slate-200 font-semibold leading-snug">
+                            <span className="text-slate-200 font-medium leading-snug">
                               {ex.name}
                             </span>
                             <div className="shrink-0 flex items-center gap-1.5">
-                              <span className="px-2 py-0.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-mono font-bold text-xs whitespace-nowrap">
+                              <span className="px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-mono font-bold text-xs whitespace-nowrap">
                                 {ex.weight} кг × {ex.reps}
                               </span>
-                              <span className="text-[11px] text-slate-400 font-medium whitespace-nowrap">
+                              <span className="text-[10px] text-slate-400 font-mono font-medium whitespace-nowrap">
                                 ({ex.setsCount} підх)
                               </span>
                             </div>
@@ -390,11 +390,11 @@ export function TraineeDetailModal({ trainee, open, onOpenChange }: TraineeDetai
 
                   {/* Athlete Notes */}
                   {w.notes && (
-                    <div className="p-3 rounded-2xl bg-slate-950/80 border border-white/5 text-xs text-slate-300 leading-relaxed italic space-y-1">
+                    <div className="p-2.5 rounded-xl bg-slate-950/50 border border-white/5 text-xs text-slate-300 leading-relaxed italic space-y-0.5">
                       <span className="text-slate-500 font-semibold not-italic block text-[10px]">
                         Коментар атлета:
                       </span>
-                      <p>"{w.notes}"</p>
+                      <p>&ldquo;{w.notes}&rdquo;</p>
                     </div>
                   )}
                 </div>
@@ -420,32 +420,32 @@ export function TraineeDetailModal({ trainee, open, onOpenChange }: TraineeDetai
               trainee.measurementHistory.map((m) => (
                 <div
                   key={m.id}
-                  className="p-4 rounded-3xl border border-white/10 bg-slate-900/70 space-y-2.5 shadow-lg"
+                  className="p-3 sm:p-3.5 rounded-2xl border border-white/10 bg-slate-900/60 space-y-2 shadow-md"
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-white flex items-center gap-1.5">
                       <Calendar className="h-3.5 w-3.5 text-cyan-400" />
                       <span>{formatDate(m.date)}</span>
                     </span>
-                    <span className="text-xs font-black text-emerald-400 bg-emerald-500/15 px-3 py-1 rounded-full border border-emerald-500/30">
+                    <span className="text-xs font-black text-emerald-400 bg-emerald-500/15 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
                       Вага: {m.weightKg} кг
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-4 gap-2 text-center text-xs pt-1 border-t border-white/5">
-                    <div className="p-2 rounded-xl bg-slate-950/60 border border-white/5">
+                  <div className="grid grid-cols-4 gap-1.5 text-center text-xs pt-1 border-t border-white/5">
+                    <div className="p-1.5 rounded-xl bg-slate-950/50 border border-white/5">
                       <span className="text-[9px] text-slate-400 uppercase font-bold block mb-0.5">Талія</span>
                       <strong className="text-white font-mono">{m.waistCm ? `${m.waistCm} см` : "—"}</strong>
                     </div>
-                    <div className="p-2 rounded-xl bg-slate-950/60 border border-white/5">
+                    <div className="p-1.5 rounded-xl bg-slate-950/50 border border-white/5">
                       <span className="text-[9px] text-slate-400 uppercase font-bold block mb-0.5">Груди</span>
                       <strong className="text-white font-mono">{m.chestCm ? `${m.chestCm} см` : "—"}</strong>
                     </div>
-                    <div className="p-2 rounded-xl bg-slate-950/60 border border-white/5">
+                    <div className="p-1.5 rounded-xl bg-slate-950/50 border border-white/5">
                       <span className="text-[9px] text-slate-400 uppercase font-bold block mb-0.5">Біцепс</span>
                       <strong className="text-white font-mono">{m.bicepsCm ? `${m.bicepsCm} см` : "—"}</strong>
                     </div>
-                    <div className="p-2 rounded-xl bg-slate-950/60 border border-white/5">
+                    <div className="p-1.5 rounded-xl bg-slate-950/50 border border-white/5">
                       <span className="text-[9px] text-slate-400 uppercase font-bold block mb-0.5">Стегно</span>
                       <strong className="text-white font-mono">{m.thighCm ? `${m.thighCm} см` : "—"}</strong>
                     </div>

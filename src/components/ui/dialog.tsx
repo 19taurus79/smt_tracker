@@ -35,7 +35,7 @@ export function Dialog({ open, onOpenChange, children, className }: DialogProps)
       {/* Content Container: Removed heavy double-padding on mobile */}
       <div
         className={cn(
-          "relative z-50 w-full max-w-lg max-h-[92vh] flex flex-col rounded-2xl sm:rounded-3xl border border-white/10 bg-slate-900/98 p-3.5 sm:p-5 shadow-2xl backdrop-blur-2xl animate-in zoom-in-95 overflow-hidden",
+          "relative z-50 w-full max-w-lg max-h-[92vh] flex flex-col rounded-2xl sm:rounded-3xl border border-white/10 bg-slate-900/98 p-2.5 sm:p-4.5 shadow-2xl backdrop-blur-2xl animate-in zoom-in-95 overflow-hidden",
           className
         )}
       >
