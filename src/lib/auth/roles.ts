@@ -2,11 +2,11 @@
 import { LinkedTelegramAccount, UserRole } from "@/types/body";
 
 export const MASTER_COACH_USERNAME = (
-  process.env.NEXT_PUBLIC_COACH_USERNAME || "coach_alex"
+  process.env.NEXT_PUBLIC_COACH_USERNAME || "OnyshchenkoSergey"
 ).replace(/^@/, "");
 
 export const BOT_USERNAME = (
-  process.env.NEXT_PUBLIC_BOT_USERNAME || "smt_workout_bot"
+  process.env.NEXT_PUBLIC_BOT_USERNAME || "athletic_smt_bot"
 ).replace(/^@/, "");
 
 /**

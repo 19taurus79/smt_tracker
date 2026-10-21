@@ -31,11 +31,11 @@ const defaultSettings: AppSettings = {
   theme: "telegram",
   showForecastInAnalytics: true,
   keepScreenAwake: true,
-  coachTelegramUsername: "",
+  coachTelegramUsername: process.env.NEXT_PUBLIC_COACH_USERNAME || "OnyshchenkoSergey",
   traineeName: "",
   gender: "male",
   userAge: 28,
-  storyBotUsername: "@smt_workout_bot",
+  storyBotUsername: "@athletic_smt_bot",
   linkedTelegramUser: null,
   userRole: "guest",
 };

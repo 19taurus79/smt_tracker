@@ -13,6 +13,7 @@ import {
   Send,
   Camera,
   Sparkles,
+  Flame,
 } from "lucide-react";
 import { WorkoutSession } from "@/types/smt";
 import { formatTime, formatDate } from "@/lib/utils";
@@ -47,6 +48,8 @@ export function WorkoutReportModal({
 }: WorkoutReportModalProps) {
   const [isConfirmResetOpen, setIsConfirmResetOpen] = useState(false);
   const [isStoryModalOpen, setIsStoryModalOpen] = useState(false);
+  const [isPublishingChallenge, setIsPublishingChallenge] = useState(false);
+  const [publishedChallenge, setPublishedChallenge] = useState(false);
   const { coachTelegramUsername, traineeName, gender, userAge } = useSettingsStore();
   const { measurements } = useBodyStore();
   const { t, language } = useTranslation();
@@ -77,6 +80,36 @@ export function WorkoutReportModal({
   });
   const tierColor = getTierColor(athleticScore.tierKey);
   const tierLabel = getTierLabel(athleticScore.tierKey, t);
+
+  const handlePublishChallenge = async () => {
+    if (!workout || isPublishingChallenge || publishedChallenge) return;
+    setIsPublishingChallenge(true);
+    try {
+      const res = await fetch("/api/challenge/publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          workoutNumber: workout.workoutNumber || 1,
+          microcycle: workout.microcycle || 1,
+          durationSeconds: workout.durationSeconds || 45 * 60,
+          tonnageKg: workout.tonnageKg || 0,
+          powerKgPerMin: workout.powerKgPerMin || 0,
+          athleticScore,
+          athleteName: traineeName || (typeof window !== "undefined" && window.Telegram?.WebApp?.initDataUnsafe?.user?.first_name) || "",
+          athleteUsername: (typeof window !== "undefined" && window.Telegram?.WebApp?.initDataUnsafe?.user?.username) || "",
+          notes: workout.notes,
+        }),
+      });
+      const data = await res.json();
+      if (data.ok) {
+        setPublishedChallenge(true);
+      }
+    } catch (e) {
+      console.error("Failed to publish to challenge:", e);
+    } finally {
+      setIsPublishingChallenge(false);
+    }
+  };
 
   const reportTitle =
     language === "uk"
@@ -262,6 +295,28 @@ export function WorkoutReportModal({
 
       {/* Modal Actions */}
       <div className="pt-2 border-t border-white/10 flex flex-col sm:flex-row gap-2 shrink-0">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={isPublishingChallenge || publishedChallenge}
+          className={`text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
+            publishedChallenge
+              ? "border-emerald-500/40 text-emerald-300 bg-emerald-500/10"
+              : "border-amber-500/30 text-amber-300 hover:bg-amber-500/10"
+          }`}
+          onClick={handlePublishChallenge}
+        >
+          <Flame className="h-3.5 w-3.5 text-amber-400" />
+          <span>
+            {publishedChallenge
+              ? (language === "uk" ? "В каналі!" : language === "en" ? "In Channel!" : "В канале!")
+              : isPublishingChallenge
+              ? (language === "uk" ? "Публікація..." : language === "en" ? "Publishing..." : "Публикация...")
+              : (language === "uk" ? "Челендж" : language === "en" ? "Challenge" : "Челлендж")}
+          </span>
+        </Button>
+
         <Button
           variant="outline"
           size="sm"

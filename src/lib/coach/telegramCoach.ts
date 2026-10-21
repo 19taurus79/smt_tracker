@@ -231,15 +231,33 @@ export function shareToTelegramCoach(text: string, coachTelegramUsername?: strin
   }
 
   const encodedText = encodeURIComponent(text);
+  const cleanUsername = coachTelegramUsername?.trim().replace(/^@/, "");
 
-  let targetUrl: string;
-  if (coachTelegramUsername && coachTelegramUsername.trim().length > 0) {
-    const cleanUsername = coachTelegramUsername.trim().replace(/^@/, "");
-    targetUrl = `https://t.me/${cleanUsername}?text=${encodedText}`;
-  } else {
-    // Open Telegram contact/share picker
-    targetUrl = `https://t.me/share/url?url=&text=${encodedText}`;
+  const targetUrl = cleanUsername
+    ? `https://t.me/${cleanUsername}?text=${encodedText}`
+    : `https://t.me/share/url?url=&text=${encodedText}`;
+
+  // 1. Inside Telegram Mini App: use native openTelegramLink
+  const tgWebApp = window.Telegram?.WebApp as any;
+  if (tgWebApp?.openTelegramLink) {
+    tgWebApp.openTelegramLink(targetUrl);
+    return;
   }
 
+  // 2. On Mobile (iOS / Android): try deep link into Telegram app directly
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if (isMobile) {
+    const deepLink = cleanUsername
+      ? `tg://resolve?domain=${cleanUsername}&text=${encodedText}`
+      : `tg://msg_url?url=&text=${encodedText}`;
+
+    window.location.href = deepLink;
+    setTimeout(() => {
+      window.open(targetUrl, "_blank");
+    }, 1500);
+    return;
+  }
+
+  // 3. Desktop browser: open official Telegram gateway
   window.open(targetUrl, "_blank");
 }
