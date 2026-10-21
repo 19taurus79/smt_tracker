@@ -6,32 +6,27 @@ import {
   Crown,
   Users,
   Dumbbell,
-  Zap,
   AlertTriangle,
   Search,
-  Plus,
-  MessageCircle,
   ExternalLink,
   ChevronRight,
-  TrendingUp,
-  Clock,
   Sparkles,
-  ArrowLeft,
-  CheckCircle,
-  Trash2,
-  Ban,
-  Unlock,
-  FileText,
   RotateCcw,
   MoreVertical,
   Flame,
-  UserCheck,
-  ShieldCheck,
+  FileText,
+  Share2,
+  Copy,
+  Check,
+  Ban,
+  Unlock,
+  Trash2,
   X,
+  MessageCircle,
 } from "lucide-react";
 import { useCoachStore, TraineeProfile, TraineeStatusFilter } from "@/lib/store/useCoachStore";
 import { useSettingsStore } from "@/lib/store/useSettingsStore";
-import { isCoachAccount, MASTER_COACH_USERNAME } from "@/lib/auth/roles";
+import { isCoachAccount, MASTER_COACH_USERNAME, BOT_USERNAME } from "@/lib/auth/roles";
 import { TraineeDetailModal } from "@/components/coach/TraineeDetailModal";
 import { Dialog, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -81,7 +76,6 @@ export default function CoachDashboardPage() {
     setSearchQuery,
     statusFilter,
     setStatusFilter,
-    addTrainee,
     blockTrainee,
     unblockTrainee,
     deleteTrainee,
@@ -94,9 +88,11 @@ export default function CoachDashboardPage() {
 
   const [selectedTrainee, setSelectedTrainee] = useState<TraineeProfile | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-  // Trainee deletion confirm modal
+  // Link copy state
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  // Delete Trainee Modal
   const [traineeToDelete, setTraineeToDelete] = useState<TraineeProfile | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
@@ -108,14 +104,6 @@ export default function CoachDashboardPage() {
 
   // Expanded notes per trainee
   const [expandedNotes, setExpandedNotes] = useState<Record<string, boolean>>({});
-
-  // New Trainee Form State
-  const [newName, setNewName] = useState("");
-  const [newUsername, setNewUsername] = useState("");
-  const [newWeight, setNewWeight] = useState("80");
-  const [newAge, setNewAge] = useState("28");
-  const [newGender, setNewGender] = useState<"male" | "female">("male");
-  const [newMicrocycle, setNewMicrocycle] = useState("1");
 
   // Summary Metrics
   const totalTrainees = trainees.length;
@@ -140,7 +128,6 @@ export default function CoachDashboardPage() {
     return Math.round(sum / validTrainees.length);
   }, [trainees]);
 
-  // Filtered trainees
   const filteredTrainees = useMemo(() => {
     return trainees.filter((t) => {
       const q = searchQuery.toLowerCase().trim();
@@ -159,6 +146,16 @@ export default function CoachDashboardPage() {
       return true;
     });
   }, [trainees, searchQuery, statusFilter]);
+
+  const inviteUrl = `https://t.me/${BOT_USERNAME}?start=coach_${MASTER_COACH_USERNAME}`;
+
+  const handleCopyInviteLink = () => {
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(inviteUrl);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2500);
+    }
+  };
 
   const toggleExpandNote = (id: string) => {
     setExpandedNotes((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -191,51 +188,6 @@ export default function CoachDashboardPage() {
     } else {
       blockTrainee(trainee.id);
     }
-  };
-
-  const handleCreateTrainee = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newName.trim() || !newUsername.trim()) return;
-
-    const colors = [
-      "from-blue-500 to-indigo-600",
-      "from-emerald-500 to-teal-600",
-      "from-purple-500 to-violet-600",
-      "from-amber-500 to-orange-600",
-      "from-rose-500 to-pink-600",
-    ];
-    const randomColor = colors[Math.floor(Math.random() * colors.length)];
-
-    addTrainee({
-      name: newName.trim(),
-      username: newUsername.trim().replace(/^@/, ""),
-      avatarColor: randomColor,
-      gender: newGender,
-      age: parseInt(newAge) || 28,
-      currentMicrocycle: parseInt(newMicrocycle) || 1,
-      currentWorkoutNumber: 1,
-      totalWorkouts: 0,
-      weightKg: parseFloat(newWeight) || 80,
-      weightDeltaKg: 0,
-      lastWorkoutDate: new Date().toISOString(),
-      athleticScore: 75,
-      tierKey: "power_master",
-      tierLabel: "Майстер Потужності 💥",
-      status: "active",
-      coachNotes: "Новий підопічний доданий вручну.",
-      workoutHistory: [],
-      measurementHistory: [
-        {
-          id: `m-init-${Date.now()}`,
-          date: new Date().toISOString(),
-          weightKg: parseFloat(newWeight) || 80,
-        },
-      ],
-    });
-
-    setNewName("");
-    setNewUsername("");
-    setIsAddModalOpen(false);
   };
 
   const getTierBadge = (t: TraineeProfile) => {
@@ -299,71 +251,84 @@ export default function CoachDashboardPage() {
               Кабінет керування підопічними
             </h1>
             <p className="text-xs text-slate-400 mt-0.5">
-              Автоматична фіксація нових лідів з каналу, моніторинг прогресу та досьє атлетів.
+              Автоматична воронка лідів з Telegram, прогресія робочих ваг та досьє команди.
             </p>
           </div>
 
+          {/* Action Buttons: Unified height h-9.5 */}
           <div className="flex items-center gap-2 shrink-0">
-            <Button
-              variant="accent"
-              size="sm"
-              className="font-bold text-xs flex items-center gap-1.5 shadow-lg shadow-emerald-500/20"
-              onClick={() => setIsAddModalOpen(true)}
+            <button
+              type="button"
+              onClick={handleCopyInviteLink}
+              className={`h-9 px-3.5 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-md ${
+                copiedLink
+                  ? "bg-emerald-500 text-slate-950 border border-emerald-400"
+                  : "bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40"
+              }`}
+              title="Скопіювати інвайт-посилання для публікації в каналі чи сторіс"
             >
-              <Plus className="h-4 w-4" />
-              <span>Додати атлета</span>
-            </Button>
+              {copiedLink ? (
+                <>
+                  <Check className="h-4 w-4" />
+                  <span>Скопійовано!</span>
+                </>
+              ) : (
+                <>
+                  <Share2 className="h-4 w-4 text-emerald-400" />
+                  <span>Посилання для каналу</span>
+                </>
+              )}
+            </button>
 
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-xs border-white/10 text-slate-300 hover:text-white hover:bg-white/5"
+            <button
+              type="button"
               onClick={() => setIsClearDemoModalOpen(true)}
-              title="Керування тестовими записами"
+              className="h-9 px-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-xs font-semibold text-slate-300 hover:text-white transition-colors flex items-center justify-center gap-1"
+              title="Керування демо-записами"
             >
-              <RotateCcw className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline ml-1">Демо</span>
-            </Button>
+              <RotateCcw className="h-3.5 w-3.5 text-slate-400" />
+              <span>Демо</span>
+            </button>
           </div>
         </div>
 
-        {/* 4 Team KPI Cards */}
+        {/* 4 Team KPI Cards (Strict grid and identical height) */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mt-5">
-          <div className="p-3 rounded-2xl bg-white/5 border border-white/10 flex items-center gap-3">
+          <div className="h-16 p-3 rounded-2xl bg-white/5 border border-white/10 flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/15 border border-blue-500/30 text-blue-400 shrink-0">
               <Users className="h-5 w-5" />
             </div>
-            <div>
-              <span className="text-[10px] uppercase font-bold text-slate-400 block">Атлетів</span>
+            <div className="min-w-0">
+              <span className="text-[10px] uppercase font-bold text-slate-400 block truncate">Атлетів</span>
               <span className="text-base font-black text-white font-mono">{totalTrainees}</span>
             </div>
           </div>
 
-          <div className="p-3 rounded-2xl bg-white/5 border border-white/10 flex items-center gap-3">
+          <div className="h-16 p-3 rounded-2xl bg-white/5 border border-white/10 flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 shrink-0">
               <Dumbbell className="h-5 w-5" />
             </div>
-            <div>
-              <span className="text-[10px] uppercase font-bold text-slate-400 block">Тоннаж команди</span>
+            <div className="min-w-0">
+              <span className="text-[10px] uppercase font-bold text-slate-400 block truncate">Тоннаж команди</span>
               <span className="text-base font-black text-emerald-400 font-mono">
                 {Math.round(totalTeamTonnage / 1000)} т
               </span>
             </div>
           </div>
 
-          <div className="p-3 rounded-2xl bg-white/5 border border-white/10 flex items-center gap-3">
+          <div className="h-16 p-3 rounded-2xl bg-white/5 border border-white/10 flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 shrink-0">
               <Sparkles className="h-5 w-5" />
             </div>
-            <div>
-              <span className="text-[10px] uppercase font-bold text-slate-400 block">Сер. індекс</span>
+            <div className="min-w-0">
+              <span className="text-[10px] uppercase font-bold text-slate-400 block truncate">Сер. індекс</span>
               <span className="text-base font-black text-amber-300 font-mono">
                 {averageScore > 0 ? `${averageScore}/100` : "—"}
               </span>
             </div>
           </div>
 
-          <div className="p-3 rounded-2xl bg-white/5 border border-white/10 flex items-center gap-3">
+          <div className="h-16 p-3 rounded-2xl bg-white/5 border border-white/10 flex items-center gap-3">
             <div className={`flex h-10 w-10 items-center justify-center rounded-xl shrink-0 ${
               leadsCount > 0
                 ? "bg-rose-500/20 border border-rose-500/40 text-rose-400"
@@ -371,11 +336,11 @@ export default function CoachDashboardPage() {
             }`}>
               {leadsCount > 0 ? <Flame className="h-5 w-5 animate-bounce" /> : <AlertTriangle className="h-5 w-5" />}
             </div>
-            <div>
-              <span className="text-[10px] uppercase font-bold text-slate-400 block">
+            <div className="min-w-0">
+              <span className="text-[10px] uppercase font-bold text-slate-400 block truncate">
                 {leadsCount > 0 ? "Нові ліди" : "Потребують уваги"}
               </span>
-              <span className={`text-base font-black font-mono ${leadsCount > 0 ? "text-rose-400" : "text-purple-300"}`}>
+              <span className={`text-base font-black font-mono truncate block ${leadsCount > 0 ? "text-rose-400" : "text-purple-300"}`}>
                 {leadsCount > 0 ? `${leadsCount} нових!` : needsAttentionTrainees}
               </span>
             </div>
@@ -383,7 +348,7 @@ export default function CoachDashboardPage() {
         </div>
       </div>
 
-      {/* Toolbar: Search & Modern Filter Pills */}
+      {/* Toolbar: Search & Clean Filter Pills */}
       <div className="space-y-2.5">
         <div className="relative">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -392,7 +357,7 @@ export default function CoachDashboardPage() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Пошук підопічного за ім'ям або @telegram..."
-            className="w-full rounded-2xl border border-white/10 bg-slate-900/80 py-2.5 pl-10 pr-10 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-emerald-500 transition-colors"
+            className="w-full h-10 rounded-2xl border border-white/10 bg-slate-900/80 py-2 pl-10 pr-10 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-emerald-500 transition-colors"
           />
           {searchQuery && (
             <button
@@ -404,11 +369,11 @@ export default function CoachDashboardPage() {
           )}
         </div>
 
-        {/* Filter Pills with Horizontal Scroll on Mobile */}
+        {/* Filter Pills with Horizontal Scroll on Mobile - Strict h-8 */}
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
           <button
             onClick={() => setStatusFilter("all")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
+            className={`h-8 px-3 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center justify-center ${
               statusFilter === "all"
                 ? "bg-white/20 text-white border border-white/30"
                 : "bg-slate-900/60 text-slate-400 hover:text-white border border-white/5"
@@ -420,20 +385,20 @@ export default function CoachDashboardPage() {
           {leadsCount > 0 && (
             <button
               onClick={() => setStatusFilter("new_lead")}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1 ${
+              className={`h-8 px-3 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center justify-center gap-1.5 ${
                 statusFilter === "new_lead"
                   ? "bg-rose-500/25 text-rose-300 border border-rose-500/40"
                   : "bg-slate-900/60 text-rose-400 hover:text-rose-300 border border-rose-500/20"
               }`}
             >
-              <Flame className="h-3.5 w-3.5" />
+              <Flame className="h-3.5 w-3.5 text-rose-400" />
               <span>Ліди ({leadsCount})</span>
             </button>
           )}
 
           <button
             onClick={() => setStatusFilter("active")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1 ${
+            className={`h-8 px-3 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center justify-center gap-1.5 ${
               statusFilter === "active"
                 ? "bg-emerald-500/25 text-emerald-300 border border-emerald-500/40"
                 : "bg-slate-900/60 text-slate-400 hover:text-white border border-white/5"
@@ -445,7 +410,7 @@ export default function CoachDashboardPage() {
 
           <button
             onClick={() => setStatusFilter("needs_attention")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1 ${
+            className={`h-8 px-3 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center justify-center gap-1.5 ${
               statusFilter === "needs_attention"
                 ? "bg-amber-500/25 text-amber-300 border border-amber-500/40"
                 : "bg-slate-900/60 text-slate-400 hover:text-white border border-white/5"
@@ -458,13 +423,13 @@ export default function CoachDashboardPage() {
           {blockedCount > 0 && (
             <button
               onClick={() => setStatusFilter("blocked")}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1 ${
+              className={`h-8 px-3 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center justify-center gap-1.5 ${
                 statusFilter === "blocked"
                   ? "bg-slate-800 text-slate-200 border border-slate-600"
                   : "bg-slate-900/60 text-slate-500 hover:text-slate-300 border border-white/5"
               }`}
             >
-              <Ban className="h-3.5 w-3.5" />
+              <Ban className="h-3.5 w-3.5 text-slate-400" />
               <span>Заблоковані ({blockedCount})</span>
             </button>
           )}
@@ -483,7 +448,7 @@ export default function CoachDashboardPage() {
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 items-stretch">
           {filteredTrainees.map((trainee) => {
             const initials = trainee.name
               .split(" ")
@@ -505,7 +470,7 @@ export default function CoachDashboardPage() {
             return (
               <div
                 key={trainee.id}
-                className={`relative rounded-3xl border transition-all p-4 space-y-3 shadow-xl flex flex-col justify-between ${
+                className={`relative rounded-3xl border transition-all p-4 shadow-xl flex flex-col justify-between ${
                   isBlocked
                     ? "border-slate-800 bg-slate-950/60 opacity-60"
                     : isLead
@@ -513,14 +478,15 @@ export default function CoachDashboardPage() {
                     : "border-white/10 bg-slate-900/70 hover:border-white/20 hover:bg-slate-900/90"
                 }`}
               >
+                {/* Top Section */}
                 <div className="space-y-3">
-                  {/* Card Header */}
-                  <div className="flex items-start justify-between gap-2.5">
-                    <div className="flex items-center gap-3">
+                  {/* Card Header with aligned elements */}
+                  <div className="flex items-center justify-between gap-2.5">
+                    <div className="flex items-center gap-3 min-w-0">
                       {/* Avatar with Status Dot */}
-                      <div className="relative">
+                      <div className="relative shrink-0">
                         <div
-                          className={`h-11 w-11 rounded-2xl bg-gradient-to-tr ${trainee.avatarColor} flex items-center justify-center text-sm font-black text-white shadow-md shrink-0`}
+                          className={`h-11 w-11 rounded-2xl bg-gradient-to-tr ${trainee.avatarColor} flex items-center justify-center text-sm font-black text-white shadow-md`}
                         >
                           {initials}
                         </div>
@@ -537,8 +503,8 @@ export default function CoachDashboardPage() {
                         )}
                       </div>
 
-                      <div>
-                        <h3 className="text-sm font-black text-white leading-tight">
+                      <div className="min-w-0">
+                        <h3 className="text-sm font-black text-white leading-tight truncate">
                           {trainee.name}
                         </h3>
                         {cleanUsername ? (
@@ -546,21 +512,21 @@ export default function CoachDashboardPage() {
                             href={telegramChatUrl}
                             target="_blank"
                             rel="noreferrer"
-                            className="text-xs font-medium text-cyan-400 hover:text-cyan-300 flex items-center gap-1 mt-0.5"
+                            className="text-xs font-medium text-cyan-400 hover:text-cyan-300 flex items-center gap-1 mt-0.5 truncate"
                           >
                             <span>@{cleanUsername}</span>
-                            <ExternalLink className="h-2.5 w-2.5 inline" />
+                            <ExternalLink className="h-2.5 w-2.5 inline shrink-0" />
                           </a>
                         ) : (
-                          <span className="text-[11px] text-slate-500 block mt-0.5">
-                            Без публічного юзернейму
+                          <span className="text-[11px] text-slate-500 block mt-0.5 truncate">
+                            Без юзернейму
                           </span>
                         )}
                       </div>
                     </div>
 
-                    {/* Right side: Tier badge & Dropdown Menu */}
-                    <div className="flex items-center gap-1.5">
+                    {/* Right side: Badge & Options Menu */}
+                    <div className="flex items-center gap-1.5 shrink-0">
                       {getTierBadge(trainee)}
 
                       {/* Dropdown Menu Trigger */}
@@ -571,7 +537,7 @@ export default function CoachDashboardPage() {
                             e.stopPropagation();
                             setActiveMenuId(activeMenuId === trainee.id ? null : trainee.id);
                           }}
-                          className="h-7 w-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+                          className="h-8 w-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
                         >
                           <MoreVertical className="h-4 w-4" />
                         </button>
@@ -580,7 +546,7 @@ export default function CoachDashboardPage() {
                         {activeMenuId === trainee.id && (
                           <div
                             onClick={(e) => e.stopPropagation()}
-                            className="absolute right-0 top-8 z-30 w-48 rounded-2xl border border-white/15 bg-slate-950 p-1.5 shadow-2xl backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-150"
+                            className="absolute right-0 top-9 z-30 w-44 rounded-2xl border border-white/15 bg-slate-950 p-1.5 shadow-2xl backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-150"
                           >
                             <button
                               type="button"
@@ -606,7 +572,7 @@ export default function CoachDashboardPage() {
                               className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-rose-400 hover:text-rose-300 hover:bg-rose-500/15 transition-colors"
                             >
                               <Trash2 className="h-3.5 w-3.5 text-rose-400" />
-                              <span>Видалити зі списку</span>
+                              <span>Видалити</span>
                             </button>
                           </div>
                         )}
@@ -616,7 +582,7 @@ export default function CoachDashboardPage() {
 
                   {/* Progress Bar in SMT 36 */}
                   <div className="space-y-1">
-                    <div className="flex justify-between text-[11px] text-slate-400">
+                    <div className="flex justify-between text-[11px] text-slate-400 font-medium">
                       <span>
                         Тренування: <strong className="text-white font-mono">#{trainee.currentWorkoutNumber}</strong> / 36
                       </span>
@@ -632,18 +598,18 @@ export default function CoachDashboardPage() {
                     </div>
                   </div>
 
-                  {/* 3 Metrics: Index | Bodyweight | Last Workout Date (smart formatted) */}
+                  {/* 3 Metrics: Equal 33.3% columns */}
                   <div className="grid grid-cols-3 gap-2 p-2 rounded-2xl bg-slate-950/60 border border-white/5 text-center text-[11px]">
-                    <div>
-                      <span className="text-[9px] uppercase font-bold text-slate-400 block">Індекс</span>
-                      <strong className="text-white font-mono">{trainee.athleticScore}/100</strong>
+                    <div className="min-w-0">
+                      <span className="text-[9px] uppercase font-bold text-slate-400 block truncate">Індекс</span>
+                      <strong className="text-white font-mono text-xs block">{trainee.athleticScore}/100</strong>
                     </div>
-                    <div>
-                      <span className="text-[9px] uppercase font-bold text-slate-400 block">Вага тіла</span>
-                      <strong className="text-white font-mono">{trainee.weightKg} кг</strong>
+                    <div className="min-w-0">
+                      <span className="text-[9px] uppercase font-bold text-slate-400 block truncate">Вага тіла</span>
+                      <strong className="text-white font-mono text-xs block">{trainee.weightKg} кг</strong>
                     </div>
-                    <div>
-                      <span className="text-[9px] uppercase font-bold text-slate-400 block">Останнє заняття</span>
+                    <div className="min-w-0">
+                      <span className="text-[9px] uppercase font-bold text-slate-400 block truncate">Останнє заняття</span>
                       <strong className="text-slate-200 font-mono text-[10px] block truncate">
                         {formatSmartDate(trainee.lastWorkoutDate, language)}
                       </strong>
@@ -651,18 +617,18 @@ export default function CoachDashboardPage() {
                   </div>
 
                   {/* Coach Notes (No text cutting, expandable and clean!) */}
-                  {trainee.coachNotes && (
+                  {trainee.coachNotes ? (
                     <div className="rounded-xl border border-white/5 bg-slate-950/60 p-2.5 space-y-1">
                       <div className="flex items-center justify-between text-[10px] font-bold text-amber-400">
                         <span className="flex items-center gap-1">
-                          <FileText className="h-3 w-3" />
+                          <FileText className="h-3 w-3 shrink-0" />
                           <span>Замітка тренера:</span>
                         </span>
                         {trainee.coachNotes.length > 60 && (
                           <button
                             type="button"
                             onClick={() => toggleExpandNote(trainee.id)}
-                            className="text-[10px] text-cyan-400 hover:text-cyan-300 font-medium transition-colors"
+                            className="text-[10px] text-cyan-400 hover:text-cyan-300 font-semibold transition-colors"
                           >
                             {isNoteExpanded ? "Згорнути" : "Читати повністю ›"}
                           </button>
@@ -676,48 +642,54 @@ export default function CoachDashboardPage() {
                         "{trainee.coachNotes}"
                       </p>
                     </div>
+                  ) : (
+                    <div className="h-10 rounded-xl border border-dashed border-white/5 flex items-center justify-center text-[11px] text-slate-500 italic">
+                      Немає персональних заміток
+                    </div>
                   )}
                 </div>
 
-                {/* Card Actions */}
-                <div className="pt-2 border-t border-white/5 flex items-center justify-between gap-2 mt-2">
+                {/* Card Actions: Strictly balanced 50% / 50% grid with unified h-9.5 buttons */}
+                <div className="grid grid-cols-2 gap-2 pt-3 border-t border-white/5 mt-3">
                   {cleanUsername ? (
                     <a
                       href={telegramChatUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="px-3.5 py-1.5 rounded-xl border border-cyan-500/30 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                      className="h-9 w-full rounded-xl border border-cyan-500/30 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
                     >
-                      <MessageCircle className="h-3.5 w-3.5" />
+                      <MessageCircle className="h-3.5 w-3.5 text-cyan-400 shrink-0" />
                       <span>Написати</span>
                     </a>
                   ) : (
-                    <span className="text-xs text-slate-500 italic">Очікує юзернейм</span>
+                    <button
+                      type="button"
+                      disabled
+                      className="h-9 w-full rounded-xl border border-white/5 bg-white/5 text-slate-500 text-xs font-medium flex items-center justify-center"
+                    >
+                      <span>Очікує юзернейм</span>
+                    </button>
                   )}
 
-                  <div className="flex items-center gap-2 ml-auto">
-                    {isBlocked ? (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-xs border-amber-500/30 text-amber-300 hover:bg-amber-500/10"
-                        onClick={() => unblockTrainee(trainee.id)}
-                      >
-                        <Unlock className="h-3.5 w-3.5 mr-1" />
-                        <span>Розблокувати</span>
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="text-xs font-bold border-white/15 hover:border-emerald-500/40 hover:text-emerald-300 flex items-center gap-1"
-                        onClick={() => handleOpenDetail(trainee)}
-                      >
-                        <span>Досьє</span>
-                        <ChevronRight className="h-3.5 w-3.5" />
-                      </Button>
-                    )}
-                  </div>
+                  {isBlocked ? (
+                    <button
+                      type="button"
+                      onClick={() => unblockTrainee(trainee.id)}
+                      className="h-9 w-full rounded-xl border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-xs font-bold flex items-center justify-center gap-1 transition-colors"
+                    >
+                      <Unlock className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                      <span>Розблокувати</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleOpenDetail(trainee)}
+                      className="h-9 w-full rounded-xl border border-white/15 bg-white/5 hover:bg-emerald-500/15 hover:border-emerald-500/40 hover:text-emerald-300 text-white text-xs font-bold flex items-center justify-center gap-1 transition-all"
+                    >
+                      <span>Досьє</span>
+                      <ChevronRight className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                    </button>
+                  )}
                 </div>
               </div>
             );
@@ -731,94 +703,6 @@ export default function CoachDashboardPage() {
         open={isDetailModalOpen}
         onOpenChange={setIsDetailModalOpen}
       />
-
-      {/* Add New Trainee Dialog */}
-      <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
-        <DialogHeader>
-          <DialogTitle onClose={() => setIsAddModalOpen(false)}>
-            <div className="flex items-center gap-2">
-              <Plus className="h-5 w-5 text-emerald-400" />
-              <span>Додати нового підопічного</span>
-            </div>
-          </DialogTitle>
-          <DialogDescription>
-            Введіть дані атлета для закріплення за програмою СМТ
-          </DialogDescription>
-        </DialogHeader>
-
-        <form onSubmit={handleCreateTrainee} className="space-y-3.5 my-2">
-          <div>
-            <label className="text-xs font-semibold text-slate-300 block mb-1">
-              Ім'я та Прізвище *
-            </label>
-            <input
-              type="text"
-              required
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              placeholder="наприклад: Артем Шевченко"
-              className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-            />
-          </div>
-
-          <div>
-            <label className="text-xs font-semibold text-slate-300 block mb-1">
-              Telegram Username *
-            </label>
-            <input
-              type="text"
-              required
-              value={newUsername}
-              onChange={(e) => setNewUsername(e.target.value)}
-              placeholder="наприклад: artem_sheva (без @)"
-              className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">
-                Початкова вага (кг)
-              </label>
-              <input
-                type="number"
-                step="0.5"
-                value={newWeight}
-                onChange={(e) => setNewWeight(e.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-
-            <div>
-              <label className="text-xs font-semibold text-slate-300 block mb-1">
-                Стартовий МКЦ (1-4)
-              </label>
-              <input
-                type="number"
-                min="1"
-                max="4"
-                value={newMicrocycle}
-                onChange={(e) => setNewMicrocycle(e.target.value)}
-                className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-          </div>
-
-          <div className="pt-2 flex justify-end gap-2 border-t border-white/10">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setIsAddModalOpen(false)}
-            >
-              Скасувати
-            </Button>
-            <Button type="submit" variant="accent" size="sm" className="font-bold text-xs">
-              Створити підопічного
-            </Button>
-          </div>
-        </form>
-      </Dialog>
 
       {/* Confirm Trainee Deletion Dialog */}
       <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
@@ -871,16 +755,16 @@ export default function CoachDashboardPage() {
             </div>
           </DialogTitle>
           <DialogDescription>
-            Ви можете очистити 4 тестові записи підопічних або відновити їх у будь-який момент
+            Очистити 4 тестові записи або повернути їх для перевірки інтерфейсу
           </DialogDescription>
         </DialogHeader>
 
         <div className="p-3 my-2 rounded-2xl bg-white/5 border border-white/10 text-xs text-slate-300 space-y-2">
           <p>
-            • <strong>Очистити всі записи:</strong> залишить список абсолютно чистим, щоб туди потрапляли лише ваші реальні підопічні з каналу.
+            • <strong>Очистити все:</strong> залишає панель чистою, куди додаватимуться лише ваші реальні підопічні з Telegram.
           </p>
           <p>
-            • <strong>Відновити демо:</strong> поверне 4 демонстраційні профілі (Кравченко, Мельник, Ковальчук, Бондаренко) для перевірки інтерфейсу.
+            • <strong>Відновити демо:</strong> повертає 4 демонстраційні профілі (Кравченко, Мельник, Ковальчук, Бондаренко).
           </p>
         </div>
 
