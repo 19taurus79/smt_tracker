@@ -34,6 +34,7 @@ export interface TraineeMeasurementRecord {
 export interface TraineeProfile {
   id: string;
   name: string;
+  alias?: string; // Custom coach alias / pseudonym for quick distinction
   username: string; // telegram username without @
   telegramChatId?: string;
   avatarColor: string; // gradient CSS class

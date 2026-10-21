@@ -87,6 +87,15 @@ export interface TranslationDict {
     startWarmup: string;
     finishWarmup: string;
     finishAndStart: string;
+    jointMobilityTab: string;
+    rampUpTab: string;
+    rampUpTitle: string;
+    rampUpDesc: string;
+    rampUpRule: string;
+    workingWeightBadge: string;
+    nextStepRampUp: string;
+    startSmtWorkout: string;
+    skipToWorkoutDirectly: string;
     resetSession: string;
     resetConfirmTitle: string;
     resetConfirmDesc: string;
@@ -258,6 +267,8 @@ export interface TranslationDict {
       density: { name: string; desc: string; };
       minimal: { name: string; desc: string; };
       challenge: { name: string; desc: string; };
+      prep_step?: { name: string; desc: string; };
+      prep_grad?: { name: string; desc: string; };
     };
     labels: {
       powerWorkout: string;

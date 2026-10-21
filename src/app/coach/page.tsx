@@ -24,12 +24,16 @@ import {
   X,
   MessageCircle,
   BarChart3,
+  Edit3,
+  UserPlus,
 } from "lucide-react";
 import { useCoachStore, TraineeProfile, TraineeStatusFilter } from "@/lib/store/useCoachStore";
 import { useSettingsStore } from "@/lib/store/useSettingsStore";
 import { isCoachAccount, MASTER_COACH_USERNAME, BOT_USERNAME } from "@/lib/auth/roles";
 import { TraineeDetailModal } from "@/components/coach/TraineeDetailModal";
 import { CoachAnalyticsView } from "@/components/coach/CoachAnalyticsView";
+import { EditTraineeModal } from "@/components/coach/EditTraineeModal";
+import { AddTraineeModal } from "@/components/coach/AddTraineeModal";
 import { Dialog, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/lib/i18n";
@@ -105,6 +109,17 @@ export default function CoachDashboardPage() {
   // Active menu dropdown id
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
+  // Trainee edit modal state
+  const [traineeToEdit, setTraineeToEdit] = useState<TraineeProfile | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+  const handleOpenEdit = (trainee: TraineeProfile) => {
+    setActiveMenuId(null);
+    setTraineeToEdit(trainee);
+    setIsEditModalOpen(true);
+  };
+
   // Expanded notes per trainee
   const [expandedNotes, setExpandedNotes] = useState<Record<string, boolean>>({});
 
@@ -137,6 +152,7 @@ export default function CoachDashboardPage() {
       const matchesSearch =
         !q ||
         t.name.toLowerCase().includes(q) ||
+        (t.alias && t.alias.toLowerCase().includes(q)) ||
         t.username.toLowerCase().includes(q);
 
       if (!matchesSearch) return false;
@@ -259,7 +275,17 @@ export default function CoachDashboardPage() {
           </div>
 
           {/* Action Buttons: Unified height h-9.5 */}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0 flex-wrap sm:flex-nowrap">
+            <button
+              type="button"
+              onClick={() => setIsAddModalOpen(true)}
+              className="h-9 px-3.5 rounded-xl border border-emerald-500/40 bg-emerald-500/15 hover:bg-emerald-500/25 text-xs font-bold text-emerald-300 transition-colors flex items-center justify-center gap-1.5 shadow-sm shadow-emerald-500/20"
+              title="Додати підопічного вручну"
+            >
+              <UserPlus className="h-4 w-4 text-emerald-400" />
+              <span>+ Атлет</span>
+            </button>
+
             <button
               type="button"
               onClick={handleCopyInviteLink}
@@ -485,12 +511,14 @@ export default function CoachDashboardPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 items-stretch">
           {filteredTrainees.map((trainee) => {
-            const initials = trainee.name
+            const displayName = trainee.alias || trainee.name;
+            const initials = displayName
               .split(" ")
+              .filter(Boolean)
               .map((n) => n[0])
               .join("")
               .slice(0, 2)
-              .toUpperCase();
+              .toUpperCase() || "АТ";
 
             const cleanUsername = trainee.username.replace(/^@/, "");
             const telegramChatUrl = cleanUsername ? `https://t.me/${cleanUsername}` : "#";
@@ -539,24 +567,49 @@ export default function CoachDashboardPage() {
                       </div>
 
                       <div className="min-w-0">
-                        <h3 className="text-sm font-black text-white leading-tight truncate">
-                          {trainee.name}
-                        </h3>
-                        {cleanUsername ? (
-                          <a
-                            href={telegramChatUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-xs font-medium text-cyan-400 hover:text-cyan-300 flex items-center gap-1 mt-0.5 truncate"
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <h3 className="text-sm font-black text-white leading-tight truncate">
+                            {displayName}
+                          </h3>
+                          {trainee.alias && (
+                            <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-amber-500/20 border border-amber-500/40 text-amber-300 shrink-0">
+                              ПСЕВДОНІМ
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenEdit(trainee);
+                            }}
+                            className="p-1 rounded-md text-slate-400 hover:text-amber-300 hover:bg-white/10 transition-colors"
+                            title="Змінити ім'я або надати псевдонім"
                           >
-                            <span>@{cleanUsername}</span>
-                            <ExternalLink className="h-2.5 w-2.5 inline shrink-0" />
-                          </a>
-                        ) : (
-                          <span className="text-[11px] text-slate-500 block mt-0.5 truncate">
-                            Без юзернейму
-                          </span>
-                        )}
+                            <Edit3 className="h-3 w-3" />
+                          </button>
+                        </div>
+                        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                          {trainee.alias && (
+                            <span className="text-[11px] text-slate-400 truncate">
+                              Ориг: {trainee.name} •
+                            </span>
+                          )}
+                          {cleanUsername ? (
+                            <a
+                              href={telegramChatUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-xs font-medium text-cyan-400 hover:text-cyan-300 flex items-center gap-1 truncate"
+                            >
+                              <span>@{cleanUsername}</span>
+                              <ExternalLink className="h-2.5 w-2.5 inline shrink-0" />
+                            </a>
+                          ) : (
+                            <span className="text-[11px] text-slate-500 block truncate">
+                              Без юзернейму
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
 
@@ -581,8 +634,17 @@ export default function CoachDashboardPage() {
                         {activeMenuId === trainee.id && (
                           <div
                             onClick={(e) => e.stopPropagation()}
-                            className="absolute right-0 top-9 z-30 w-44 rounded-2xl border border-white/15 bg-slate-950 p-1.5 shadow-2xl backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-150"
+                            className="absolute right-0 top-9 z-30 w-48 rounded-2xl border border-white/15 bg-slate-950 p-1.5 shadow-2xl backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-150"
                           >
+                            <button
+                              type="button"
+                              onClick={() => handleOpenEdit(trainee)}
+                              className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-amber-300 hover:text-white hover:bg-amber-500/15 transition-colors"
+                            >
+                              <Edit3 className="h-3.5 w-3.5 text-amber-400" />
+                              <span>Змінити псевдонім / ім&apos;я</span>
+                            </button>
+
                             <button
                               type="button"
                               onClick={() => handleToggleBlock(trainee)}
@@ -831,6 +893,19 @@ export default function CoachDashboardPage() {
           </Button>
         </div>
       </Dialog>
+
+      {/* Edit Trainee Name & Alias Modal */}
+      <EditTraineeModal
+        trainee={traineeToEdit}
+        open={isEditModalOpen}
+        onOpenChange={setIsEditModalOpen}
+      />
+
+      {/* Add Trainee Modal */}
+      <AddTraineeModal
+        open={isAddModalOpen}
+        onOpenChange={setIsAddModalOpen}
+      />
     </div>
   );
 }

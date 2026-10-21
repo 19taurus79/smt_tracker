@@ -147,7 +147,8 @@ function WorkoutContent() {
   };
 
   const handleStartThisWorkout = () => {
-    startWorkout(currentWorkout.id);
+    // Proactively guide the athlete through joint mobility & ramp-up sets before starting SMT timer
+    openWarmupModal();
   };
 
   const previewNoticeTitle =
@@ -458,21 +459,21 @@ function WorkoutContent() {
           <Button
             variant="accent"
             size="lg"
-            className="flex-1 font-black text-xs sm:text-sm px-4 py-3.5 shadow-xl shadow-emerald-500/25 flex items-center justify-center gap-2 text-center leading-snug"
+            className="flex-1 font-black text-xs sm:text-sm px-4 py-3.5 shadow-xl shadow-emerald-500/25 flex items-center justify-center gap-2 text-center leading-snug bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-500 text-slate-950"
             onClick={handleStartThisWorkout}
           >
-            <Play className="h-4 w-4 fill-current shrink-0" />
+            <Flame className="h-4 w-4 text-amber-900 fill-current shrink-0" />
             <span>{t.workout.start}</span>
           </Button>
 
           <Button
             variant="outline"
             size="lg"
-            onClick={openWarmupModal}
-            className="font-bold border-amber-500/30 text-amber-300 hover:bg-amber-500/10 px-4 py-3.5 text-xs sm:text-sm flex items-center justify-center gap-2"
+            onClick={() => startWorkout(currentWorkout.id)}
+            className="font-bold border-white/10 text-slate-400 hover:text-white px-4 py-3.5 text-xs sm:text-sm flex items-center justify-center gap-2"
           >
-            <Flame className="h-4 w-4 text-amber-400 shrink-0" />
-            <span>{t.workout.warmup}</span>
+            <Play className="h-3.5 w-3.5 shrink-0" />
+            <span>{t.workout.skipToWorkoutDirectly}</span>
           </Button>
         </div>
       )}

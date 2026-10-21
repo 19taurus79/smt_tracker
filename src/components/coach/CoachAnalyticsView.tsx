@@ -28,6 +28,7 @@ import {
   FileText,
   SlidersHorizontal,
   ChevronDown,
+  Edit3,
 } from "lucide-react";
 import {
   ResponsiveContainer,
@@ -45,6 +46,7 @@ import {
 } from "recharts";
 import { useCoachStore, TraineeProfile, TraineeWorkoutRecord } from "@/lib/store/useCoachStore";
 import { useTranslation } from "@/lib/i18n";
+import { EditTraineeModal } from "./EditTraineeModal";
 
 interface CoachAnalyticsViewProps {
   onOpenDetail: (trainee: TraineeProfile) => void;
@@ -73,6 +75,15 @@ export function CoachAnalyticsView({ onOpenDetail }: CoachAnalyticsViewProps) {
   const [selectedTraineeId, setSelectedTraineeId] = useState<string | null>(
     trainees.length > 0 ? trainees[0].id : null
   );
+
+  // Trainee edit modal state
+  const [traineeToEdit, setTraineeToEdit] = useState<TraineeProfile | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+  const handleOpenEdit = (t: TraineeProfile) => {
+    setTraineeToEdit(t);
+    setIsEditModalOpen(true);
+  };
 
   // Time cutoffs
   const now = useMemo(() => Date.now(), []);
@@ -116,7 +127,7 @@ export function CoachAnalyticsView({ onOpenDetail }: CoachAnalyticsViewProps) {
           totalTonnage,
           avgPower,
           periodWorkoutsCount: periodWorkouts.length,
-          shortName: t.name.split(" ")[0] + (t.name.split(" ")[1] ? ` ${t.name.split(" ")[1][0]}.` : ""),
+          shortName: t.alias || (t.name.split(" ")[0] + (t.name.split(" ")[1] ? ` ${t.name.split(" ")[1][0]}.` : "")),
         };
       });
   }, [trainees, timeCutoffMs]);
@@ -170,7 +181,12 @@ export function CoachAnalyticsView({ onOpenDetail }: CoachAnalyticsViewProps) {
       .filter((t) => {
         // Search query
         const q = searchQuery.toLowerCase().trim();
-        if (q && !t.name.toLowerCase().includes(q) && !t.username.toLowerCase().includes(q)) {
+        if (
+          q &&
+          !t.name.toLowerCase().includes(q) &&
+          !(t.alias && t.alias.toLowerCase().includes(q)) &&
+          !t.username.toLowerCase().includes(q)
+        ) {
           return false;
         }
         // Microcycle filter
@@ -267,7 +283,7 @@ export function CoachAnalyticsView({ onOpenDetail }: CoachAnalyticsViewProps) {
         return {
           id: t.id,
           name: t.shortName,
-          fullName: t.name,
+          fullName: t.alias ? `${t.alias} (${t.name})` : t.name,
           username: t.username,
           tierLabel: t.tierLabel,
           tierKey: t.tierKey,
@@ -556,7 +572,7 @@ export function CoachAnalyticsView({ onOpenDetail }: CoachAnalyticsViewProps) {
               <div className="text-xs font-bold text-white flex items-center gap-1.5">
                 <span>Потребують контакту ({teamStats.attentionList.length}):</span>
                 <span className="text-rose-300 font-normal">
-                  {teamStats.attentionList.map((t) => t.name).join(", ")}
+                  {teamStats.attentionList.map((t) => t.alias || t.name).join(", ")}
                 </span>
               </div>
               <p className="text-[11px] text-rose-200/80">
@@ -936,7 +952,14 @@ export function CoachAnalyticsView({ onOpenDetail }: CoachAnalyticsViewProps) {
                     <div className="flex items-center gap-2.5 min-w-0">
                       <span className="text-base shrink-0">{medalEmoji}</span>
                       <div className="min-w-0">
-                        <div className="text-xs font-bold text-white truncate">{athlete.name}</div>
+                        <div className="text-xs font-bold text-white truncate">
+                          {athlete.alias || athlete.name}
+                        </div>
+                        {athlete.alias && (
+                          <div className="text-[9px] text-slate-400 truncate">
+                            ({athlete.name})
+                          </div>
+                        )}
                         <div className="text-[10px] text-slate-400 font-mono">
                           МКЦ-{athlete.currentMicrocycle} • {athlete.totalWorkouts} занять
                         </div>
@@ -976,7 +999,28 @@ export function CoachAnalyticsView({ onOpenDetail }: CoachAnalyticsViewProps) {
               </div>
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="text-base font-black text-white">{activeSelectedTrainee.name}</h3>
+                  <h3 className="text-base font-black text-white">
+                    {activeSelectedTrainee.alias || activeSelectedTrainee.name}
+                  </h3>
+                  {activeSelectedTrainee.alias && (
+                    <span className="text-xs text-slate-400 font-normal">
+                      ({activeSelectedTrainee.name})
+                    </span>
+                  )}
+                  {activeSelectedTrainee.alias && (
+                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 border border-amber-500/40 text-amber-300">
+                      ПСЕВДОНІМ
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => handleOpenEdit(activeSelectedTrainee)}
+                    className="h-6 px-2 rounded-lg bg-white/5 hover:bg-amber-500/20 border border-white/10 text-slate-300 hover:text-amber-300 text-[11px] font-medium flex items-center gap-1 transition-colors"
+                    title="Змінити ім'я або надати псевдонім"
+                  >
+                    <Edit3 className="h-3 w-3" />
+                    <span>Псевдонім</span>
+                  </button>
                   <span className="text-xs text-slate-400">@{activeSelectedTrainee.username}</span>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 uppercase">
                     {activeSelectedTrainee.tierLabel}
@@ -1261,18 +1305,26 @@ export function CoachAnalyticsView({ onOpenDetail }: CoachAnalyticsViewProps) {
                         <div
                           className={`flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br ${trainee.avatarColor} text-white font-bold text-xs shrink-0 shadow-sm`}
                         >
-                          {trainee.name
+                          {(trainee.alias || trainee.name)
                             .split(" ")
+                            .filter(Boolean)
                             .map((n) => n[0])
                             .join("")
                             .slice(0, 2)
                             .toUpperCase()}
                         </div>
                         <div className="min-w-0">
-                          <div className="font-bold text-white group-hover:text-emerald-400 transition-colors truncate">
-                            {trainee.name}
+                          <div className="font-bold text-white group-hover:text-emerald-400 transition-colors truncate flex items-center gap-1.5">
+                            <span>{trainee.alias || trainee.name}</span>
+                            {trainee.alias && (
+                              <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-amber-500/20 border border-amber-500/30 text-amber-300 font-normal">
+                                псевдонім
+                              </span>
+                            )}
                           </div>
-                          <div className="text-[10px] text-slate-400">@{trainee.username}</div>
+                          <div className="text-[10px] text-slate-400 truncate">
+                            {trainee.alias ? `${trainee.name} • ` : ""}@{trainee.username}
+                          </div>
                         </div>
                       </div>
                     </td>
@@ -1330,6 +1382,14 @@ export function CoachAnalyticsView({ onOpenDetail }: CoachAnalyticsViewProps) {
                       <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
                         <button
                           type="button"
+                          onClick={() => handleOpenEdit(trainee)}
+                          className="h-7 w-7 rounded-lg bg-white/5 hover:bg-amber-500/20 border border-white/10 text-slate-300 hover:text-amber-300 flex items-center justify-center transition-colors"
+                          title="Змінити ім'я або псевдонім"
+                        >
+                          <Edit3 className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => onOpenDetail(trainee)}
                           className="h-7 px-2.5 rounded-lg bg-white/10 hover:bg-emerald-500 hover:text-slate-950 font-bold text-[11px] text-white transition-colors flex items-center gap-1"
                         >
@@ -1354,6 +1414,12 @@ export function CoachAnalyticsView({ onOpenDetail }: CoachAnalyticsViewProps) {
           </table>
         </div>
       </div>
+
+      <EditTraineeModal
+        trainee={traineeToEdit}
+        open={isEditModalOpen}
+        onOpenChange={setIsEditModalOpen}
+      />
     </div>
   );
 }

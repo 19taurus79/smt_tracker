@@ -19,6 +19,7 @@ import {
   ChevronRight,
   X,
   Send,
+  Camera,
 } from "lucide-react";
 import { Dialog, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,8 @@ import { soundPlayer } from "@/lib/audio/sound";
 import { triggerHaptic } from "@/lib/tma/telegram";
 import { formatTime } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
+import { StoryShareModal, StoryTemplateType, PrepStoryData } from "@/components/analytics/StoryShareModal";
+import { WorkoutSession } from "@/types/smt";
 
 interface PrepWorkoutModalProps {
   open: boolean;
@@ -73,6 +76,8 @@ export function PrepWorkoutModal({
   const [isAppliedSuccessfully, setIsAppliedSuccessfully] = useState<boolean>(false);
   const [isPublishingChallenge, setIsPublishingChallenge] = useState<boolean>(false);
   const [publishedChallenge, setPublishedChallenge] = useState<boolean>(false);
+  const [isStoryModalOpen, setIsStoryModalOpen] = useState<boolean>(false);
+  const [storyInitialTemplate, setStoryInitialTemplate] = useState<StoryTemplateType>("prep_step");
 
   // Calibration state for after workout
   const [calibrateBench, setCalibrateBench] = useState<number>(50);
@@ -393,6 +398,58 @@ export function PrepWorkoutModal({
       pull: exId === "pull" ? nextWeight : calibratePull,
       squat: exId === "squat" ? nextWeight : calibrateSquat,
     });
+  };
+
+  // Synthetic workout & prep data for Story generation
+  const prepStoryWorkout: WorkoutSession = {
+    id: currentSession.id,
+    workoutNumber: selectedNum,
+    microcycle: 1,
+    week: 1,
+    title: `Вводне тренування #${selectedNum}`,
+    status: "completed",
+    completedAt: new Date().toISOString(),
+    durationSeconds: elapsedSeconds || 25 * 60,
+    tonnageKg: prepTonnage,
+    powerKgPerMin: Math.round(prepTonnage / Math.max(1, (elapsedSeconds || 25 * 60) / 60)),
+    supersets: currentSession.exercises.map((ex, i) => ({
+      id: `ss-${i}`,
+      label: ex.name,
+      exercises: [
+        {
+          id: ex.id,
+          exerciseId: ex.id,
+          name: ex.name,
+          category: "main",
+          order: i + 1,
+          sets: ex.sets.map((s, si) => ({
+            id: s.id,
+            setNumber: si + 1,
+            targetWeight: s.weight,
+            actualWeight: s.weight,
+            targetReps: s.reps,
+            actualReps: s.reps,
+            completed: s.completed,
+          })),
+        },
+      ],
+    })),
+  };
+
+  const prepStoryData: PrepStoryData = {
+    prepSessionNumber: selectedNum,
+    targetRestSeconds: targetRest,
+    isGraduation: step === "all_completed",
+    completedSetsCount,
+    totalSetsCount,
+    suggestedWeights: {
+      bench: suggestedWeights.benchPress.startWeight,
+      closeGrip: suggestedWeights.closeGripBench.startWeight,
+      pull: suggestedWeights.pullUps.startWeight,
+      biceps: suggestedWeights.bicepsCurl.startWeight,
+      squat: suggestedWeights.squat.startWeight,
+      ohp: suggestedWeights.ohp.startWeight,
+    },
   };
 
   // =========================================================================
@@ -772,26 +829,41 @@ export function PrepWorkoutModal({
                   : `Опубликуйте тренировку #${selectedNum} (отдых ${targetRest}с выдержан, тоннаж: ${prepTonnage} кг)!`}
               </p>
             </div>
-            <Button
-              size="sm"
-              variant={publishedChallenge ? "outline" : "accent"}
-              disabled={isPublishingChallenge || publishedChallenge}
-              className={`shrink-0 text-xs h-8.5 font-bold ${
-                publishedChallenge
-                  ? "border-emerald-500/40 text-emerald-300 bg-emerald-500/10"
-                  : "bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-md shadow-blue-500/20"
-              }`}
-              onClick={() => handlePublishPrepChallenge(false)}
-            >
-              <Send className="h-3.5 w-3.5 mr-1.5" />
-              <span>
-                {publishedChallenge
-                  ? (language === "uk" ? "✓ В каналі!" : "✓ В канале!")
-                  : isPublishingChallenge
-                  ? (language === "uk" ? "Публікація..." : "Публикация...")
-                  : (language === "uk" ? "В канал Челенджу" : "В канал Челленджа")}
-              </span>
-            </Button>
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-pink-500/30 text-pink-300 hover:bg-pink-500/10 text-xs font-bold h-8.5"
+                onClick={() => {
+                  setStoryInitialTemplate("prep_step");
+                  setIsStoryModalOpen(true);
+                }}
+              >
+                <Camera className="h-3.5 w-3.5 mr-1 text-pink-400" />
+                <span>{language === "uk" ? "Сторіс" : "Сторис"}</span>
+              </Button>
+
+              <Button
+                size="sm"
+                variant={publishedChallenge ? "outline" : "accent"}
+                disabled={isPublishingChallenge || publishedChallenge}
+                className={`text-xs h-8.5 font-bold ${
+                  publishedChallenge
+                    ? "border-emerald-500/40 text-emerald-300 bg-emerald-500/10"
+                    : "bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-md shadow-blue-500/20"
+                }`}
+                onClick={() => handlePublishPrepChallenge(false)}
+              >
+                <Send className="h-3.5 w-3.5 mr-1.5" />
+                <span>
+                  {publishedChallenge
+                    ? (language === "uk" ? "✓ В каналі!" : "✓ В канале!")
+                    : isPublishingChallenge
+                    ? (language === "uk" ? "Публікація..." : "Публикация...")
+                    : (language === "uk" ? "В канал Челенджу" : "В канал Челленджа")}
+                </span>
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -805,6 +877,14 @@ export function PrepWorkoutModal({
             {language === "uk" ? "Закрити" : language === "en" ? "Close" : "Закрыть"}
           </Button>
         </div>
+
+        <StoryShareModal
+          open={isStoryModalOpen}
+          onOpenChange={setIsStoryModalOpen}
+          workout={prepStoryWorkout}
+          prepData={prepStoryData}
+          initialTemplate={storyInitialTemplate}
+        />
       </Dialog>
     );
   }
@@ -922,26 +1002,41 @@ export function PrepWorkoutModal({
                   : "Опубликуйте успешное окончание подготовки и ваши стартовые веса на 36 тренировок СМТ-1!"}
               </p>
             </div>
-            <Button
-              size="sm"
-              variant={publishedChallenge ? "outline" : "accent"}
-              disabled={isPublishingChallenge || publishedChallenge}
-              className={`shrink-0 text-xs h-9 font-bold px-3.5 ${
-                publishedChallenge
-                  ? "border-emerald-500/40 text-emerald-300 bg-emerald-500/10"
-                  : "bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-md shadow-blue-500/20"
-              }`}
-              onClick={() => handlePublishPrepChallenge(true)}
-            >
-              <Send className="h-3.5 w-3.5 mr-1.5" />
-              <span>
-                {publishedChallenge
-                  ? (language === "uk" ? "✓ Випускний у каналі!" : "✓ Выпускной в канале!")
-                  : isPublishingChallenge
-                  ? (language === "uk" ? "Публікація..." : "Публикация...")
-                  : (language === "uk" ? "Опублікувати випускний" : "Опубликовать выпускной")}
-              </span>
-            </Button>
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-amber-500/40 text-amber-300 hover:bg-amber-500/10 text-xs font-bold h-9 px-3"
+                onClick={() => {
+                  setStoryInitialTemplate("prep_grad");
+                  setIsStoryModalOpen(true);
+                }}
+              >
+                <Camera className="h-3.5 w-3.5 mr-1.5 text-amber-400" />
+                <span>{language === "uk" ? "Сторіс Випускника" : "Сторис Выпускника"}</span>
+              </Button>
+
+              <Button
+                size="sm"
+                variant={publishedChallenge ? "outline" : "accent"}
+                disabled={isPublishingChallenge || publishedChallenge}
+                className={`text-xs h-9 font-bold px-3.5 ${
+                  publishedChallenge
+                    ? "border-emerald-500/40 text-emerald-300 bg-emerald-500/10"
+                    : "bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-md shadow-blue-500/20"
+                }`}
+                onClick={() => handlePublishPrepChallenge(true)}
+              >
+                <Send className="h-3.5 w-3.5 mr-1.5" />
+                <span>
+                  {publishedChallenge
+                    ? (language === "uk" ? "✓ Випускний у каналі!" : "✓ Выпускной в канале!")
+                    : isPublishingChallenge
+                    ? (language === "uk" ? "Публікація..." : "Публикация...")
+                    : (language === "uk" ? "Опублікувати випускний" : "Опубликовать выпускной")}
+                </span>
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -981,6 +1076,14 @@ export function PrepWorkoutModal({
             {language === "uk" ? "Закрити" : language === "en" ? "Close" : "Закрыть"}
           </Button>
         </div>
+
+        <StoryShareModal
+          open={isStoryModalOpen}
+          onOpenChange={setIsStoryModalOpen}
+          workout={prepStoryWorkout}
+          prepData={prepStoryData}
+          initialTemplate={storyInitialTemplate}
+        />
       </Dialog>
     );
   }

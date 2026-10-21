@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SMT-1 & Adaptation: Instagram Stories Collage</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background: #020617;
+      color: #f8fafc;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      padding: 24px;
+      line-height: 1.5;
+    }
+    header {
+      max-width: 1600px;
+      margin: 0 auto 24px auto;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: #34d399;
+    }
+    h1 {
+      font-size: 24px;
+      font-weight: 900;
+      color: #ffffff;
+      margin-top: 6px;
+    }
+    p.subtitle {
+      font-size: 13px;
+      color: #94a3b8;
+    }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+    }
+    button {
+      cursor: pointer;
+      border: none;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 12px;
+      padding: 10px 16px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: #020617;
+      box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3);
+    }
+    .btn-primary:hover {
+      opacity: 0.92;
+      transform: translateY(-1px);
+    }
+    .btn-gold {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: #020617;
+      box-shadow: 0 4px 16px rgba(245, 158, 11, 0.3);
+    }
+    .btn-gold:hover {
+      opacity: 0.92;
+      transform: translateY(-1px);
+    }
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #cbd5e1;
+    }
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.15);
+      color: #ffffff;
+    }
+    .section-title {
+      max-width: 1600px;
+      margin: 28px auto 16px auto;
+      font-size: 15px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #94a3b8;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .section-title span.line {
+      flex: 1;
+      height: 1px;
+      background: rgba(255, 255, 255, 0.1);
+    }
+    .grid {
+      max-width: 1600px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 24px;
+    }
+    .card {
+      background: rgba(15, 23, 42, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 24px;
+      padding: 16px;
+      display: flex;
+      flex-col: column;
+      gap: 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(12px);
+    }
+    .card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .card-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: #ffffff;
+    }
+    .card-desc {
+      font-size: 11px;
+      color: #94a3b8;
+    }
+    .canvas-container {
+      width: 100%;
+      aspect-ratio: 9 / 16;
+      background: #020617;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      position: relative;
+    }
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: contain;
+    }
+    .master-collage-section {
+      max-width: 1600px;
+      margin: 36px auto;
+      padding: 24px;
+      border-radius: 24px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+    }
+    #masterCollageCanvas {
+      width: 100%;
+      height: auto;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: #020617;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.8);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div>
+      <div class="badge">🔥 SMT-1 & Adaptation • 9:16 Full Set</div>
+      <h1>Коллаж всех шаблонов Stories для Instagram</h1>
+      <p class="subtitle">8 специализированных шаблонов высокого разрешения (1080 × 1920 px): 6 для СМТ-1 и 2 для Адаптационного цикла.</p>
+    </div>
+    <div class="actions">
+      <button class="btn-gold" onclick="downloadMasterCollage()">
+        <span>⚡ Скачать весь Коллаж (Ultra-HD PNG)</span>
+      </button>
+      <button class="btn-primary" onclick="downloadAllSeparate()">
+        <span>📥 Скачать все 8 картинок</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- MASTER COLLAGE PREVIEW -->
+  <div class="master-collage-section">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <div>
+        <h2 style="font-size: 18px; font-weight: 900; color: #fbbf24;">⚡ Общий панорамный коллаж (8 в одном)</h2>
+        <p style="font-size: 12px; color: #94a3b8;">Все 8 шаблонов сшиты в единый супер-постер (4320 × 1920 / 4×2)</p>
+      </div>
+      <button class="btn-gold" onclick="downloadMasterCollage()">Скачать коллаж</button>
+    </div>
+    <canvas id="masterCollageCanvas"></canvas>
+  </div>
+
+  <!-- ADAPTATION SECTION -->
+  <div class="section-title">
+    <span>🌱 ШАБЛОНЫ ВВОДНОЙ АДАПТАЦИИ (2 ШАБЛОНА)</span>
+    <span class="line"></span>
+  </div>
+
+  <div class="grid">
+    <!-- 1. PREP STEP -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">1. Адаптация #3 (Пауза 60с)</div>
+          <div class="card-desc">Шаг сокращения пауз от 90с до 30с + неоновый степпер</div>
+        </div>
+        <button class="btn-secondary" onclick="downloadCanvas('canvas_prep_step', 'smt_story_prep_step_3.png')">PNG</button>
+      </div>
+      <div class="canvas-container">
+        <canvas id="canvas_prep_step" width="1080" height="1920"></canvas>
+      </div>
+    </div>
+
+    <!-- 2. PREP GRADUATION -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">2. Выпускной СМТ-1 (Сертификат)</div>
+          <div class="card-desc">Золотой диплом готовности + 6 подобранных стартовых весов</div>
+        </div>
+        <button class="btn-secondary" onclick="downloadCanvas('canvas_prep_grad', 'smt_story_prep_graduation.png')">PNG</button>
+      </div>
+      <div class="canvas-container">
+        <canvas id="canvas_prep_grad" width="1080" height="1920"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- SMT-1 MAIN PROGRAM SECTION -->
+  <div class="section-title">
+    <span>⚡ ШАБЛОНЫ ОСНОВНОЙ ПРОГРАММЫ СМТ-1 (6 ШАБЛОНОВ)</span>
+    <span class="line"></span>
+  </div>
+
+  <div class="grid">
+    <!-- 3. POWER -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">3. Сила и Сеты (Power)</div>
+          <div class="card-desc">Изумрудный неон, тоннаж, мощность и все выполненные веса</div>
+        </div>
+        <button class="btn-secondary" onclick="downloadCanvas('canvas_power', 'smt_story_power.png')">PNG</button>
+      </div>
+      <div class="canvas-container">
+        <canvas id="canvas_power" width="1080" height="1920"></canvas>
+      </div>
+    </div>
+
+    <!-- 4. RECOMP -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">4. Рекомпозиция тела (Recomp)</div>
+          <div class="card-desc">Cyan/Фиолетовый стиль, динамика веса, талия, бицепс</div>
+        </div>
+        <button class="btn-secondary" onclick="downloadCanvas('canvas_recomp', 'smt_story_recomp.png')">PNG</button>
+      </div>
+      <div class="canvas-container">
+        <canvas id="canvas_recomp" width="1080" height="1920"></canvas>
+      </div>
+    </div>
+
+    <!-- 5. PROGRESS -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">5. Рекорды и PR (Progress)</div>
+          <div class="card-desc">Золотой стиль, дельта прироста к прошлому циклу (+1250 кг)</div>
+        </div>
+        <button class="btn-secondary" onclick="downloadCanvas('canvas_progress', 'smt_story_progress.png')">PNG</button>
+      </div>
+      <div class="canvas-container">
+        <canvas id="canvas_progress" width="1080" height="1920"></canvas>
+      </div>
+    </div>
+
+    <!-- 6. DENSITY -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">6. Плотность и 30с отдых (Density)</div>
+          <div class="card-desc">Пламенный Crimson стиль, суровые 30-секундные паузы</div>
+        </div>
+        <button class="btn-secondary" onclick="downloadCanvas('canvas_density', 'smt_story_density.png')">PNG</button>
+      </div>
+      <div class="canvas-container">
+        <canvas id="canvas_density" width="1080" height="1920"></canvas>
+      </div>
+    </div>
+
+    <!-- 7. MINIMAL -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">7. Постер под фото (Minimal)</div>
+          <div class="card-desc">Матовый титановый минимализм для наложения на селфи</div>
+        </div>
+        <button class="btn-secondary" onclick="downloadCanvas('canvas_minimal', 'smt_story_minimal.png')">PNG</button>
+      </div>
+      <div class="canvas-container">
+        <canvas id="canvas_minimal" width="1080" height="1920"></canvas>
+      </div>
+    </div>
+
+    <!-- 8. CHALLENGE -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">8. Челлендж & Дуэль (Challenge)</div>
+          <div class="card-desc">Неоновый вызов «Мне по силам. А тебе?» + QR-код в дуэль</div>
+        </div>
+        <button class="btn-secondary" onclick="downloadCanvas('canvas_challenge', 'smt_story_challenge.png')">PNG</button>
+      </div>
+      <div class="canvas-container">
+        <canvas id="canvas_challenge" width="1080" height="1920"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div id="hiddenQr" style="display: none;"></div>
+
+  <script>
+    // Utility roundRect
+    function roundRect(ctx, x, y, w, h, r, fill = true, stroke = false) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+      if (fill) ctx.fill();
+      if (stroke) ctx.stroke();
+    }
+
+    function drawHeaderBlock(ctx, badgeText, title, meta, accentColor, bgColor) {
+      const x = 80, y = 60, w = 920, h = 140;
+      ctx.fillStyle = bgColor;
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
+      ctx.lineWidth = 2;
+      roundRect(ctx, x, y, w, h, 24, true, true);
+
+      ctx.font = "bold 22px system-ui, -apple-system, sans-serif";
+      const badgeWidth = ctx.measureText(badgeText).width + 32;
+      ctx.fillStyle = "rgba(255, 255, 255, 0.06)";
+      ctx.strokeStyle = accentColor;
+      ctx.lineWidth = 2;
+      roundRect(ctx, x + 30, y + 22, badgeWidth, 38, 12, true, true);
+
+      ctx.fillStyle = accentColor;
+      ctx.fillText(badgeText, x + 46, y + 49);
+
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "900 36px system-ui, -apple-system, sans-serif";
+      ctx.fillText(title, x + 30, y + 112);
+
+      ctx.textAlign = "right";
+      ctx.fillStyle = "#94a3b8";
+      ctx.font = "bold 26px system-ui, -apple-system, sans-serif";
+      ctx.fillText(meta, x + w - 30, y + 85);
+      ctx.textAlign = "left";
+    }
+
+    function drawScoreBadge(ctx, x, y, w, h, score, tier, label, accentColor, bgColor, borderColor) {
+      ctx.fillStyle = bgColor;
+      ctx.strokeStyle = borderColor;
+      ctx.lineWidth = 3;
+      roundRect(ctx, x, y, w, h, 28, true, true);
+
+      ctx.font = "900 84px system-ui, -apple-system, sans-serif";
+      const iconStr = "⚡ ";
+      const iconW = ctx.measureText(iconStr).width;
+      const scoreStr = `${score}`;
+      const scoreW = ctx.measureText(scoreStr).width;
+
+      ctx.fillStyle = accentColor;
+      ctx.fillText(iconStr, x + 35, y + 98);
+      ctx.fillText(scoreStr, x + 35 + iconW, y + 98);
+
+      ctx.fillStyle = "#64748b";
+      ctx.font = "bold 32px system-ui, -apple-system, sans-serif";
+      ctx.fillText("/ 100", x + 35 + iconW + scoreW + 14, y + 92);
+
+      ctx.textAlign = "right";
+      ctx.fillStyle = "#94a3b8";
+      ctx.font = "bold 22px system-ui, -apple-system, sans-serif";
+      ctx.fillText(label.toUpperCase(), x + w - 35, y + 54);
+
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "900 36px system-ui, -apple-system, sans-serif";
+      ctx.fillText(tier.toUpperCase(), x + w - 35, y + 102);
+      ctx.textAlign = "left";
+    }
+
+    function drawMetricCard(ctx, x, y, w, h, title, value, unit, valColor, bgColor, borderColor) {
+      ctx.fillStyle = bgColor;
+      ctx.strokeStyle = borderColor;
+      ctx.lineWidth = 3;
+      roundRect(ctx, x, y, w, h, 24, true, true);
+
+      ctx.fillStyle = "#94a3b8";
+      ctx.font = "bold 22px system-ui, -apple-system, sans-serif";
+      ctx.fillText(title, x + 30, y + 50);
+
+      ctx.fillStyle = valColor;
+      ctx.font = "900 68px system-ui, -apple-system, sans-serif";
+      ctx.fillText(value, x + 30, y + 135);
+
+      ctx.fillStyle = "#94a3b8";
+      ctx.font = "600 24px system-ui, -apple-system, sans-serif";
+      ctx.fillText(unit, x + 30, y + 185);
+    }
+
+    function drawRestStrip(ctx, x, y, w, h, durationStr, restLabel, timeLabel, accentColor) {
+      ctx.fillStyle = "rgba(15, 23, 42, 0.85)";
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+      ctx.lineWidth = 2;
+      roundRect(ctx, x, y, w, h, 20, true, true);
+
+      ctx.fillStyle = "#cbd5e1";
+      ctx.font = "600 26px system-ui, -apple-system, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(
+        `⏱  Время: ${durationStr}    •    ⚡  Отдых 30с    •    🔥  СМТ-1 (High-Density)`,
+        x + w / 2,
+        y + 54
+      );
+      ctx.textAlign = "left";
+    }
+
+    function drawExercisesSection(ctx, x, y, w, h, supersets, sectionTitle, accentColor, bgColor, borderColor) {
+      ctx.fillStyle = bgColor;
+      ctx.strokeStyle = borderColor;
+      ctx.lineWidth = 3;
+      roundRect(ctx, x, y, w, h, 28, true, true);
+
+      ctx.fillStyle = accentColor;
+      ctx.font = "bold 30px system-ui, -apple-system, sans-serif";
+      ctx.fillText(`📋  ${sectionTitle}`, x + 35, y + 52);
+
+      const totalExCount = supersets.reduce((acc, s) => acc + s.exercises.length, 0);
+      ctx.textAlign = "right";
+      ctx.fillStyle = "#94a3b8";
+      ctx.font = "600 22px system-ui, -apple-system, sans-serif";
+      ctx.fillText(`${totalExCount} упражнений • ${supersets.length} суперсета`, x + w - 35, y + 52);
+      ctx.textAlign = "left";
+
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x + 35, y + 74);
+      ctx.lineTo(x + w - 35, y + 74);
+      ctx.stroke();
+
+      const availableH = h - 90;
+      const numSS = Math.max(1, supersets.length);
+      const blockH = availableH / numSS;
+
+      supersets.forEach((ss, ssIdx) => {
+        const ssY = y + 84 + ssIdx * blockH;
+
+        ctx.fillStyle = accentColor;
+        ctx.font = "bold 22px system-ui, -apple-system, sans-serif";
+        ctx.fillText(`СУПЕРСЕТ ${ssIdx + 1}`, x + 35, ssY + 28);
+
+        ctx.fillStyle = "#64748b";
+        ctx.font = "500 20px system-ui, -apple-system, sans-serif";
+        ctx.fillText(`• отдых 30с`, x + 185, ssY + 28);
+
+        ss.exercises.forEach((ex, exIdx) => {
+          const exY = ssY + 62 + exIdx * 42;
+          ctx.fillStyle = "#f8fafc";
+          ctx.font = "600 26px system-ui, -apple-system, sans-serif";
+          ctx.fillText(`• ${ex.name}`, x + 40, exY);
+
+          ctx.textAlign = "right";
+          ctx.fillStyle = accentColor;
+          ctx.font = "900 26px system-ui, -apple-system, sans-serif";
+          ctx.fillText(`${ex.weight} кг × ${ex.reps}`, x + w - 160, exY);
+
+          ctx.fillStyle = "#94a3b8";
+          ctx.font = "600 22px system-ui, -apple-system, sans-serif";
+          ctx.fillText(`(${ex.sets} подх)`, x + w - 35, exY);
+          ctx.textAlign = "left";
+        });
+
+        if (ssIdx < supersets.length - 1) {
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(x + 35, ssY + blockH - 6);
+          ctx.lineTo(x + w - 35, ssY + blockH - 6);
+          ctx.stroke();
+        }
+      });
+    }
+
+    function drawPromoBanner(ctx, botUsername, inviteText, accentColor, qrImg) {
+      const x = 80, y = 1645, w = 920, h = 240;
+      const qrSize = 172;
+
+      ctx.fillStyle = "rgba(15, 23, 42, 0.95)";
+      ctx.strokeStyle = accentColor;
+      ctx.lineWidth = 3;
+      roundRect(ctx, x, y, w, h, 28, true, true);
+
+      if (qrImg) {
+        ctx.fillStyle = "#ffffff";
+        roundRect(ctx, x + 30, y + 25, qrSize + 16, qrSize + 16, 16, true, false);
+        ctx.drawImage(qrImg, x + 38, y + 33, qrSize, qrSize);
+      }
+
+      const textX = x + 30 + qrSize + 36;
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "bold 30px system-ui, -apple-system, sans-serif";
+      ctx.fillText(inviteText, textX, y + 75);
+
+      ctx.fillStyle = accentColor;
+      ctx.font = "900 44px system-ui, -apple-system, sans-serif";
+      ctx.fillText(botUsername, textX, y + 130);
+
+      ctx.fillStyle = "#94a3b8";
+      ctx.font = "600 22px system-ui, -apple-system, sans-serif";
+      ctx.fillText("Наведи камеру смартфона для запуска", textX, y + 175);
+    }
+
+    // Generate QR Code image as Promise
+    function createQrImage(text) {
+      return new Promise((resolve) => {
+        const div = document.getElementById("hiddenQr");
+        div.innerHTML = "";
+        try {
+          new QRCode(div, {
+            text: text,
+            width: 256,
+            height: 256,
+            colorDark: "#000000",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.M,
+          });
+          setTimeout(() => {
+            const img = div.querySelector("img");
+            if (img && img.src) {
+              const resImg = new Image();
+              resImg.onload = () => resolve(resImg);
+              resImg.src = img.src;
+            } else {
+              const canvas = div.querySelector("canvas");
+              if (canvas) {
+                const resImg = new Image();
+                resImg.onload = () => resolve(resImg);
+                resImg.src = canvas.toDataURL();
+              } else {
+                resolve(null);
+              }
+            }
+          }, 60);
+        } catch (e) {
+          resolve(null);
+        }
+      });
+    }
+
+    // Common sample data
+    const sampleWorkout = {
+      workoutNumber: 15,
+      microcycle: 2,
+      week: 5,
+      dateStr: "21 октября 2026",
+      durationStr: "42:15",
+      tonnage: 11450,
+      power: 272,
+      score: 92,
+      tierTitle: "ТИТАН СИЛЫ ⚡",
+      supersets: [
+        {
+          exercises: [
+            { name: "Жим штанги лежа", weight: 95, reps: 10, sets: 4 },
+            { name: "Разведение гантелей", weight: 22, reps: 10, sets: 4 }
+          ]
+        },
+        {
+          exercises: [
+            { name: "Приседания со штангой", weight: 120, reps: 10, sets: 4 },
+            { name: "Выпады с гантелями", weight: 20, reps: 10, sets: 4 }
+          ]
+        }
+      ]
+    };
+
+    const botHandle = "@athletic_smt_bot";
+
+    // 1. RENDER POWER
+    function renderPower(canvas, qrImg) {
+      const ctx = canvas.getContext("2d");
+      const width = 1080, height = 1920;
+
+      const bg = ctx.createLinearGradient(0, 0, 0, height);
+      bg.addColorStop(0, "#020617");
+      bg.addColorStop(0.5, "#061524");
+      bg.addColorStop(1, "#020617");
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, width, height);
+
+      const glow = ctx.createRadialGradient(250, 380, 10, 250, 380, 550);
+      glow.addColorStop(0, "rgba(16, 185, 129, 0.2)");
+      glow.addColorStop(1, "rgba(16, 185, 129, 0)");
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, width, height);
+
+      drawHeaderBlock(ctx, "СВЕРХМОЩНЫЙ ТРЕНИНГ", `ТРЕНИРОВКА #${sampleWorkout.workoutNumber} • МКЦ-${sampleWorkout.microcycle}`, `Неделя ${sampleWorkout.week} • ${sampleWorkout.dateStr}`, "#10b981", "#0f172a");
+      drawScoreBadge(ctx, 80, 220, 920, 140, sampleWorkout.score, sampleWorkout.tierTitle, "ИНДЕКС АТЛЕТИЧНОСТИ", "#10b981", "rgba(16, 185, 129, 0.12)", "rgba(16, 185, 129, 0.4)");
+      drawMetricCard(ctx, 80, 380, 445, 230, "ОБЩИЙ ТОННАЖ", "11,450", "кг", "#10b981", "rgba(16, 185, 129, 0.08)", "rgba(16, 185, 129, 0.3)");
+      drawMetricCard(ctx, 555, 380, 445, 230, "ПЛОТНОСТЬ И МОЩНОСТЬ", "272", "кг/мин", "#38bdf8", "rgba(56, 189, 248, 0.08)", "rgba(56, 189, 248, 0.3)");
+      drawRestStrip(ctx, 80, 630, 920, 85, sampleWorkout.durationStr, "ОТДЫХ 30 СЕК", "Время", "#10b981");
+      drawExercisesSection(ctx, 80, 735, 920, 910, sampleWorkout.supersets, "КЛЮЧЕВЫЕ РАБОЧИЕ ВЕСА:", "#10b981", "#090d16", "rgba(16, 185, 129, 0.25)");
+      drawPromoBanner(ctx, botHandle, "🔥 Участвуй в челлендже силы в Telegram:", "#10b981", qrImg);
+    }
+
+    // 2. RENDER RECOMP
+    function renderRecomp(canvas, qrImg) {
+      const ctx = canvas.getContext("2d");
+      const width = 1080, height = 1920;
+
+      const grad = ctx.createLinearGradient(0, 0, width, height);
+      grad.addColorStop(0, "#0b0f19");
+      grad.addColorStop(0.4, "#1e1b4b");
+      grad.addColorStop(1, "#090d16");
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, width, height);
+
+      const c1 = ctx.createRadialGradient(250, 450, 10, 250, 450, 500);
+      c1.addColorStop(0, "rgba(56, 189, 248, 0.22)");
+      c1.addColorStop(1, "rgba(56, 189, 248, 0)");
+      ctx.fillStyle = c1;
+      ctx.fillRect(0, 0, width, height);
+
+      drawHeaderBlock(ctx, "РЕКОМПОЗИЦИЯ ТЕЛА", `ТРЕНИРОВКА #${sampleWorkout.workoutNumber} • МКЦ-${sampleWorkout.microcycle}`, `${sampleWorkout.dateStr} • ${sampleWorkout.durationStr}`, "#38bdf8", "rgba(255, 255, 255, 0.08)");
+      drawScoreBadge(ctx, 80, 220, 920, 140, sampleWorkout.score, sampleWorkout.tierTitle, "ИНДЕКС АТЛЕТИЧНОСТИ", "#38bdf8", "rgba(56, 189, 248, 0.12)", "rgba(56, 189, 248, 0.35)");
+      drawMetricCard(ctx, 80, 380, 445, 230, "МАССА ТЕЛА", "84.5", "кг (+1.5 кг PR)", "#38bdf8", "rgba(56, 189, 248, 0.08)", "rgba(56, 189, 248, 0.3)");
+      drawMetricCard(ctx, 555, 380, 445, 230, "ТАЛИЯ И БИЦЕПС", "81 / 41", "см (рельеф)", "#a855f7", "rgba(168, 85, 247, 0.08)", "rgba(168, 85, 247, 0.3)");
+      drawRestStrip(ctx, 80, 630, 920, 85, sampleWorkout.durationStr, "ОТДЫХ 30 СЕК", "Время", "#38bdf8");
+      drawExercisesSection(ctx, 80, 735, 920, 910, sampleWorkout.supersets, "ВЫПОЛНЕННЫЕ ПОДХОДЫ:", "#38bdf8", "#0e1322", "rgba(56, 189, 248, 0.25)");
+      drawPromoBanner(ctx, botHandle, "Прогрессируй и меняй тело в Telegram:", "#38bdf8", qrImg);
+    }
+
+    // 3. RENDER PROGRESS
+    function renderProgress(canvas, qrImg) {
+      const ctx = canvas.getContext("2d");
+      const width = 1080, height = 1920;
+
+      const bg = ctx.createLinearGradient(0, 0, 0, height);
+      bg.addColorStop(0, "#0a0a0f");
+      bg.addColorStop(0.5, "#1a1608");
+      bg.addColorStop(1, "#0a0a0f");
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, width, height);
+
+      const glow = ctx.createRadialGradient(540, 400, 10, 540, 400, 550);
+      glow.addColorStop(0, "rgba(245, 158, 11, 0.2)");
+      glow.addColorStop(1, "rgba(245, 158, 11, 0)");
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, width, height);
+
+      drawHeaderBlock(ctx, "НОВЫЙ ЛИЧНЫЙ РЕКОРД (PR)", `ТРЕНИРОВКА ЗАВЕРШЕНА • #${sampleWorkout.workoutNumber}`, `МКЦ-${sampleWorkout.microcycle} • Неделя ${sampleWorkout.week} • ${sampleWorkout.dateStr}`, "#f59e0b", "#14161f");
+      drawScoreBadge(ctx, 80, 220, 920, 140, sampleWorkout.score, sampleWorkout.tierTitle, "ИНДЕКС АТЛЕТИЧНОСТИ", "#f59e0b", "rgba(245, 158, 11, 0.1)", "rgba(245, 158, 11, 0.4)");
+      drawMetricCard(ctx, 80, 380, 445, 230, "ПРОГРЕСС К ПРОШЛОМУ ЦИКЛУ:", "+1,250 кг", "▲ +12% НОВЫЙ РЕКОРД", "#f59e0b", "#12141c", "rgba(245, 158, 11, 0.3)");
+      drawMetricCard(ctx, 555, 380, 445, 230, "ОБЩИЙ ТОННАЖ", "11,450", "кг • 272 кг/мин", "#ffffff", "#12141c", "rgba(255, 255, 255, 0.2)");
+      drawRestStrip(ctx, 80, 630, 920, 85, sampleWorkout.durationStr, "ОТДЫХ 30 СЕК", "Время", "#f59e0b");
+      drawExercisesSection(ctx, 80, 735, 920, 910, sampleWorkout.supersets, "КЛЮЧЕВЫЕ РАБОЧИЕ ВЕСА:", "#f59e0b", "#12141c", "rgba(245, 158, 11, 0.3)");
+      drawPromoBanner(ctx, botHandle, "Фиксируй рекорды в трекере Telegram:", "#f59e0b", qrImg);
+    }
+
+    // 4. RENDER DENSITY
+    function renderDensity(canvas, qrImg) {
+      const ctx = canvas.getContext("2d");
+      const width = 1080, height = 1920;
+
+      const bg = ctx.createLinearGradient(0, 0, 0, height);
+      bg.addColorStop(0, "#0a060a");
+      bg.addColorStop(0.5, "#1f0914");
+      bg.addColorStop(1, "#0a060a");
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, width, height);
+
+      const glow = ctx.createRadialGradient(250, 400, 10, 250, 400, 500);
+      glow.addColorStop(0, "rgba(244, 63, 94, 0.22)");
+      glow.addColorStop(1, "rgba(244, 63, 94, 0)");
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, width, height);
+
+      drawHeaderBlock(ctx, "МЕТАБОЛИЧЕСКАЯ ПЛОТНОСТЬ", `СВЕРХМОЩНЫЙ ТРЕНИНГ • #${sampleWorkout.workoutNumber}`, `${sampleWorkout.dateStr} • ${sampleWorkout.durationStr}`, "#f43f5e", "#180913");
+      drawScoreBadge(ctx, 80, 220, 920, 140, sampleWorkout.score, sampleWorkout.tierTitle, "ИНДЕКС АТЛЕТИЧНОСТИ", "#f43f5e", "rgba(244, 63, 94, 0.12)", "rgba(244, 63, 94, 0.4)");
+      drawMetricCard(ctx, 80, 380, 445, 230, "ОТДЫХ МЕЖДУ СЕТАМИ", "30 СЕК", "СТРОГО ПО ТАЙМЕРУ", "#f43f5e", "rgba(244, 63, 94, 0.08)", "rgba(244, 63, 94, 0.3)");
+      drawMetricCard(ctx, 555, 380, 445, 230, "СКОРОСТЬ ТОННАЖА", "272", "кг / минута", "#fb7185", "rgba(251, 113, 133, 0.08)", "rgba(251, 113, 133, 0.3)");
+      drawRestStrip(ctx, 80, 630, 920, 85, sampleWorkout.durationStr, "ОТДЫХ 30 СЕК", "Время", "#f43f5e");
+      drawExercisesSection(ctx, 80, 735, 920, 910, sampleWorkout.supersets, "ВЫПОЛНЕННЫЕ ПОДХОДЫ:", "#f43f5e", "#160711", "rgba(244, 63, 94, 0.3)");
+      drawPromoBanner(ctx, botHandle, "Выдержи 30с отдых в Telegram-трекере:", "#f43f5e", qrImg);
+    }
+
+    // 5. RENDER MINIMAL
+    function renderMinimal(canvas, qrImg) {
+      const ctx = canvas.getContext("2d");
+      const width = 1080, height = 1920;
+
+      ctx.fillStyle = "#09090b";
+      ctx.fillRect(0, 0, width, height);
+
+      drawHeaderBlock(ctx, "ПРЕМИУМ ПОСТЕР", `ТРЕНИРОВКА #${sampleWorkout.workoutNumber} • МКЦ-${sampleWorkout.microcycle}`, `${sampleWorkout.dateStr} • ${sampleWorkout.durationStr}`, "#e2e8f0", "#18181b");
+      drawScoreBadge(ctx, 80, 220, 920, 140, sampleWorkout.score, sampleWorkout.tierTitle, "ИНДЕКС АТЛЕТИЧНОСТИ", "#ffffff", "rgba(255, 255, 255, 0.05)", "rgba(255, 255, 255, 0.2)");
+      drawMetricCard(ctx, 80, 380, 445, 230, "ОБЩИЙ ТОННАЖ", "11,450", "кг (1.35x собств. веса)", "#ffffff", "rgba(255, 255, 255, 0.04)", "rgba(255, 255, 255, 0.15)");
+      drawMetricCard(ctx, 555, 380, 445, 230, "ПЛОТНОСТЬ И МОЩНОСТЬ", "272", "кг/мин • 24 подхода", "#10b981", "rgba(255, 255, 255, 0.04)", "rgba(16, 185, 129, 0.25)");
+      drawRestStrip(ctx, 80, 630, 920, 85, sampleWorkout.durationStr, "ОТДЫХ 30 СЕК", "Время", "#ffffff");
+      drawExercisesSection(ctx, 80, 735, 920, 910, sampleWorkout.supersets, "КЛЮЧЕВЫЕ РАБОЧИЕ ВЕСА:", "#10b981", "#09090b", "rgba(255, 255, 255, 0.15)");
+      drawPromoBanner(ctx, botHandle, "Тренируйся по методике СМТ в Telegram:", "#ffffff", qrImg);
+    }
+
+    // 6. RENDER CHALLENGE
+    function renderChallenge(canvas, qrImg) {
+      const ctx = canvas.getContext("2d");
+      const width = 1080, height = 1920;
+
+      const bg = ctx.createLinearGradient(0, 0, width, height);
+      bg.addColorStop(0, "#080616");
+      bg.addColorStop(0.5, "#180c36");
+      bg.addColorStop(1, "#050914");
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, width, height);
+
+      const g1 = ctx.createRadialGradient(250, 380, 10, 250, 380, 450);
+      g1.addColorStop(0, "rgba(168, 85, 247, 0.28)");
+      g1.addColorStop(1, "rgba(168, 85, 247, 0)");
+      ctx.fillStyle = g1;
+      ctx.fillRect(0, 0, width, height);
+
+      drawHeaderBlock(ctx, "ПРИМИ ВЫЗОВ МОЩНОСТИ", "МНЕ ПО СИЛАМ. А ТЕБЕ?", `${sampleWorkout.dateStr} • ${sampleWorkout.durationStr}`, "#06b6d4", "#140e2b");
+      drawScoreBadge(ctx, 80, 220, 920, 140, sampleWorkout.score, sampleWorkout.tierTitle, "ИНДЕКС АТЛЕТИЧНОСТИ", "#06b6d4", "rgba(168, 85, 247, 0.15)", "#a855f7");
+      drawMetricCard(ctx, 80, 380, 445, 230, "ОБЩИЙ ТОННАЖ", "11,450", "кг • Сможешь так?", "#06b6d4", "rgba(6, 182, 212, 0.08)", "rgba(6, 182, 212, 0.35)");
+      drawMetricCard(ctx, 555, 380, 445, 230, "ПЛОТНОСТЬ И МОЩНОСТЬ", "272", "кг/мин • 30с отдых", "#c084fc", "rgba(168, 85, 247, 0.08)", "rgba(168, 85, 247, 0.35)");
+      drawRestStrip(ctx, 80, 630, 920, 85, sampleWorkout.durationStr, "ОТДЫХ 30 СЕК", "Время", "#06b6d4");
+      drawExercisesSection(ctx, 80, 735, 920, 910, sampleWorkout.supersets, "МНЕ ПО СИЛАМ. А ТЕБЕ?", "#06b6d4", "#120b22", "rgba(6, 182, 212, 0.35)");
+      drawPromoBanner(ctx, botHandle, "🔥 Прими вызов в канале челленджа:", "#06b6d4", qrImg);
+    }
+
+    // 7. RENDER PREP STEP
+    function renderPrepStep(canvas, qrImg) {
+      const ctx = canvas.getContext("2d");
+      const width = 1080, height = 1920;
+
+      const bg = ctx.createLinearGradient(0, 0, 0, height);
+      bg.addColorStop(0, "#030712");
+      bg.addColorStop(0.4, "#081d28");
+      bg.addColorStop(1, "#020817");
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, width, height);
+
+      const glow = ctx.createRadialGradient(250, 380, 10, 250, 380, 550);
+      glow.addColorStop(0, "rgba(6, 182, 212, 0.25)");
+      glow.addColorStop(1, "rgba(6, 182, 212, 0)");
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, width, height);
+
+      drawHeaderBlock(ctx, "🌱 SMT PREP • АДАПТАЦИЯ СЕРДЦА И СВЯЗОК", "ВВОДНАЯ ТРЕНИРОВКА #3 ИЗ 6", "21 октября 2026 • 32:40", "#06b6d4", "#0c1b26");
+
+      // Stepper
+      ctx.fillStyle = "rgba(6, 182, 212, 0.12)";
+      ctx.strokeStyle = "#06b6d4";
+      ctx.lineWidth = 3;
+      roundRect(ctx, 80, 220, 920, 150, 24, true, true);
+
+      ctx.fillStyle = "#38bdf8";
+      ctx.font = "bold 24px system-ui, -apple-system, sans-serif";
+      ctx.fillText("ПРОТОКОЛ СОКРАЩЕНИЯ ОТДЫХА:", 115, 260);
+
+      const steps = [90, 75, 60, 45, 30, 30];
+      const pillW = 120, pillH = 50, startX = 115, pillY = 285, gap = 20;
+
+      steps.forEach((st, idx) => {
+        const px = startX + idx * (pillW + gap);
+        const isCurrent = idx + 1 === 3;
+        const isPast = idx + 1 < 3;
+
+        if (isCurrent) {
+          ctx.fillStyle = "#06b6d4";
+          ctx.strokeStyle = "#38bdf8";
+          ctx.lineWidth = 3;
+          roundRect(ctx, px, pillY, pillW, pillH, 14, true, true);
+          ctx.fillStyle = "#020817";
+          ctx.font = "900 24px system-ui, -apple-system, sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText(`${st}с ⚡`, px + pillW / 2, pillY + 34);
+        } else if (isPast) {
+          ctx.fillStyle = "rgba(16, 185, 129, 0.2)";
+          ctx.strokeStyle = "#10b981";
+          ctx.lineWidth = 2;
+          roundRect(ctx, px, pillY, pillW, pillH, 14, true, true);
+          ctx.fillStyle = "#34d399";
+          ctx.font = "bold 20px system-ui, -apple-system, sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText(`${st}с ✓`, px + pillW / 2, pillY + 33);
+        } else {
+          ctx.fillStyle = "rgba(255, 255, 255, 0.05)";
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
+          ctx.lineWidth = 1;
+          roundRect(ctx, px, pillY, pillW, pillH, 14, true, true);
+          ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
+          ctx.font = "600 20px system-ui, -apple-system, sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText(`${st}с`, px + pillW / 2, pillY + 33);
+        }
+      });
+      ctx.textAlign = "left";
+
+      drawMetricCard(ctx, 80, 390, 445, 220, "ТОННАЖ СЕССИИ", "5,800", "кг", "#06b6d4", "rgba(6, 182, 212, 0.08)", "rgba(6, 182, 212, 0.3)");
+      drawMetricCard(ctx, 555, 390, 445, 220, "ОТДЫХ МЕЖДУ СЕТАМИ", "60 СЕК", "ВЫДЕРЖАНО СТРОГО!", "#10b981", "rgba(16, 185, 129, 0.08)", "rgba(16, 185, 129, 0.3)");
+
+      // Exercises Box
+      ctx.fillStyle = "rgba(15, 23, 42, 0.7)";
+      ctx.strokeStyle = "rgba(6, 182, 212, 0.3)";
+      ctx.lineWidth = 2;
+      roundRect(ctx, 80, 630, 920, 990, 24, true, true);
+
+      ctx.fillStyle = "#38bdf8";
+      ctx.font = "bold 28px system-ui, -apple-system, sans-serif";
+      ctx.fillText("3 БАЗОВЫХ УПРАЖНЕНИЯ АДАПТАЦИИ (4 × 10–12):", 120, 690);
+
+      const prepExercises = [
+        { name: "Жим штанги или гантелей лежа", desc: "База груди, плеч и трицепса", sets: "4 подхода × 10–12 повт (55 кг)" },
+        { name: "Подтягивания или тяга блока к груди", desc: "База спины и бицепса", sets: "4 подхода × 10–12 повт (50 кг)" },
+        { name: "Приседания или жим ногами в тренажере", desc: "База ног, ягодиц и кора", sets: "4 подхода × 10–12 повт (65 кг)" },
+      ];
+
+      prepExercises.forEach((pex, i) => {
+        const ey = 730 + i * 190;
+        ctx.fillStyle = "rgba(255, 255, 255, 0.04)";
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+        ctx.lineWidth = 1;
+        roundRect(ctx, 115, ey, 850, 160, 18, true, true);
+
+        ctx.fillStyle = "rgba(6, 182, 212, 0.15)";
+        ctx.beginPath();
+        ctx.arc(175, ey + 80, 42, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "#06b6d4";
+        ctx.font = "bold 32px system-ui, -apple-system, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(`${i + 1}`, 175, ey + 91);
+        ctx.textAlign = "left";
+
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 32px system-ui, -apple-system, sans-serif";
+        ctx.fillText(pex.name, 240, ey + 62);
+
+        ctx.fillStyle = "rgba(255, 255, 255, 0.55)";
+        ctx.font = "500 22px system-ui, -apple-system, sans-serif";
+        ctx.fillText(pex.desc, 240, ey + 102);
+
+        ctx.fillStyle = "#34d399";
+        ctx.font = "bold 24px system-ui, -apple-system, sans-serif";
+        ctx.fillText(`✓ ${pex.sets}`, 240, ey + 138);
+      });
+
+      const alertY = 1330;
+      ctx.fillStyle = "rgba(245, 158, 11, 0.1)";
+      ctx.strokeStyle = "rgba(245, 158, 11, 0.35)";
+      ctx.lineWidth = 2;
+      roundRect(ctx, 115, alertY, 850, 160, 18, true, true);
+
+      ctx.fillStyle = "#f59e0b";
+      ctx.font = "bold 24px system-ui, -apple-system, sans-serif";
+      ctx.fillText("⚠️ ПРАВИЛО АДАПТАЦИИ К СМТ-1:", 145, alertY + 45);
+
+      ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
+      ctx.font = "500 22px system-ui, -apple-system, sans-serif";
+      ctx.fillText("Не гонись за весом! Увеличивай нагрузку только если", 145, alertY + 85);
+      ctx.fillText("легко выдерживаешь сокращенный отдых (60 секунд).", 145, alertY + 120);
+
+      drawPromoBanner(ctx, botHandle, "Готовься к СМТ-1 вместе с нами в Telegram:", "#06b6d4", qrImg);
+    }
+
+    // 8. RENDER PREP GRADUATION
+    function renderPrepGrad(canvas, qrImg) {
+      const ctx = canvas.getContext("2d");
+      const width = 1080, height = 1920;
+
+      const bg = ctx.createLinearGradient(0, 0, width, height);
+      bg.addColorStop(0, "#080b12");
+      bg.addColorStop(0.5, "#141208");
+      bg.addColorStop(1, "#080b12");
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, width, height);
+
+      const glow = ctx.createRadialGradient(540, 400, 10, 540, 400, 650);
+      glow.addColorStop(0, "rgba(245, 158, 11, 0.22)");
+      glow.addColorStop(1, "rgba(245, 158, 11, 0)");
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, width, height);
+
+      drawHeaderBlock(ctx, "🏆 ОФИЦИАЛЬНЫЙ СЕРТИФИКАТ ГОТОВНОСТИ", "ВЫПУСКНИК АДАПТАЦИИ К СМТ-1", "Все 6 тренировок закрыты • 21 окт 2026", "#f59e0b", "#1c180e");
+
+      ctx.fillStyle = "rgba(245, 158, 11, 0.12)";
+      ctx.strokeStyle = "#f59e0b";
+      ctx.lineWidth = 3;
+      roundRect(ctx, 80, 220, 920, 150, 24, true, true);
+
+      ctx.fillStyle = "#fbbf24";
+      ctx.font = "900 36px system-ui, -apple-system, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("🎓 СЕРДЦЕ И СВЯЗКИ ГОТОВЫ К 30с ПАУЗАМ!", 540, 280);
+
+      ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
+      ctx.font = "600 24px system-ui, -apple-system, sans-serif";
+      ctx.fillText("СТАТУС: ДОПУЩЕН К 12-НЕДЕЛЬНОМУ ЦИКЛУ СМТ-1", 540, 325);
+      ctx.textAlign = "left";
+
+      drawMetricCard(ctx, 80, 390, 445, 210, "ОСВОЕННЫЙ РИТМ ПАУЗ", "30 СЕК", "ЭКСТРЕМАЛЬНАЯ ПЛОТНОСТЬ", "#f59e0b", "rgba(245, 158, 11, 0.08)", "rgba(245, 158, 11, 0.35)");
+      drawMetricCard(ctx, 555, 390, 445, 210, "АДАПТАЦИОННЫХ СЕССИЙ", "6 / 6", "100% ВЫПОЛНЕНИЕ ЦИКЛА", "#10b981", "rgba(16, 185, 129, 0.08)", "rgba(16, 185, 129, 0.35)");
+
+      ctx.fillStyle = "rgba(15, 23, 42, 0.8)";
+      ctx.strokeStyle = "rgba(245, 158, 11, 0.35)";
+      ctx.lineWidth = 2;
+      roundRect(ctx, 80, 620, 920, 1000, 24, true, true);
+
+      ctx.fillStyle = "#fbbf24";
+      ctx.font = "bold 28px system-ui, -apple-system, sans-serif";
+      ctx.fillText("ИНДИВИДУАЛЬНЫЕ СТАРТОВЫЕ ВЕСА НА 36 ТРЕНИРОВОК:", 120, 680);
+
+      const exercisesGrid = [
+        { name: "Жим лежа", weight: 55, tag: "Блок 1 (40% 1RM)" },
+        { name: "Жим узким хватом", weight: 50, tag: "Блок 2 (40% 1RM)" },
+        { name: "Подтягивания / тяга", weight: 50, tag: "СС-1 (40% 1RM)" },
+        { name: "Штанга на бицепс", weight: 25, tag: "СС-1 (30% 1RM)" },
+        { name: "Приседания / ногами", weight: 65, tag: "СС-2 (40% 1RM)" },
+        { name: "Армейский жим", weight: 30, tag: "СС-2 (30% 1RM)" },
+      ];
+
+      exercisesGrid.forEach((item, idx) => {
+        const col = idx % 2;
+        const row = Math.floor(idx / 2);
+        const gx = 120 + col * 435;
+        const gy = 720 + row * 200;
+
+        ctx.fillStyle = "rgba(255, 255, 255, 0.05)";
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
+        ctx.lineWidth = 1;
+        roundRect(ctx, gx, gy, 410, 175, 18, true, true);
+
+        ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+        ctx.font = "bold 20px system-ui, -apple-system, sans-serif";
+        ctx.fillText(item.tag, gx + 25, gy + 45);
+
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 28px system-ui, -apple-system, sans-serif";
+        ctx.fillText(item.name, gx + 25, gy + 88);
+
+        ctx.fillStyle = "#f59e0b";
+        ctx.font = "900 48px system-ui, -apple-system, sans-serif";
+        ctx.fillText(`${item.weight}`, gx + 25, gy + 148);
+
+        ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
+        ctx.font = "bold 24px system-ui, -apple-system, sans-serif";
+        ctx.fillText("кг", gx + 25 + ctx.measureText(`${item.weight}`).width + 10, gy + 148);
+      });
+
+      ctx.fillStyle = "rgba(16, 185, 129, 0.15)";
+      ctx.strokeStyle = "rgba(16, 185, 129, 0.4)";
+      ctx.lineWidth = 2;
+      roundRect(ctx, 120, 1340, 840, 120, 18, true, true);
+
+      ctx.fillStyle = "#34d399";
+      ctx.font = "900 26px system-ui, -apple-system, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("🚀 СТАРТУЮ 12-НЕДЕЛЬНЫЙ ЦИКЛ СМТ-1!", 540, 1385);
+
+      ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+      ctx.font = "500 20px system-ui, -apple-system, sans-serif";
+      ctx.fillText("Присоединяйся к силовому челленджу в Telegram:", 540, 1425);
+      ctx.textAlign = "left";
+
+      drawPromoBanner(ctx, botHandle, "Забирай СМТ-трекер в Telegram:", "#f59e0b", qrImg);
+    }
+
+    // Stitch master collage (4 columns x 2 rows = 4320 x 3840, scaled nicely)
+    function buildMasterCollage() {
+      const master = document.getElementById("masterCollageCanvas");
+      const ctx = master.getContext("2d");
+
+      const cols = 4;
+      const rows = 2;
+      const cardW = 1080;
+      const cardH = 1920;
+      const pad = 40;
+      const topHeaderH = 180;
+
+      master.width = cols * cardW + (cols + 1) * pad;
+      master.height = rows * cardH + (rows + 1) * pad + topHeaderH;
+
+      // Dark Luxury background
+      ctx.fillStyle = "#020617";
+      ctx.fillRect(0, 0, master.width, master.height);
+
+      // Top Banner
+      ctx.fillStyle = "rgba(255, 255, 255, 0.04)";
+      ctx.strokeStyle = "rgba(245, 158, 11, 0.3)";
+      ctx.lineWidth = 3;
+      roundRect(ctx, pad, pad, master.width - pad * 2, topHeaderH - pad, 28, true, true);
+
+      ctx.fillStyle = "#f59e0b";
+      ctx.font = "900 54px system-ui, -apple-system, sans-serif";
+      ctx.fillText("⚡ SMT-1 & ADAPTATION: ПОЛНЫЙ ПАКЕТ INSTAGRAM STORIES (9:16)", pad + 40, pad + 75);
+
+      ctx.fillStyle = "#94a3b8";
+      ctx.font = "bold 28px system-ui, -apple-system, sans-serif";
+      ctx.fillText("8 готовых шаблонов 1080 × 1920 px: 2 для вводного цикла адаптации + 6 для основной программы СМТ-1", pad + 40, pad + 120);
+
+      const canvasIds = [
+        "canvas_prep_step",
+        "canvas_prep_grad",
+        "canvas_power",
+        "canvas_recomp",
+        "canvas_progress",
+        "canvas_density",
+        "canvas_minimal",
+        "canvas_challenge"
+      ];
+
+      canvasIds.forEach((id, index) => {
+        const c = document.getElementById(id);
+        const col = index % cols;
+        const row = Math.floor(index / cols);
+
+        const x = pad + col * (cardW + pad);
+        const y = topHeaderH + pad + row * (cardH + pad);
+
+        // Draw shadow / frame
+        ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+        roundRect(ctx, x - 4, y - 4, cardW + 8, cardH + 8, 28, true, false);
+
+        ctx.drawImage(c, x, y, cardW, cardH);
+
+        // Golden frame outline
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
+        ctx.lineWidth = 4;
+        roundRect(ctx, x, y, cardW, cardH, 24, false, true);
+      });
+    }
+
+    // Init and render all
+    async function initAll() {
+      const qrImg = await createQrImage("https://t.me/athletic_smt_bot?start=ref_smt");
+
+      renderPrepStep(document.getElementById("canvas_prep_step"), qrImg);
+      renderPrepGrad(document.getElementById("canvas_prep_grad"), qrImg);
+      renderPower(document.getElementById("canvas_power"), qrImg);
+      renderRecomp(document.getElementById("canvas_recomp"), qrImg);
+      renderProgress(document.getElementById("canvas_progress"), qrImg);
+      renderDensity(document.getElementById("canvas_density"), qrImg);
+      renderMinimal(document.getElementById("canvas_minimal"), qrImg);
+      renderChallenge(document.getElementById("canvas_challenge"), qrImg);
+
+      setTimeout(() => {
+        buildMasterCollage();
+      }, 200);
+    }
+
+    function downloadCanvas(canvasId, filename) {
+      const c = document.getElementById(canvasId);
+      const link = document.createElement("a");
+      link.download = filename;
+      link.href = c.toDataURL("image/png");
+      link.click();
+    }
+
+    function downloadMasterCollage() {
+      const c = document.getElementById("masterCollageCanvas");
+      const link = document.createElement("a");
+      link.download = "smt_all_8_stories_master_collage.png";
+      link.href = c.toDataURL("image/png");
+      link.click();
+    }
+
+    function downloadAllSeparate() {
+      const list = [
+        { id: "canvas_prep_step", name: "1_smt_prep_step_adaptation.png" },
+        { id: "canvas_prep_grad", name: "2_smt_prep_graduation_certificate.png" },
+        { id: "canvas_power", name: "3_smt_power_workout.png" },
+        { id: "canvas_recomp", name: "4_smt_recomp_body.png" },
+        { id: "canvas_progress", name: "5_smt_progress_pr.png" },
+        { id: "canvas_density", name: "6_smt_density_30s.png" },
+        { id: "canvas_minimal", name: "7_smt_minimal_poster.png" },
+        { id: "canvas_challenge", name: "8_smt_challenge_duel.png" },
+      ];
+      list.forEach((item, idx) => {
+        setTimeout(() => {
+          downloadCanvas(item.id, item.name);
+        }, idx * 250);
+      });
+    }
+
+    window.onload = initAll;
+  </script>
+</body>
+</html>

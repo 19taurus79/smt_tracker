@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/button";
 import { TraineeProfile, useCoachStore } from "@/lib/store/useCoachStore";
 import { formatTime, formatDate } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
+import { EditTraineeModal } from "./EditTraineeModal";
 
 interface TraineeDetailModalProps {
   trainee: TraineeProfile | null;
@@ -33,13 +34,17 @@ interface TraineeDetailModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export function TraineeDetailModal({ trainee, open, onOpenChange }: TraineeDetailModalProps) {
+export function TraineeDetailModal({ trainee: initialTrainee, open, onOpenChange }: TraineeDetailModalProps) {
   const { updateCoachNotes, blockTrainee, unblockTrainee, deleteTrainee } = useCoachStore();
+  const storeTrainee = useCoachStore((s) => s.trainees.find((t) => t.id === initialTrainee?.id));
+  const trainee = storeTrainee || initialTrainee;
+
   const { t, language } = useTranslation();
 
   const [activeTab, setActiveTab] = useState<"workouts" | "body" | "notes">("workouts");
   const [editedNotes, setEditedNotes] = useState(trainee?.coachNotes || "");
   const [notesSaved, setNotesSaved] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   React.useEffect(() => {
     if (trainee) {
@@ -59,12 +64,14 @@ export function TraineeDetailModal({ trainee, open, onOpenChange }: TraineeDetai
   const isBlocked = trainee.status === "blocked";
   const isLead = trainee.status === "new_lead";
 
-  const initials = trainee.name
+  const displayName = trainee.alias || trainee.name;
+  const initials = displayName
     .split(" ")
+    .filter(Boolean)
     .map((n) => n[0])
     .join("")
     .slice(0, 2)
-    .toUpperCase();
+    .toUpperCase() || "АТ";
 
   const cleanTelegramUsername = trainee.username.replace(/^@/, "");
   const telegramChatUrl = cleanTelegramUsername ? `https://t.me/${cleanTelegramUsername}` : "#";
@@ -127,23 +134,46 @@ export function TraineeDetailModal({ trainee, open, onOpenChange }: TraineeDetai
             >
               {initials}
             </div>
-            <div className="min-w-0">
-              <span className="text-base font-black text-white leading-tight block truncate">
-                {trainee.name}
-              </span>
-              {cleanTelegramUsername ? (
-                <a
-                  href={telegramChatUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 inline-flex items-center gap-1"
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-base font-black text-white leading-tight truncate">
+                  {displayName}
+                </span>
+                {trainee.alias && (
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 border border-amber-500/40 text-amber-300 shrink-0">
+                    ПСЕВДОНІМ
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(true)}
+                  className="h-6 px-2 rounded-lg bg-white/5 hover:bg-amber-500/20 border border-white/10 text-slate-300 hover:text-amber-300 text-[11px] font-medium flex items-center gap-1 transition-colors"
+                  title="Змінити ім'я або надати псевдонім"
                 >
-                  <span>@{cleanTelegramUsername}</span>
-                  <ExternalLink className="h-2.5 w-2.5 inline" />
-                </a>
-              ) : (
-                <span className="text-xs text-slate-500 italic block">Без юзернейму</span>
-              )}
+                  <FileEdit className="h-3 w-3" />
+                  <span>Редагувати</span>
+                </button>
+              </div>
+              <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                {trainee.alias && (
+                  <span className="text-xs text-slate-400">
+                    Оригінал: <span className="text-slate-300 font-medium">{trainee.name}</span>
+                  </span>
+                )}
+                {cleanTelegramUsername ? (
+                  <a
+                    href={telegramChatUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 inline-flex items-center gap-1"
+                  >
+                    <span>@{cleanTelegramUsername}</span>
+                    <ExternalLink className="h-2.5 w-2.5 inline" />
+                  </a>
+                ) : (
+                  <span className="text-xs text-slate-500 italic block">Без юзернейму</span>
+                )}
+              </div>
             </div>
           </div>
         </DialogTitle>
@@ -557,6 +587,12 @@ export function TraineeDetailModal({ trainee, open, onOpenChange }: TraineeDetai
           {t.common.close}
         </button>
       </div>
+
+      <EditTraineeModal
+        trainee={trainee}
+        open={isEditModalOpen}
+        onOpenChange={setIsEditModalOpen}
+      />
     </Dialog>
   );
 }

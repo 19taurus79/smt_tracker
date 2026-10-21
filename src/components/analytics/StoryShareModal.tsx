@@ -14,29 +14,71 @@ import { useSettingsStore } from "@/lib/store/useSettingsStore";
 import { useWorkoutStore } from "@/lib/store/useWorkoutStore";
 import { calculateAthleticScore } from "@/lib/scoring/athleticScore";
 
+export interface PrepStoryData {
+  prepSessionNumber: number;
+  targetRestSeconds: number;
+  isGraduation?: boolean;
+  completedSetsCount?: number;
+  totalSetsCount?: number;
+  suggestedWeights?: {
+    bench: number;
+    closeGrip: number;
+    pull: number;
+    biceps: number;
+    squat: number;
+    ohp: number;
+  };
+}
+
 interface StoryShareModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   workout: WorkoutSession | null;
   latestMeasurement?: BodyMeasurement;
+  prepData?: PrepStoryData;
+  initialTemplate?: StoryTemplateType;
 }
 
-export type StoryTemplateType = "power" | "recomp" | "progress" | "density" | "minimal" | "challenge";
+export type StoryTemplateType =
+  | "power"
+  | "recomp"
+  | "progress"
+  | "density"
+  | "minimal"
+  | "challenge"
+  | "prep_step"
+  | "prep_grad";
 
 export function StoryShareModal({
   open,
   onOpenChange,
   workout,
   latestMeasurement,
+  prepData,
+  initialTemplate,
 }: StoryShareModalProps) {
   const { t, language } = useTranslation();
   const { storyBotUsername, gender, userAge } = useSettingsStore();
   const { workouts } = useWorkoutStore();
-  const [selectedTemplate, setSelectedTemplate] = useState<StoryTemplateType>("power");
+  const [selectedTemplate, setSelectedTemplate] = useState<StoryTemplateType>(
+    initialTemplate || (prepData?.isGraduation ? "prep_grad" : prepData ? "prep_step" : "power")
+  );
   const [isGenerating, setIsGenerating] = useState(false);
   const [isPublishingChallenge, setIsPublishingChallenge] = useState(false);
   const [publishedChallenge, setPublishedChallenge] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    if (open) {
+      if (initialTemplate) {
+        setSelectedTemplate(initialTemplate);
+      } else if (prepData?.isGraduation) {
+        setSelectedTemplate("prep_grad");
+      } else if (prepData) {
+        setSelectedTemplate("prep_step");
+      }
+    }
+  }, [open, initialTemplate, prepData]);
 
   if (!workout) return null;
 
@@ -747,13 +789,340 @@ export function StoryShareModal({
       // Bottom Viral Banner
       drawPromoBanner(ctx, botHandle, labels.joinTelegramBot, "#06b6d4", qrImg);
     }
+
+    // --- TEMPLATE 7: PREP STEP (Cyberpunk Cyan & Emerald Rest Stepper) ---
+    else if (selectedTemplate === "prep_step") {
+      const bg = ctx.createLinearGradient(0, 0, 0, height);
+      bg.addColorStop(0, "#030712");
+      bg.addColorStop(0.4, "#081d28");
+      bg.addColorStop(1, "#020817");
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, width, height);
+
+      // Cyan glow
+      const glow = ctx.createRadialGradient(250, 380, 10, 250, 380, 550);
+      glow.addColorStop(0, "rgba(6, 182, 212, 0.25)");
+      glow.addColorStop(1, "rgba(6, 182, 212, 0)");
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, width, height);
+
+      const sessNum = prepData?.prepSessionNumber || workout.workoutNumber || 1;
+      const targetRest = prepData?.targetRestSeconds || 60;
+
+      // Header Block
+      drawHeaderBlock(
+        ctx,
+        "🌱 SMT PREP • АДАПТАЦІЯ СЕРЦЯ ТА ЗВ'ЯЗОК",
+        `ВВОДНЕ ТРЕНУВАННЯ #${sessNum} ІЗ 6`,
+        `${dateStr} • ${durationStr}`,
+        "#06b6d4",
+        "#0c1b26"
+      );
+
+      // Rest Stepper Badge (y = 220, h = 150)
+      ctx.fillStyle = "rgba(6, 182, 212, 0.12)";
+      ctx.strokeStyle = "#06b6d4";
+      ctx.lineWidth = 3;
+      roundRect(ctx, 80, 220, 920, 150, 24, true, true);
+
+      ctx.fillStyle = "#38bdf8";
+      ctx.font = "bold 24px system-ui, -apple-system, sans-serif";
+      ctx.fillText("ПРОТОКОЛ СКОРОЧЕННЯ ВІДПОЧИНКУ:", 115, 260);
+
+      // 6-step rest pills
+      const steps = [90, 75, 60, 45, 30, 30];
+      const pillW = 120;
+      const pillH = 50;
+      const startX = 115;
+      const pillY = 285;
+      const gap = 20;
+
+      steps.forEach((st, idx) => {
+        const px = startX + idx * (pillW + gap);
+        const isCurrent = idx + 1 === sessNum;
+        const isPast = idx + 1 < sessNum;
+
+        if (isCurrent) {
+          ctx.fillStyle = "#06b6d4";
+          ctx.strokeStyle = "#38bdf8";
+          ctx.lineWidth = 3;
+          roundRect(ctx, px, pillY, pillW, pillH, 14, true, true);
+          ctx.fillStyle = "#020817";
+          ctx.font = "900 24px system-ui, -apple-system, sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText(`${st}с ⚡`, px + pillW / 2, pillY + 34);
+        } else if (isPast) {
+          ctx.fillStyle = "rgba(16, 185, 129, 0.2)";
+          ctx.strokeStyle = "#10b981";
+          ctx.lineWidth = 2;
+          roundRect(ctx, px, pillY, pillW, pillH, 14, true, true);
+          ctx.fillStyle = "#34d399";
+          ctx.font = "bold 20px system-ui, -apple-system, sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText(`${st}с ✓`, px + pillW / 2, pillY + 33);
+        } else {
+          ctx.fillStyle = "rgba(255, 255, 255, 0.05)";
+          ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
+          ctx.lineWidth = 1;
+          roundRect(ctx, px, pillY, pillW, pillH, 14, true, true);
+          ctx.fillStyle = "rgba(255, 255, 255, 0.4)";
+          ctx.font = "600 20px system-ui, -apple-system, sans-serif";
+          ctx.textAlign = "center";
+          ctx.fillText(`${st}с`, px + pillW / 2, pillY + 33);
+        }
+      });
+      ctx.textAlign = "left";
+
+      // Twin Stats (y = 390, h = 220)
+      drawMetricCard(
+        ctx,
+        80,
+        390,
+        445,
+        220,
+        "ТОННАЖ СЕСІЇ",
+        `${tonnage.toLocaleString()}`,
+        t.common.kg,
+        "#06b6d4",
+        "rgba(6, 182, 212, 0.08)",
+        "rgba(6, 182, 212, 0.3)"
+      );
+
+      drawMetricCard(
+        ctx,
+        555,
+        390,
+        445,
+        220,
+        "ВІДПОЧИНОК МІЖ СЕТАМИ",
+        `${targetRest} СЕК`,
+        "ВИТРИМАНО СУВОРО!",
+        "#10b981",
+        "rgba(16, 185, 129, 0.08)",
+        "rgba(16, 185, 129, 0.3)"
+      );
+
+      // Exercises Box (y = 630, h = 990)
+      ctx.fillStyle = "rgba(15, 23, 42, 0.7)";
+      ctx.strokeStyle = "rgba(6, 182, 212, 0.3)";
+      ctx.lineWidth = 2;
+      roundRect(ctx, 80, 630, 920, 990, 24, true, true);
+
+      ctx.fillStyle = "#38bdf8";
+      ctx.font = "bold 28px system-ui, -apple-system, sans-serif";
+      ctx.fillText("3 БАЗОВІ ВПРАВИ АДАПТАЦІЇ (4 × 10–12):", 120, 690);
+
+      const prepExercises = [
+        { name: "Жим штанги або гантелей лежачи", desc: "База грудей, плечей і трицепса", sets: "4 підходи × 10–12 повт" },
+        { name: "Підтягування або тяга блоку до грудей", desc: "База спини та біцепса", sets: "4 підходи × 10–12 повт" },
+        { name: "Присідання або жим ногами в тренажері", desc: "База ніг, сідниць і кора", sets: "4 підходи × 10–12 повт" },
+      ];
+
+      prepExercises.forEach((pex, i) => {
+        const ey = 730 + i * 190;
+        ctx.fillStyle = "rgba(255, 255, 255, 0.04)";
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+        ctx.lineWidth = 1;
+        roundRect(ctx, 115, ey, 850, 160, 18, true, true);
+
+        // Icon circle
+        ctx.fillStyle = "rgba(6, 182, 212, 0.15)";
+        ctx.beginPath();
+        ctx.arc(175, ey + 80, 42, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = "#06b6d4";
+        ctx.font = "bold 32px system-ui, -apple-system, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(`${i + 1}`, 175, ey + 91);
+        ctx.textAlign = "left";
+
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 32px system-ui, -apple-system, sans-serif";
+        ctx.fillText(pex.name, 240, ey + 62);
+
+        ctx.fillStyle = "rgba(255, 255, 255, 0.55)";
+        ctx.font = "500 22px system-ui, -apple-system, sans-serif";
+        ctx.fillText(pex.desc, 240, ey + 102);
+
+        ctx.fillStyle = "#34d399";
+        ctx.font = "bold 24px system-ui, -apple-system, sans-serif";
+        ctx.fillText(`✓ ${pex.sets}`, 240, ey + 138);
+      });
+
+      // Adaptation Rule Alert inside the box
+      const alertY = 1330;
+      ctx.fillStyle = "rgba(245, 158, 11, 0.1)";
+      ctx.strokeStyle = "rgba(245, 158, 11, 0.35)";
+      ctx.lineWidth = 2;
+      roundRect(ctx, 115, alertY, 850, 160, 18, true, true);
+
+      ctx.fillStyle = "#f59e0b";
+      ctx.font = "bold 24px system-ui, -apple-system, sans-serif";
+      ctx.fillText("⚠️ ПРАВИЛО АДАПТАЦІЇ ДО СМТ-1:", 145, alertY + 45);
+
+      ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
+      ctx.font = "500 22px system-ui, -apple-system, sans-serif";
+      ctx.fillText("Не женися за вагою! Збільшуй навантаження тільки якщо", 145, alertY + 85);
+      ctx.fillText(`легко витримуєш скорочений відпочинок (${targetRest} секунд).`, 145, alertY + 120);
+
+      // Bottom Viral Banner
+      drawPromoBanner(ctx, botHandle, "Готуйся до СМТ-1 разом з нами у Telegram:", "#06b6d4", qrImg);
+    }
+
+    // --- TEMPLATE 8: PREP GRADUATION (Gold Certificate of Readiness for SMT-1) ---
+    else if (selectedTemplate === "prep_grad") {
+      const bg = ctx.createLinearGradient(0, 0, width, height);
+      bg.addColorStop(0, "#080b12");
+      bg.addColorStop(0.5, "#141208");
+      bg.addColorStop(1, "#080b12");
+      ctx.fillStyle = bg;
+      ctx.fillRect(0, 0, width, height);
+
+      // Golden ambient radial glow
+      const glow = ctx.createRadialGradient(540, 400, 10, 540, 400, 650);
+      glow.addColorStop(0, "rgba(245, 158, 11, 0.22)");
+      glow.addColorStop(1, "rgba(245, 158, 11, 0)");
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, width, height);
+
+      // Header Block (Gold / Bronze)
+      drawHeaderBlock(
+        ctx,
+        "🏆 ОФІЦІЙНИЙ СЕРТИФІКАТ ГОТОВНОСТІ",
+        "ВИПУСКНИК АДАПТАЦІЇ ДО СМТ-1",
+        `Всі 6 тренувань закрито • ${dateStr}`,
+        "#f59e0b",
+        "#1c180e"
+      );
+
+      // Gold Hero Achievement Badge (y = 220, h = 150)
+      ctx.fillStyle = "rgba(245, 158, 11, 0.12)";
+      ctx.strokeStyle = "#f59e0b";
+      ctx.lineWidth = 3;
+      roundRect(ctx, 80, 220, 920, 150, 24, true, true);
+
+      ctx.fillStyle = "#fbbf24";
+      ctx.font = "900 36px system-ui, -apple-system, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("🎓 СЕРЦЕ ТА ЗВ'ЯЗКИ ГОТОВІ ДО 30с ПАУЗ!", 540, 280);
+
+      ctx.fillStyle = "rgba(255, 255, 255, 0.85)";
+      ctx.font = "600 24px system-ui, -apple-system, sans-serif";
+      ctx.fillText("СТАТУС: ДОПУЩЕНИЙ ДО 12-ТИЖНЕВОГО ЦИКЛУ СМТ-1", 540, 325);
+      ctx.textAlign = "left";
+
+      // Twin Status Cards (y = 390, h = 210)
+      drawMetricCard(
+        ctx,
+        80,
+        390,
+        445,
+        210,
+        "ОСВОЄНИЙ РИТМ ПАУЗ",
+        "30 СЕК",
+        "ЕКСТРЕМАЛЬНА ЩІЛЬНІСТЬ",
+        "#f59e0b",
+        "rgba(245, 158, 11, 0.08)",
+        "rgba(245, 158, 11, 0.35)"
+      );
+
+      drawMetricCard(
+        ctx,
+        555,
+        390,
+        445,
+        210,
+        "АДАПТАЦІЙНИХ СЕСІЙ",
+        "6 / 6",
+        "100% ВИКОНАННЯ ЦИКЛУ",
+        "#10b981",
+        "rgba(16, 185, 129, 0.08)",
+        "rgba(16, 185, 129, 0.35)"
+      );
+
+      // Calculated SMT-1 Starting Loads Grid (y = 620, h = 1000)
+      ctx.fillStyle = "rgba(15, 23, 42, 0.8)";
+      ctx.strokeStyle = "rgba(245, 158, 11, 0.35)";
+      ctx.lineWidth = 2;
+      roundRect(ctx, 80, 620, 920, 1000, 24, true, true);
+
+      ctx.fillStyle = "#fbbf24";
+      ctx.font = "bold 28px system-ui, -apple-system, sans-serif";
+      ctx.fillText("ІНДИВІДУАЛЬНІ СТАРТОВІ ВАГИ НА 36 ТРЕНУВАНЬ:", 120, 680);
+
+      const weights = prepData?.suggestedWeights || {
+        bench: 55,
+        closeGrip: 50,
+        pull: 50,
+        biceps: 25,
+        squat: 65,
+        ohp: 30,
+      };
+
+      const exercisesGrid = [
+        { name: "Жим лежачи", weight: weights.bench, tag: "Блок 1 (40% 1RM)" },
+        { name: "Жим вузьким хватом", weight: weights.closeGrip, tag: "Блок 2 (40% 1RM)" },
+        { name: "Підтягування / тяга", weight: weights.pull, tag: "СС-1 (40% 1RM)" },
+        { name: "Штанга на біцепс", weight: weights.biceps, tag: "СС-1 (30% 1RM)" },
+        { name: "Присідання / ногами", weight: weights.squat, tag: "СС-2 (40% 1RM)" },
+        { name: "Армійський жим", weight: weights.ohp, tag: "СС-2 (30% 1RM)" },
+      ];
+
+      exercisesGrid.forEach((item, idx) => {
+        const col = idx % 2;
+        const row = Math.floor(idx / 2);
+        const gx = 120 + col * 435;
+        const gy = 720 + row * 200;
+
+        ctx.fillStyle = "rgba(255, 255, 255, 0.05)";
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
+        ctx.lineWidth = 1;
+        roundRect(ctx, gx, gy, 410, 175, 18, true, true);
+
+        ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+        ctx.font = "bold 20px system-ui, -apple-system, sans-serif";
+        ctx.fillText(item.tag, gx + 25, gy + 45);
+
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "bold 28px system-ui, -apple-system, sans-serif";
+        ctx.fillText(item.name, gx + 25, gy + 88);
+
+        ctx.fillStyle = "#f59e0b";
+        ctx.font = "900 48px system-ui, -apple-system, sans-serif";
+        ctx.fillText(`${item.weight}`, gx + 25, gy + 148);
+
+        ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
+        ctx.font = "bold 24px system-ui, -apple-system, sans-serif";
+        ctx.fillText("кг", gx + 25 + ctx.measureText(`${item.weight}`).width + 10, gy + 148);
+      });
+
+      // Bottom Motivational Callout
+      ctx.fillStyle = "rgba(16, 185, 129, 0.15)";
+      ctx.strokeStyle = "rgba(16, 185, 129, 0.4)";
+      ctx.lineWidth = 2;
+      roundRect(ctx, 120, 1340, 840, 120, 18, true, true);
+
+      ctx.fillStyle = "#34d399";
+      ctx.font = "900 26px system-ui, -apple-system, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("🚀 СТАРТУЮ 12-ТИЖНЕВИЙ ЦИКЛ СМТ-1!", 540, 1385);
+
+      ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+      ctx.font = "500 20px system-ui, -apple-system, sans-serif";
+      ctx.fillText("Приєднуйся до силового челенджу у Telegram:", 540, 1425);
+      ctx.textAlign = "left";
+
+      // Bottom Promo Banner
+      drawPromoBanner(ctx, botHandle, "Забирай СМТ-трекер у Telegram:", "#f59e0b", qrImg);
+    }
   };
 
   useEffect(() => {
     if (open) {
       void renderCanvas();
     }
-  }, [open, selectedTemplate, workout, language, athleticScore.score]);
+  }, [open, selectedTemplate, workout, language, athleticScore.score, prepData]);
 
   const handleDownload = () => {
     const canvas = canvasRef.current;
@@ -763,7 +1132,10 @@ export function StoryShareModal({
     setTimeout(() => {
       try {
         const link = document.createElement("a");
-        link.download = `smt_story_w${workout.workoutNumber}_${selectedTemplate}_${language}.png`;
+        const filenamePrefix = prepData
+          ? `smt_prep_s${prepData.prepSessionNumber}`
+          : `smt_story_w${workout.workoutNumber}`;
+        link.download = `${filenamePrefix}_${selectedTemplate}_${language}.png`;
         link.href = canvas.toDataURL("image/png");
         link.click();
       } catch (err) {
@@ -774,7 +1146,25 @@ export function StoryShareModal({
     }, 150);
   };
 
+  const prepOptions: { id: StoryTemplateType; name: string; desc: string; icon: React.ReactNode }[] = prepData
+    ? [
+        {
+          id: "prep_step",
+          name: t.story.templates.prep_step?.name || `Адаптація #${prepData.prepSessionNumber}`,
+          desc: t.story.templates.prep_step?.desc || `Пауза ${prepData.targetRestSeconds}с`,
+          icon: <Flame className="h-4 w-4 text-cyan-400" />,
+        },
+        {
+          id: "prep_grad",
+          name: t.story.templates.prep_grad?.name || "Випускний СМТ-1",
+          desc: t.story.templates.prep_grad?.desc || "Сертифікат готовності",
+          icon: <Trophy className="h-4 w-4 text-amber-400" />,
+        },
+      ]
+    : [];
+
   const templateOptions: { id: StoryTemplateType; name: string; desc: string; icon: React.ReactNode }[] = [
+    ...prepOptions,
     {
       id: "power",
       name: t.story.templates.power.name,
