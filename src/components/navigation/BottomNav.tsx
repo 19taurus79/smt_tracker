@@ -10,24 +10,41 @@ import {
   Ruler,
   TrendingUp,
   Settings,
+  Crown,
 } from "lucide-react";
 import { useWorkoutStore } from "@/lib/store/useWorkoutStore";
+import { useSettingsStore } from "@/lib/store/useSettingsStore";
+import { isCoachAccount } from "@/lib/auth/roles";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 
 export function BottomNav() {
   const pathname = usePathname();
   const { activeWorkoutId } = useWorkoutStore();
-  const { t } = useTranslation();
+  const { userRole, linkedTelegramUser } = useSettingsStore();
+  const { t, language } = useTranslation();
 
-  const navItems = [
-    { href: "/", label: t.nav.home, icon: Home },
-    { href: "/workout", label: t.nav.workout, icon: Dumbbell, hasBadge: true },
-    { href: "/program", label: t.nav.program, icon: Calendar },
-    { href: "/body", label: t.nav.body, icon: Ruler },
-    { href: "/analytics", label: t.nav.analytics, icon: TrendingUp },
-    { href: "/settings", label: t.nav.settings, icon: Settings },
-  ];
+  const isCoach = userRole === "coach" || isCoachAccount(linkedTelegramUser?.username, linkedTelegramUser?.id);
+
+  const coachLabel = language === "uk" ? "Тренер" : language === "en" ? "Coach" : "Тренер";
+
+  const navItems = isCoach
+    ? [
+        { href: "/", label: t.nav.home, icon: Home },
+        { href: "/workout", label: t.nav.workout, icon: Dumbbell, hasBadge: true },
+        { href: "/program", label: t.nav.program, icon: Calendar },
+        { href: "/coach", label: coachLabel, icon: Crown, isCoachTab: true },
+        { href: "/analytics", label: t.nav.analytics, icon: TrendingUp },
+        { href: "/settings", label: t.nav.settings, icon: Settings },
+      ]
+    : [
+        { href: "/", label: t.nav.home, icon: Home },
+        { href: "/workout", label: t.nav.workout, icon: Dumbbell, hasBadge: true },
+        { href: "/program", label: t.nav.program, icon: Calendar },
+        { href: "/body", label: t.nav.body, icon: Ruler },
+        { href: "/analytics", label: t.nav.analytics, icon: TrendingUp },
+        { href: "/settings", label: t.nav.settings, icon: Settings },
+      ];
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-slate-950/95 backdrop-blur-2xl ios-safe-bottom">
@@ -43,14 +60,18 @@ export function BottomNav() {
               href={item.href}
               className={cn(
                 "relative flex flex-col items-center justify-center flex-1 py-1 transition-all text-xs font-medium select-none",
-                isActive ? "text-emerald-400" : "text-slate-400 hover:text-slate-200"
+                isActive
+                  ? (item.isCoachTab ? "text-amber-300 font-bold" : "text-emerald-400 font-bold")
+                  : (item.isCoachTab ? "text-amber-500/70 hover:text-amber-300" : "text-slate-400 hover:text-slate-200")
               )}
             >
               <div className="relative">
                 <Icon
                   className={cn(
                     "h-4 w-4 sm:h-5 sm:w-5 transition-transform",
-                    isActive && "scale-110 text-emerald-400"
+                    isActive
+                      ? (item.isCoachTab ? "scale-110 text-amber-400" : "scale-110 text-emerald-400")
+                      : (item.isCoachTab ? "text-amber-500/80" : "")
                   )}
                 />
                 {showPill && (

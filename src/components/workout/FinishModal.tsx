@@ -24,7 +24,8 @@ import { Dialog, DialogHeader, DialogTitle, DialogDescription } from "@/componen
 import { Button } from "@/components/ui/button";
 import { calculateWorkoutTonnage, calculateWorkoutPower } from "@/lib/smt/calculator";
 import { StoryShareModal } from "@/components/analytics/StoryShareModal";
-import { generateWorkoutCoachMessage, shareToTelegramCoach } from "@/lib/coach/telegramCoach";
+import { generateWorkoutCoachMessage, shareToTelegramCoach, sendDirectCoachReport } from "@/lib/coach/telegramCoach";
+import { isCoachAccount } from "@/lib/auth/roles";
 import { useTranslation } from "@/lib/i18n";
 import { getLocalizedExerciseName } from "@/lib/i18n/exercises";
 import { calculateAthleticScore, getTierLabel, getTierColor } from "@/lib/scoring/athleticScore";
@@ -51,9 +52,13 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
     traineeName,
     gender,
     userAge,
+    userRole,
+    linkedTelegramUser,
   } = useSettingsStore();
   const { measurements } = useBodyStore();
   const { t, language } = useTranslation();
+
+  const isCoach = userRole === "coach" || isCoachAccount(linkedTelegramUser?.username, linkedTelegramUser?.id);
 
   const [notes, setNotes] = useState("");
   // Proposed increments per exercise ID: { [exerciseId]: incrementKg }
@@ -66,9 +71,9 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
 
   useEffect(() => {
     if (open) {
-      setSendToCoach(Boolean(coachTelegramUsername));
+      setSendToCoach(!isCoach && Boolean(coachTelegramUsername));
     }
-  }, [open, coachTelegramUsername]);
+  }, [open, isCoach, coachTelegramUsername]);
 
   useEffect(() => {
     if (open) {
@@ -202,23 +207,38 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
       currentWorkout.id
     );
 
-    if (sendToCoach) {
-      const msg = generateWorkoutCoachMessage({
-        workout: {
-          ...currentWorkout,
-          durationSeconds: effectiveDuration,
-          tonnageKg: tonnage,
-          powerKgPerMin: power,
-          notes,
+    if (sendToCoach && !isCoach) {
+      const exercisesSummary = currentWorkout.supersets.flatMap((ss) =>
+        ss.exercises.map((ex) => ({
+          name: getLocalizedExerciseName(ex.exerciseId || ex.name, language, false),
+          weight: ex.sets[0]?.actualWeight ?? ex.sets[0]?.targetWeight ?? 0,
+          reps: ex.sets[0]?.actualReps ?? ex.sets[0]?.targetReps ?? 10,
+          setsCount: ex.sets.filter((s) => s.completed).length || ex.sets.length,
+          supersetLabel: ss.label,
+        }))
+      );
+
+      sendDirectCoachReport({
+        traineeName: traineeName || linkedTelegramUser?.firstName || (typeof window !== "undefined" && window.Telegram?.WebApp?.initDataUnsafe?.user?.first_name) || "Атлет",
+        traineeUsername: linkedTelegramUser?.username || (typeof window !== "undefined" && window.Telegram?.WebApp?.initDataUnsafe?.user?.username) || "",
+        workoutNumber: currentWorkout.workoutNumber || 1,
+        microcycle: currentWorkout.microcycle || 1,
+        durationSeconds: effectiveDuration,
+        tonnageKg: tonnage,
+        powerKgPerMin: power,
+        athleticScore: {
+          score: athleticScore.score,
+          tierKey: athleticScore.tierKey,
+          tierLabel,
         },
-        traineeName,
-        weightIncrement: weightIncrementKg,
-        latestMeasurement: measurements[0],
-        language,
-        gender,
-        userAge,
-      });
-      shareToTelegramCoach(msg, coachTelegramUsername);
+        latestMeasurement: measurements[0] ? {
+          weightKg: measurements[0].weightKg,
+          waistCm: measurements[0].waistCm,
+          bicepsCm: measurements[0].bicepsCm,
+        } : undefined,
+        exercises: exercisesSummary,
+        notes,
+      }).catch((err) => console.error("Direct coach send failed:", err));
     }
 
     onOpenChange(false);
@@ -386,30 +406,30 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
         </div>
 
         {/* Coach Sharing & Instagram Stories */}
-        <div className="p-3 rounded-2xl bg-slate-950/80 border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <label className="flex items-center gap-2.5 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={sendToCoach}
-              onChange={(e) => setSendToCoach(e.target.checked)}
-              className="h-4 w-4 rounded border-white/20 bg-slate-900 text-cyan-500 focus:ring-0"
-            />
-            <div>
-              <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                <Send className="h-3.5 w-3.5 text-cyan-400" />
-                <span>{t.workout.sendCoachButton}</span>
-              </span>
-              <span className="text-[10px] text-slate-400 block mt-0.5">
-                {coachTelegramUsername
-                  ? `@${coachTelegramUsername.replace("@", "")}`
-                  : language === "uk"
-                  ? "У Telegram відкриється вибір контакту"
-                  : language === "en"
-                  ? "Telegram contact picker will open"
-                  : "В Telegram откроется выбор контакта"}
-              </span>
-            </div>
-          </label>
+        <div className={`p-3 rounded-2xl bg-slate-950/80 border border-white/10 flex flex-col sm:flex-row sm:items-center ${isCoach ? "justify-end" : "justify-between"} gap-3`}>
+          {!isCoach && (
+            <label className="flex items-center gap-2.5 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={sendToCoach}
+                onChange={(e) => setSendToCoach(e.target.checked)}
+                className="h-4 w-4 rounded border-white/20 bg-slate-900 text-cyan-500 focus:ring-0"
+              />
+              <div>
+                <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <Send className="h-3.5 w-3.5 text-cyan-400" />
+                  <span>{t.workout.sendCoachButton}</span>
+                </span>
+                <span className="text-[10px] text-slate-400 block mt-0.5">
+                  {language === "uk"
+                    ? `Прямий звіт тренеру @${(coachTelegramUsername || "OnyshchenkoSergey").replace("@", "")}`
+                    : language === "en"
+                    ? `Direct report to Coach @${(coachTelegramUsername || "OnyshchenkoSergey").replace("@", "")}`
+                    : `Прямой отчет тренеру @${(coachTelegramUsername || "OnyshchenkoSergey").replace("@", "")}`}
+                </span>
+              </div>
+            </label>
+          )}
 
           <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
             <Button

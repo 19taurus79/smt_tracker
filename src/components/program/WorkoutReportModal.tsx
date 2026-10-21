@@ -23,7 +23,8 @@ import { ConfirmResetModal } from "@/components/workout/ConfirmResetModal";
 import { StoryShareModal } from "@/components/analytics/StoryShareModal";
 import { useSettingsStore } from "@/lib/store/useSettingsStore";
 import { useBodyStore } from "@/lib/store/useBodyStore";
-import { generateWorkoutCoachMessage, shareToTelegramCoach } from "@/lib/coach/telegramCoach";
+import { generateWorkoutCoachMessage, shareToTelegramCoach, sendDirectCoachReport } from "@/lib/coach/telegramCoach";
+import { isCoachAccount } from "@/lib/auth/roles";
 import { useTranslation } from "@/lib/i18n";
 import {
   getLocalizedExerciseName,
@@ -50,23 +51,14 @@ export function WorkoutReportModal({
   const [isStoryModalOpen, setIsStoryModalOpen] = useState(false);
   const [isPublishingChallenge, setIsPublishingChallenge] = useState(false);
   const [publishedChallenge, setPublishedChallenge] = useState(false);
-  const { coachTelegramUsername, traineeName, gender, userAge } = useSettingsStore();
+  const [isSendingToCoach, setIsSendingToCoach] = useState(false);
+  const [sentToCoach, setSentToCoach] = useState(false);
+
+  const { coachTelegramUsername, traineeName, gender, userAge, userRole, linkedTelegramUser } = useSettingsStore();
   const { measurements } = useBodyStore();
   const { t, language } = useTranslation();
 
-  const handleSendToCoach = () => {
-    if (!workout) return;
-    const msg = generateWorkoutCoachMessage({
-      workout,
-      traineeName,
-      weightIncrement: 2.5,
-      latestMeasurement: measurements[0],
-      language,
-      gender,
-      userAge,
-    });
-    shareToTelegramCoach(msg, coachTelegramUsername);
-  };
+  const isCoach = userRole === "coach" || isCoachAccount(linkedTelegramUser?.username, linkedTelegramUser?.id);
 
   if (!workout) return null;
 
@@ -111,6 +103,52 @@ export function WorkoutReportModal({
       console.error("Failed to publish to challenge:", e);
     } finally {
       setIsPublishingChallenge(false);
+    }
+  };
+
+  const handleSendToCoach = async () => {
+    if (!workout || isSendingToCoach || sentToCoach) return;
+    setIsSendingToCoach(true);
+    try {
+      const exercisesSummary = workout.supersets.flatMap((ss) =>
+        ss.exercises.map((ex) => ({
+          name: getLocalizedExerciseName(ex.exerciseId || ex.name, language, false),
+          weight: ex.sets[0]?.actualWeight ?? ex.sets[0]?.targetWeight ?? 0,
+          reps: ex.sets[0]?.actualReps ?? ex.sets[0]?.targetReps ?? 10,
+          setsCount: ex.sets.filter((s) => s.completed).length || ex.sets.length,
+          supersetLabel: ss.label,
+        }))
+      );
+
+      const success = await sendDirectCoachReport({
+        traineeName: traineeName || linkedTelegramUser?.firstName || (typeof window !== "undefined" && window.Telegram?.WebApp?.initDataUnsafe?.user?.first_name) || "Атлет",
+        traineeUsername: linkedTelegramUser?.username || (typeof window !== "undefined" && window.Telegram?.WebApp?.initDataUnsafe?.user?.username) || "",
+        workoutNumber: workout.workoutNumber || 1,
+        microcycle: workout.microcycle || 1,
+        durationSeconds: workout.durationSeconds || 45 * 60,
+        tonnageKg: workout.tonnageKg || 0,
+        powerKgPerMin: workout.powerKgPerMin || 0,
+        athleticScore: {
+          score: athleticScore.score,
+          tierKey: athleticScore.tierKey,
+          tierLabel,
+        },
+        latestMeasurement: measurements[0] ? {
+          weightKg: measurements[0].weightKg,
+          waistCm: measurements[0].waistCm,
+          bicepsCm: measurements[0].bicepsCm,
+        } : undefined,
+        exercises: exercisesSummary,
+        notes: workout.notes,
+      });
+
+      if (success) {
+        setSentToCoach(true);
+      }
+    } catch (e) {
+      console.error("Direct coach send failed:", e);
+    } finally {
+      setIsSendingToCoach(false);
     }
   };
 
@@ -320,15 +358,28 @@ export function WorkoutReportModal({
           </span>
         </Button>
 
-        <Button
-          variant="outline"
-          size="sm"
-          className="text-xs font-semibold border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/10 flex items-center justify-center gap-1.5"
-          onClick={handleSendToCoach}
-        >
-          <Send className="h-3.5 w-3.5" />
-          <span>{coachTelegramUsername ? t.workout.sendCoachButton : t.common.share}</span>
-        </Button>
+        {!isCoach && (
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isSendingToCoach || sentToCoach}
+            className={`text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+              sentToCoach
+                ? "border-emerald-500/40 text-emerald-300 bg-emerald-500/10"
+                : "border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/10"
+            }`}
+            onClick={handleSendToCoach}
+          >
+            <Send className="h-3.5 w-3.5" />
+            <span>
+              {sentToCoach
+                ? (language === "uk" ? "✓ Надіслано тренеру!" : language === "en" ? "✓ Sent to Coach!" : "✓ Отправлено тренеру!")
+                : isSendingToCoach
+                ? (language === "uk" ? "Надсилання..." : language === "en" ? "Sending..." : "Отправка...")
+                : t.workout.sendCoachButton}
+            </span>
+          </Button>
+        )}
 
         <Button
           variant="outline"

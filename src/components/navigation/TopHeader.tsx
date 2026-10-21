@@ -11,6 +11,7 @@ import { isTelegramWebApp, initTelegramWebApp } from "@/lib/tma/telegram";
 import { HelpModal } from "@/components/help/HelpModal";
 import { useTranslation } from "@/lib/i18n";
 import { formatWorkoutTitle } from "@/lib/i18n/exercises";
+import { isCoachAccount } from "@/lib/auth/roles";
 
 export function TopHeader() {
   const { t, language } = useTranslation();
@@ -55,11 +56,11 @@ export function TopHeader() {
               </Link>
             )}
 
-            {userRole === "coach" ? (
+            {userRole === "coach" || isCoachAccount(linkedTelegramUser?.username, linkedTelegramUser?.id) ? (
               <Link
-                href="/settings"
+                href="/coach"
                 className="flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-500/20 to-amber-600/20 border border-amber-500/40 px-2.5 py-0.5 text-[11px] font-bold text-amber-300 hover:scale-105 transition-all shadow-sm shadow-amber-500/20"
-                title="Панель Головного Тренера"
+                title="Кабінет Головного Тренера"
               >
                 <Crown className="h-3 w-3 text-amber-400" />
                 <span>ТРЕНЕР</span>
