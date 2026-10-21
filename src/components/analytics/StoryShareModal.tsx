@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Dialog, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { WorkoutSession } from "@/types/smt";
-import { BodyMeasurement } from "@/types/body";
+import { BodyMeasurement, AppLanguage } from "@/types/body";
 import { formatTime, formatDate } from "@/lib/utils";
 import { Download, Sparkles, Check, Zap, Trophy, Flame, Activity, Award, Dumbbell } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
@@ -135,7 +135,10 @@ export function StoryShareModal({
     .flatMap((e) => e.sets)
     .filter((s) => s.completed).length || 24;
 
-  const botHandle = storyBotUsername || "@smt_workout_bot";
+  const botHandle =
+    storyBotUsername && !storyBotUsername.includes("smt_workout_bot")
+      ? storyBotUsername
+      : "@athletic_smt_bot";
 
   const renderCanvas = () => {
     const canvas = canvasRef.current;
@@ -152,7 +155,6 @@ export function StoryShareModal({
 
     // --- TEMPLATE 1: POWER & SETS (Neon Emerald Cyberpunk) ---
     if (selectedTemplate === "power") {
-      // Background gradient
       const bg = ctx.createLinearGradient(0, 0, 0, height);
       bg.addColorStop(0, "#020617");
       bg.addColorStop(0.5, "#061524");
@@ -161,13 +163,13 @@ export function StoryShareModal({
       ctx.fillRect(0, 0, width, height);
 
       // Ambient radial glow
-      const glow = ctx.createRadialGradient(250, 420, 10, 250, 420, 550);
+      const glow = ctx.createRadialGradient(250, 380, 10, 250, 380, 550);
       glow.addColorStop(0, "rgba(16, 185, 129, 0.2)");
       glow.addColorStop(1, "rgba(16, 185, 129, 0)");
       ctx.fillStyle = glow;
       ctx.fillRect(0, 0, width, height);
 
-      // Header Block
+      // Header Block (y = 60, h = 140)
       drawHeaderBlock(
         ctx,
         labels.powerWorkout,
@@ -177,13 +179,13 @@ export function StoryShareModal({
         "#0f172a"
       );
 
-      // Athletic Score Hero Badge
+      // Athletic Score Hero Badge (y = 220, h = 140)
       drawScoreBadge(
         ctx,
         80,
-        280,
+        220,
         920,
-        150,
+        140,
         athleticScore.score,
         tierTitle,
         labels.athleticScore,
@@ -192,13 +194,13 @@ export function StoryShareModal({
         "rgba(16, 185, 129, 0.4)"
       );
 
-      // Twin Core Metrics: Tonnage & Density
+      // Twin Core Metrics: Tonnage & Density (y = 380, h = 230)
       drawMetricCard(
         ctx,
         80,
-        460,
+        380,
         445,
-        260,
+        230,
         labels.totalTonnage,
         `${tonnage.toLocaleString()}`,
         t.common.kg,
@@ -210,9 +212,9 @@ export function StoryShareModal({
       drawMetricCard(
         ctx,
         555,
-        460,
+        380,
         445,
-        260,
+        230,
         labels.powerAndDensity,
         `${power}`,
         `${t.common.kg}/${t.common.min}`,
@@ -221,39 +223,26 @@ export function StoryShareModal({
         "rgba(56, 189, 248, 0.3)"
       );
 
-      // Time + Rest Info Card
-      ctx.fillStyle = "rgba(15, 23, 42, 0.8)";
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
-      ctx.lineWidth = 2;
-      roundRect(ctx, 80, 750, 920, 100, 20, true, true);
-      ctx.fillStyle = "#94a3b8";
-      ctx.font = "600 28px system-ui, -apple-system, sans-serif";
-      ctx.fillText(`⏱  ${t.common.time}: ${durationStr}    |    ⚡  ${labels.restBetweenSets}`, 120, 812);
+      // Time + Rest Info Card (y = 630, h = 85)
+      drawRestStrip(ctx, 80, 630, 920, 85, durationStr, labels.restBetweenSets, t.common.time, "#10b981");
 
-      // Exercises Box (Top Heavy Sets)
-      ctx.fillStyle = "#090d16";
-      ctx.strokeStyle = "rgba(16, 185, 129, 0.25)";
-      ctx.lineWidth = 3;
-      roundRect(ctx, 80, 880, 920, 680, 28, true, true);
+      // Exercises Box with ALL exercises & supersets! (y = 735, h = 910)
+      drawExercisesSection(
+        ctx,
+        80,
+        735,
+        920,
+        910,
+        workout.supersets,
+        language,
+        labels.keyWeights,
+        t,
+        "#10b981",
+        "#090d16",
+        "rgba(16, 185, 129, 0.25)"
+      );
 
-      ctx.fillStyle = "#38bdf8";
-      ctx.font = "bold 34px system-ui, -apple-system, sans-serif";
-      ctx.fillText(labels.keyWeights, 120, 955);
-
-      let yPos = 1030;
-      exercisesSummary.forEach((ex) => {
-        ctx.fillStyle = "#f8fafc";
-        ctx.font = "bold 32px system-ui, -apple-system, sans-serif";
-        ctx.fillText(`• ${ex.name}`, 120, yPos);
-
-        ctx.fillStyle = "#10b981";
-        ctx.font = "600 28px system-ui, -apple-system, sans-serif";
-        ctx.fillText(`   ${ex.detail}`, 120, yPos + 44);
-
-        yPos += 105;
-      });
-
-      // Bottom Viral Banner
+      // Bottom Viral Banner (y = 1665, h = 165)
       drawPromoBanner(ctx, botHandle, labels.joinTelegramBot, "#10b981");
     }
 
@@ -267,14 +256,14 @@ export function StoryShareModal({
       ctx.fillRect(0, 0, width, height);
 
       // Ambient glows
-      const c1 = ctx.createRadialGradient(250, 500, 10, 250, 500, 500);
-      c1.addColorStop(0, "rgba(56, 189, 248, 0.25)");
+      const c1 = ctx.createRadialGradient(250, 450, 10, 250, 450, 500);
+      c1.addColorStop(0, "rgba(56, 189, 248, 0.22)");
       c1.addColorStop(1, "rgba(56, 189, 248, 0)");
       ctx.fillStyle = c1;
       ctx.fillRect(0, 0, width, height);
 
-      const c2 = ctx.createRadialGradient(850, 1100, 10, 850, 1100, 500);
-      c2.addColorStop(0, "rgba(168, 85, 247, 0.25)");
+      const c2 = ctx.createRadialGradient(850, 900, 10, 850, 900, 500);
+      c2.addColorStop(0, "rgba(168, 85, 247, 0.22)");
       c2.addColorStop(1, "rgba(168, 85, 247, 0)");
       ctx.fillStyle = c2;
       ctx.fillRect(0, 0, width, height);
@@ -282,7 +271,7 @@ export function StoryShareModal({
       // Header Block
       drawHeaderBlock(
         ctx,
-        labels.powerWorkout,
+        labels.bodyRecomp,
         `${labels.workoutNumber}${workout.workoutNumber} • ${labels.microcycle}${workout.microcycle}`,
         `${dateStr} • ${durationStr}`,
         "#38bdf8",
@@ -293,9 +282,9 @@ export function StoryShareModal({
       drawScoreBadge(
         ctx,
         80,
-        280,
+        220,
         920,
-        150,
+        140,
         athleticScore.score,
         tierTitle,
         labels.athleticScore,
@@ -304,47 +293,17 @@ export function StoryShareModal({
         "rgba(56, 189, 248, 0.35)"
       );
 
-      // Recomp Highlights Card
-      ctx.fillStyle = "rgba(255, 255, 255, 0.06)";
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
-      ctx.lineWidth = 3;
-      roundRect(ctx, 80, 460, 920, 360, 28, true, true);
-
-      ctx.fillStyle = "#38bdf8";
-      ctx.font = "bold 34px system-ui, -apple-system, sans-serif";
-      ctx.fillText(labels.bodyRecomp, 120, 530);
-
-      // Metrics in Recomp
-      ctx.fillStyle = "#f8fafc";
-      ctx.font = "900 68px system-ui, -apple-system, sans-serif";
-      ctx.fillText(`${athleteWeight} ${t.common.kg}`, 120, 630);
-      ctx.fillStyle = "#94a3b8";
-      ctx.font = "600 28px system-ui, -apple-system, sans-serif";
-      ctx.fillText(labels.weight, 120, 675);
-
-      if (latestMeasurement?.waistCm) {
-        ctx.fillStyle = "#38bdf8";
-        ctx.font = "900 68px system-ui, -apple-system, sans-serif";
-        ctx.fillText(`${latestMeasurement.waistCm} ${t.common.cm}`, 560, 630);
-        ctx.fillStyle = "#94a3b8";
-        ctx.font = "600 28px system-ui, -apple-system, sans-serif";
-        ctx.fillText(labels.waist, 560, 675);
-      }
-
-      ctx.fillStyle = "#a855f7";
-      ctx.font = "600 30px system-ui, -apple-system, sans-serif";
-      ctx.fillText(`✨  ${t.body.recompSummary}: ${t.body.fatLoss} & ${t.body.muscleGain}`, 120, 760);
-
-      // Tonnage & Density Twin
+      // Recomp Highlights Cards
+      const waistInfo = latestMeasurement?.waistCm ? `${latestMeasurement.waistCm} ${t.common.cm}` : `145x ${labels.totalTonnage}`;
       drawMetricCard(
         ctx,
         80,
-        850,
+        380,
         445,
-        280,
-        labels.totalTonnage,
-        `${tonnage.toLocaleString()}`,
-        t.common.kg,
+        230,
+        labels.weight,
+        `${athleteWeight} ${t.common.kg}`,
+        `${labels.waist} ${waistInfo}`,
         "#38bdf8",
         "rgba(255, 255, 255, 0.05)",
         "rgba(56, 189, 248, 0.3)"
@@ -353,34 +312,35 @@ export function StoryShareModal({
       drawMetricCard(
         ctx,
         555,
-        850,
+        380,
         445,
-        280,
+        230,
         labels.powerAndDensity,
         `${power}`,
-        `${t.common.kg}/${t.common.min}`,
+        `${tonnage.toLocaleString()} ${t.common.kg} • ${totalCompletedSets} ${t.common.sets}`,
         "#a855f7",
         "rgba(255, 255, 255, 0.05)",
         "rgba(168, 85, 247, 0.3)"
       );
 
+      // Rest Strip
+      drawRestStrip(ctx, 80, 630, 920, 85, durationStr, labels.restBetweenSets, t.common.time, "#38bdf8");
+
       // Exercises Box
-      ctx.fillStyle = "rgba(255, 255, 255, 0.05)";
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
-      ctx.lineWidth = 2;
-      roundRect(ctx, 80, 1160, 920, 400, 24, true, true);
-
-      ctx.fillStyle = "#a855f7";
-      ctx.font = "bold 32px system-ui, -apple-system, sans-serif";
-      ctx.fillText(labels.setsAndReps, 120, 1230);
-
-      let yR = 1295;
-      exercisesSummary.slice(0, 3).forEach((ex) => {
-        ctx.fillStyle = "#ffffff";
-        ctx.font = "600 30px system-ui, -apple-system, sans-serif";
-        ctx.fillText(`✓  ${ex.name}: ${ex.detail}`, 120, yR);
-        yR += 60;
-      });
+      drawExercisesSection(
+        ctx,
+        80,
+        735,
+        920,
+        910,
+        workout.supersets,
+        language,
+        labels.setsAndReps,
+        t,
+        "#38bdf8",
+        "rgba(255, 255, 255, 0.04)",
+        "rgba(56, 189, 248, 0.25)"
+      );
 
       // Bottom Viral Banner
       drawPromoBanner(ctx, botHandle, labels.joinTelegramBot, "#38bdf8");
@@ -395,16 +355,16 @@ export function StoryShareModal({
       ctx.strokeStyle = "rgba(245, 158, 11, 0.25)";
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(80, 80);
-      ctx.lineTo(1000, 80);
-      ctx.moveTo(80, 1840);
-      ctx.lineTo(1000, 1840);
+      ctx.moveTo(80, 40);
+      ctx.lineTo(1000, 40);
+      ctx.moveTo(80, 1880);
+      ctx.lineTo(1000, 1880);
       ctx.stroke();
 
       // Header Block
       drawHeaderBlock(
         ctx,
-        labels.powerWorkout,
+        labels.newPrRecord,
         `${labels.workoutCompleted} • #${workout.workoutNumber}`,
         `${labels.microcycle}${workout.microcycle} • ${t.common.week} ${workout.week} • ${dateStr}`,
         "#f59e0b",
@@ -415,9 +375,9 @@ export function StoryShareModal({
       drawScoreBadge(
         ctx,
         80,
-        280,
+        220,
         920,
-        150,
+        140,
         athleticScore.score,
         tierTitle,
         labels.athleticScore,
@@ -426,34 +386,16 @@ export function StoryShareModal({
         "rgba(245, 158, 11, 0.4)"
       );
 
-      // Gold Hero Card: Growth vs Previous Cycle
-      ctx.fillStyle = "#161922";
-      ctx.strokeStyle = "#f59e0b";
-      ctx.lineWidth = 4;
-      roundRect(ctx, 80, 460, 920, 340, 28, true, true);
-
-      ctx.fillStyle = "#f59e0b";
-      ctx.font = "bold 32px system-ui, -apple-system, sans-serif";
-      ctx.fillText(`🏆  ${labels.progressVsLast}`, 120, 530);
-
-      ctx.fillStyle = "#ffffff";
-      ctx.font = "900 84px system-ui, -apple-system, sans-serif";
-      ctx.fillText(`+${tonnageDelta > 0 ? tonnageDelta.toLocaleString() : "850"} ${t.common.kg}`, 120, 640);
-
-      ctx.fillStyle = "#10b981";
-      ctx.font = "bold 34px system-ui, -apple-system, sans-serif";
-      ctx.fillText(`▲ +${tonnagePercent}%  |  ${labels.newPrRecord}`, 120, 720);
-
-      // Core Metrics Twin
+      // Progress Cards
       drawMetricCard(
         ctx,
         80,
-        830,
+        380,
         445,
-        280,
-        labels.totalTonnage,
-        `${tonnage.toLocaleString()}`,
-        t.common.kg,
+        230,
+        labels.progressVsLast,
+        `+${tonnageDelta > 0 ? tonnageDelta.toLocaleString() : "850"} ${t.common.kg}`,
+        `▲ +${tonnagePercent}% ${labels.newPrRecord}`,
         "#f59e0b",
         "#12141c",
         "rgba(245, 158, 11, 0.3)"
@@ -462,34 +404,35 @@ export function StoryShareModal({
       drawMetricCard(
         ctx,
         555,
-        830,
+        380,
         445,
-        280,
-        labels.powerAndDensity,
-        `${power}`,
-        `${t.common.kg}/${t.common.min}`,
+        230,
+        labels.totalTonnage,
+        `${tonnage.toLocaleString()}`,
+        `${t.common.kg} • ${power} ${t.common.kg}/${t.common.min}`,
         "#ffffff",
         "#12141c",
         "rgba(255, 255, 255, 0.2)"
       );
 
-      // Summary Box
-      ctx.fillStyle = "#12141c";
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
-      ctx.lineWidth = 2;
-      roundRect(ctx, 80, 1140, 920, 420, 24, true, true);
+      // Rest Strip
+      drawRestStrip(ctx, 80, 630, 920, 85, durationStr, labels.restBetweenSets, t.common.time, "#f59e0b");
 
-      ctx.fillStyle = "#f59e0b";
-      ctx.font = "bold 32px system-ui, -apple-system, sans-serif";
-      ctx.fillText(labels.keyWeights, 120, 1210);
-
-      let yP = 1275;
-      exercisesSummary.slice(0, 3).forEach((ex) => {
-        ctx.fillStyle = "#f8fafc";
-        ctx.font = "600 30px system-ui, -apple-system, sans-serif";
-        ctx.fillText(`⚡  ${ex.name}: ${ex.detail}`, 120, yP);
-        yP += 65;
-      });
+      // Exercises Box
+      drawExercisesSection(
+        ctx,
+        80,
+        735,
+        920,
+        910,
+        workout.supersets,
+        language,
+        labels.keyWeights,
+        t,
+        "#f59e0b",
+        "#12141c",
+        "rgba(245, 158, 11, 0.3)"
+      );
 
       // Bottom Viral Banner
       drawPromoBanner(ctx, botHandle, labels.joinTelegramBot, "#f59e0b");
@@ -505,27 +448,29 @@ export function StoryShareModal({
       ctx.fillRect(0, 0, width, height);
 
       // Crimson glow
-      const glow = ctx.createRadialGradient(250, 450, 10, 250, 450, 500);
-      glow.addColorStop(0, "rgba(244, 63, 94, 0.2)");
+      const glow = ctx.createRadialGradient(250, 400, 10, 250, 400, 500);
+      glow.addColorStop(0, "rgba(244, 63, 94, 0.22)");
       glow.addColorStop(1, "rgba(244, 63, 94, 0)");
       ctx.fillStyle = glow;
       ctx.fillRect(0, 0, width, height);
 
+      // Header Block
       drawHeaderBlock(
         ctx,
-        labels.powerWorkout,
-        `${labels.tempoAndBurn} • #${workout.workoutNumber}`,
+        labels.tempoAndBurn,
+        `${labels.powerWorkout} • #${workout.workoutNumber}`,
         `${dateStr} • ${durationStr}`,
         "#f43f5e",
         "#180913"
       );
 
+      // Athletic Score
       drawScoreBadge(
         ctx,
         80,
-        280,
+        220,
         920,
-        150,
+        140,
         athleticScore.score,
         tierTitle,
         labels.athleticScore,
@@ -534,137 +479,142 @@ export function StoryShareModal({
         "rgba(244, 63, 94, 0.4)"
       );
 
-      // Intensity Hero: Density
+      // Density Twin Cards
       drawMetricCard(
         ctx,
         80,
-        460,
-        920,
-        340,
-        labels.powerAndDensity,
-        `${power} ${t.common.kg}/${t.common.min}`,
-        `⏱  ${labels.restBetweenSets}  |  ${totalCompletedSets} ${t.common.sets}`,
-        "#f43f5e",
-        "rgba(244, 63, 94, 0.08)",
-        "rgba(244, 63, 94, 0.4)"
-      );
-
-      // Twin Tonnage & Sets
-      drawMetricCard(
-        ctx,
-        80,
-        830,
+        380,
         445,
-        280,
-        labels.totalTonnage,
-        `${tonnage.toLocaleString()}`,
-        t.common.kg,
-        "#ffffff",
+        230,
+        labels.powerAndDensity,
+        `${power}`,
+        `${t.common.kg}/${t.common.min} • 30с відпочинок`,
+        "#f43f5e",
         "#140b12",
-        "rgba(255, 255, 255, 0.2)"
+        "rgba(244, 63, 94, 0.35)"
       );
 
       drawMetricCard(
         ctx,
         555,
-        830,
+        380,
         445,
-        280,
+        230,
         labels.totalSetsCount,
         `${totalCompletedSets}`,
-        labels.restBetweenSets,
+        `${labels.totalTonnage}: ${tonnage.toLocaleString()} ${t.common.kg}`,
         "#fb7185",
         "#140b12",
         "rgba(251, 113, 133, 0.3)"
       );
 
+      // Rest Strip
+      drawRestStrip(ctx, 80, 630, 920, 85, durationStr, labels.restBetweenSets, t.common.time, "#f43f5e");
+
       // Exercises Box
-      ctx.fillStyle = "#140b12";
-      ctx.strokeStyle = "rgba(244, 63, 94, 0.25)";
-      ctx.lineWidth = 2;
-      roundRect(ctx, 80, 1140, 920, 420, 24, true, true);
+      drawExercisesSection(
+        ctx,
+        80,
+        735,
+        920,
+        910,
+        workout.supersets,
+        language,
+        labels.tempoAndBurn,
+        t,
+        "#f43f5e",
+        "#140b12",
+        "rgba(244, 63, 94, 0.25)"
+      );
 
-      ctx.fillStyle = "#fb7185";
-      ctx.font = "bold 32px system-ui, -apple-system, sans-serif";
-      ctx.fillText(labels.keyWeights, 120, 1210);
-
-      let yD = 1275;
-      exercisesSummary.slice(0, 3).forEach((ex) => {
-        ctx.fillStyle = "#f8fafc";
-        ctx.font = "600 30px system-ui, -apple-system, sans-serif";
-        ctx.fillText(`🔥  ${ex.name}: ${ex.detail}`, 120, yD);
-        yD += 65;
-      });
-
+      // Bottom Viral Banner
       drawPromoBanner(ctx, botHandle, labels.joinTelegramBot, "#f43f5e");
     }
 
-    // --- TEMPLATE 5: MINIMALIST / PHOTO POSTER (Deep Charcoal / Transparent Feel) ---
+    // --- TEMPLATE 5: MINIMALIST / PHOTO POSTER (Deep Charcoal / Clean Lines) ---
     else if (selectedTemplate === "minimal") {
       ctx.fillStyle = "#09090b";
       ctx.fillRect(0, 0, width, height);
 
-      // Giant subtle backdrop score
+      // Giant subtle backdrop watermark score
       ctx.fillStyle = "rgba(255, 255, 255, 0.03)";
       ctx.font = "900 480px system-ui, -apple-system, sans-serif";
       ctx.textAlign = "center";
-      ctx.fillText(`${athleticScore.score}`, 540, 980);
+      ctx.fillText(`${athleticScore.score}`, 540, 950);
       ctx.textAlign = "left";
 
-      // Top minimalist header
-      ctx.fillStyle = "#a1a1aa";
-      ctx.font = "bold 32px system-ui, -apple-system, sans-serif";
-      ctx.fillText(labels.powerWorkout, 100, 140);
+      // Header Block
+      drawHeaderBlock(
+        ctx,
+        labels.workoutCompleted,
+        `${labels.workoutNumber}${workout.workoutNumber} / ${labels.microcycle}${workout.microcycle}`,
+        `${dateStr} • ${durationStr}`,
+        "#ffffff",
+        "rgba(255, 255, 255, 0.05)"
+      );
 
-      ctx.fillStyle = "#ffffff";
-      ctx.font = "900 68px system-ui, -apple-system, sans-serif";
-      ctx.fillText(`${labels.workoutNumber}${workout.workoutNumber} / ${labels.microcycle}${workout.microcycle}`, 100, 215);
+      // Score
+      drawScoreBadge(
+        ctx,
+        80,
+        220,
+        920,
+        140,
+        athleticScore.score,
+        tierTitle,
+        labels.athleticScore,
+        "#ffffff",
+        "rgba(255, 255, 255, 0.05)",
+        "rgba(255, 255, 255, 0.2)"
+      );
 
-      ctx.fillStyle = "#71717a";
-      ctx.font = "500 28px system-ui, -apple-system, sans-serif";
-      ctx.fillText(`${dateStr} • ${durationStr}`, 100, 260);
+      // Clean Stats Twin
+      drawMetricCard(
+        ctx,
+        80,
+        380,
+        445,
+        230,
+        labels.totalTonnage,
+        `${tonnage.toLocaleString()}`,
+        `${t.common.kg} • ${athleticScore.relativeTonnage}x bodyweight`,
+        "#ffffff",
+        "rgba(255, 255, 255, 0.04)",
+        "rgba(255, 255, 255, 0.15)"
+      );
 
-      // Hero Score Card
-      ctx.fillStyle = "rgba(255, 255, 255, 0.05)";
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
-      ctx.lineWidth = 3;
-      roundRect(ctx, 100, 340, 880, 480, 32, true, true);
+      drawMetricCard(
+        ctx,
+        555,
+        380,
+        445,
+        230,
+        labels.powerAndDensity,
+        `${power}`,
+        `${t.common.kg}/${t.common.min} • ${totalCompletedSets} ${t.common.sets}`,
+        "#10b981",
+        "rgba(255, 255, 255, 0.04)",
+        "rgba(16, 185, 129, 0.25)"
+      );
 
-      ctx.fillStyle = "#a1a1aa";
-      ctx.font = "bold 32px system-ui, -apple-system, sans-serif";
-      ctx.fillText(labels.athleticScore, 150, 420);
+      // Rest Strip
+      drawRestStrip(ctx, 80, 630, 920, 85, durationStr, labels.restBetweenSets, t.common.time, "#ffffff");
 
-      ctx.fillStyle = "#ffffff";
-      ctx.font = "900 160px system-ui, -apple-system, sans-serif";
-      ctx.fillText(`${athleticScore.score}`, 150, 590);
-
-      ctx.fillStyle = "#10b981";
-      ctx.font = "bold 44px system-ui, -apple-system, sans-serif";
-      ctx.fillText(`• ${tierTitle}`, 460, 560);
-
-      ctx.fillStyle = "#71717a";
-      ctx.font = "600 30px system-ui, -apple-system, sans-serif";
-      ctx.fillText(`${t.scoring.relativeTonnage}: ${athleticScore.relativeTonnage}x bodyweight`, 150, 680);
-
-      // Clean Bottom Stats Row
-      ctx.fillStyle = "rgba(255, 255, 255, 0.04)";
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
-      ctx.lineWidth = 2;
-      roundRect(ctx, 100, 860, 880, 320, 28, true, true);
-
-      ctx.fillStyle = "#ffffff";
-      ctx.font = "900 58px system-ui, -apple-system, sans-serif";
-      ctx.fillText(`${tonnage.toLocaleString()} ${t.common.kg}`, 150, 960);
-      ctx.fillStyle = "#71717a";
-      ctx.font = "bold 26px system-ui, -apple-system, sans-serif";
-      ctx.fillText(labels.totalTonnage, 150, 1005);
-
-      ctx.fillStyle = "#ffffff";
-      ctx.font = "900 58px system-ui, -apple-system, sans-serif";
-      ctx.fillText(`${power} ${t.common.kg}/${t.common.min}`, 150, 1100);
-      ctx.fillStyle = "#71717a";
-      ctx.font = "bold 26px system-ui, -apple-system, sans-serif";
-      ctx.fillText(labels.powerAndDensity, 150, 1145);
+      // Exercises Box
+      drawExercisesSection(
+        ctx,
+        80,
+        735,
+        920,
+        910,
+        workout.supersets,
+        language,
+        labels.keyWeights,
+        t,
+        "#10b981",
+        "#09090b",
+        "rgba(255, 255, 255, 0.15)"
+      );
 
       // Clean minimal invite
       drawPromoBanner(ctx, botHandle, labels.joinTelegramBot, "#ffffff");
@@ -680,13 +630,13 @@ export function StoryShareModal({
       ctx.fillRect(0, 0, width, height);
 
       // Dual color glows
-      const g1 = ctx.createRadialGradient(250, 400, 10, 250, 400, 450);
-      g1.addColorStop(0, "rgba(168, 85, 247, 0.3)");
+      const g1 = ctx.createRadialGradient(250, 380, 10, 250, 380, 450);
+      g1.addColorStop(0, "rgba(168, 85, 247, 0.28)");
       g1.addColorStop(1, "rgba(168, 85, 247, 0)");
       ctx.fillStyle = g1;
       ctx.fillRect(0, 0, width, height);
 
-      const g2 = ctx.createRadialGradient(850, 800, 10, 850, 800, 500);
+      const g2 = ctx.createRadialGradient(850, 750, 10, 850, 750, 500);
       g2.addColorStop(0, "rgba(6, 182, 212, 0.25)");
       g2.addColorStop(1, "rgba(6, 182, 212, 0)");
       ctx.fillStyle = g2;
@@ -696,91 +646,76 @@ export function StoryShareModal({
       drawHeaderBlock(
         ctx,
         labels.challengeSubtitle,
-        `${labels.powerWorkout} • #${workout.workoutNumber}`,
+        labels.challengeTitle,
         `${dateStr} • ${durationStr}`,
         "#06b6d4",
         "#140e2b"
       );
 
-      // Giant Challenge Headline
-      ctx.fillStyle = "#ffffff";
-      ctx.font = "900 68px system-ui, -apple-system, sans-serif";
-      ctx.fillText(labels.challengeTitle, 80, 360);
-
-      // Hero Duel Card
-      ctx.fillStyle = "rgba(168, 85, 247, 0.12)";
-      ctx.strokeStyle = "#a855f7";
-      ctx.lineWidth = 4;
-      roundRect(ctx, 80, 420, 920, 420, 32, true, true);
-
-      ctx.fillStyle = "#c084fc";
-      ctx.font = "bold 34px system-ui, -apple-system, sans-serif";
-      ctx.fillText(`⚡  ${labels.athleticScore}:`, 120, 490);
-
-      ctx.fillStyle = "#ffffff";
-      ctx.font = "900 130px system-ui, -apple-system, sans-serif";
-      ctx.fillText(`${athleticScore.score}`, 120, 630);
-
-      ctx.fillStyle = "#06b6d4";
-      ctx.font = "bold 44px system-ui, -apple-system, sans-serif";
-      ctx.fillText(`/ 100`, 360, 630);
-
-      ctx.fillStyle = "#f8fafc";
-      ctx.font = "bold 38px system-ui, -apple-system, sans-serif";
-      ctx.fillText(`Рівень: ${tierTitle}`, 120, 720);
-
-      ctx.fillStyle = "#94a3b8";
-      ctx.font = "600 28px system-ui, -apple-system, sans-serif";
-      ctx.fillText(`Результат: ${tonnage.toLocaleString()} кг за ${durationStr} (30с відпочинок)`, 120, 780);
+      // Hero Duel Score
+      drawScoreBadge(
+        ctx,
+        80,
+        220,
+        920,
+        140,
+        athleticScore.score,
+        tierTitle,
+        labels.athleticScore,
+        "#06b6d4",
+        "rgba(168, 85, 247, 0.15)",
+        "#a855f7"
+      );
 
       // Duel Targets: Tonnage + Density
       drawMetricCard(
         ctx,
         80,
-        880,
+        380,
         445,
-        280,
+        230,
         labels.totalTonnage,
         `${tonnage.toLocaleString()}`,
-        t.common.kg,
+        `${t.common.kg} • ${t.scoring.challengeCallout || "Зможеш так?"}`,
         "#06b6d4",
         "rgba(6, 182, 212, 0.08)",
-        "rgba(6, 182, 212, 0.4)"
+        "rgba(6, 182, 212, 0.35)"
       );
 
       drawMetricCard(
         ctx,
         555,
-        880,
+        380,
         445,
-        280,
+        230,
         labels.powerAndDensity,
         `${power}`,
-        `${t.common.kg}/${t.common.min}`,
+        `${t.common.kg}/${t.common.min} • 30с відпочинок`,
         "#c084fc",
         "rgba(168, 85, 247, 0.08)",
-        "rgba(168, 85, 247, 0.4)"
+        "rgba(168, 85, 247, 0.35)"
       );
 
-      // Challenge Box Callout
-      ctx.fillStyle = "#120b22";
-      ctx.strokeStyle = "rgba(6, 182, 212, 0.35)";
-      ctx.lineWidth = 3;
-      roundRect(ctx, 80, 1200, 920, 360, 28, true, true);
+      // Rest Strip
+      drawRestStrip(ctx, 80, 630, 920, 85, durationStr, labels.restBetweenSets, t.common.time, "#06b6d4");
 
-      ctx.fillStyle = "#06b6d4";
-      ctx.font = "bold 36px system-ui, -apple-system, sans-serif";
-      ctx.fillText("🥊  ВИКЛИК ПРИЙНЯТО?", 120, 1280);
+      // Exercises Box with Challenge Headline
+      drawExercisesSection(
+        ctx,
+        80,
+        735,
+        920,
+        910,
+        workout.supersets,
+        language,
+        labels.challengeTitle,
+        t,
+        "#06b6d4",
+        "#120b22",
+        "rgba(6, 182, 212, 0.35)"
+      );
 
-      ctx.fillStyle = "#ffffff";
-      ctx.font = "600 32px system-ui, -apple-system, sans-serif";
-      ctx.fillText("Чи подужаєш підняти 150 власних ваг", 120, 1350);
-      ctx.fillText("за 45 хвилин з відпочинком 30 секунд?", 120, 1400);
-
-      ctx.fillStyle = "#c084fc";
-      ctx.font = "bold 30px system-ui, -apple-system, sans-serif";
-      ctx.fillText("Спробуй у нашому безкоштовному трекері!", 120, 1480);
-
+      // Bottom Viral Banner
       drawPromoBanner(ctx, botHandle, labels.joinTelegramBot, "#06b6d4");
     }
   };
@@ -980,25 +915,38 @@ function drawHeaderBlock(
   accentColor: string,
   bgColor: string
 ) {
-  // Badge
+  const x = 80;
+  const y = 60;
+  const w = 920;
+  const h = 140;
+
+  // Background card
   ctx.fillStyle = bgColor;
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
+  ctx.lineWidth = 2;
+  roundRect(ctx, x, y, w, h, 24, true, true);
+
+  // Left Tag Pill (measures text dynamically so it NEVER overflows or touches meta)
+  ctx.font = "bold 22px system-ui, -apple-system, sans-serif";
+  const badgeWidth = ctx.measureText(badgeText).width + 32;
+  ctx.fillStyle = "rgba(255, 255, 255, 0.06)";
   ctx.strokeStyle = accentColor;
-  ctx.lineWidth = 3;
-  roundRect(ctx, 80, 80, 480, 140, 24, true, true);
+  ctx.lineWidth = 2;
+  roundRect(ctx, x + 30, y + 22, badgeWidth, 38, 12, true, true);
 
   ctx.fillStyle = accentColor;
-  ctx.font = "bold 38px system-ui, -apple-system, sans-serif";
-  ctx.fillText(badgeText, 110, 140);
+  ctx.fillText(badgeText, x + 46, y + 49);
 
-  ctx.fillStyle = "#94a3b8";
-  ctx.font = "600 28px system-ui, -apple-system, sans-serif";
-  ctx.fillText(title, 110, 185);
+  // Main Workout Title (bottom row of card)
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "900 36px system-ui, -apple-system, sans-serif";
+  ctx.fillText(title, x + 30, y + 112);
 
-  // Top right meta
-  ctx.fillStyle = "#94a3b8";
-  ctx.font = "500 30px system-ui, -apple-system, sans-serif";
+  // Right-aligned Meta (Week + Date)
   ctx.textAlign = "right";
-  ctx.fillText(meta, 1000, 150);
+  ctx.fillStyle = "#94a3b8";
+  ctx.font = "bold 26px system-ui, -apple-system, sans-serif";
+  ctx.fillText(meta, x + w - 30, y + 85);
   ctx.textAlign = "left";
 }
 
@@ -1020,21 +968,31 @@ function drawScoreBadge(
   ctx.lineWidth = 3;
   roundRect(ctx, x, y, w, h, 28, true, true);
 
-  ctx.fillStyle = accentColor;
-  ctx.font = "900 76px system-ui, -apple-system, sans-serif";
-  ctx.fillText(`⚡ ${score}`, x + 40, y + 100);
+  // Left: ⚡ Score with dynamic pixel offset for "/ 100" (NO OVERLAP)
+  ctx.font = "900 84px system-ui, -apple-system, sans-serif";
+  const iconStr = "⚡ ";
+  const iconW = ctx.measureText(iconStr).width;
+  const scoreStr = `${score}`;
+  const scoreW = ctx.measureText(scoreStr).width;
 
-  ctx.fillStyle = "#94a3b8";
+  ctx.fillStyle = accentColor;
+  ctx.fillText(iconStr, x + 35, y + 98);
+  ctx.fillText(scoreStr, x + 35 + iconW, y + 98);
+
+  ctx.fillStyle = "#64748b";
   ctx.font = "bold 32px system-ui, -apple-system, sans-serif";
-  ctx.fillText("/ 100", x + 260, y + 95);
+  ctx.fillText("/ 100", x + 35 + iconW + scoreW + 14, y + 92);
+
+  // Right side: Label & Tier Title right-aligned cleanly
+  ctx.textAlign = "right";
+  ctx.fillStyle = "#94a3b8";
+  ctx.font = "bold 22px system-ui, -apple-system, sans-serif";
+  ctx.fillText(label.toUpperCase(), x + w - 35, y + 54);
 
   ctx.fillStyle = "#ffffff";
-  ctx.font = "bold 34px system-ui, -apple-system, sans-serif";
-  ctx.fillText(tier, x + 380, y + 95);
-
-  ctx.fillStyle = "#94a3b8";
-  ctx.font = "600 24px system-ui, -apple-system, sans-serif";
-  ctx.fillText(label, x + 380, y + 50);
+  ctx.font = "900 36px system-ui, -apple-system, sans-serif";
+  ctx.fillText(tier.toUpperCase(), x + w - 35, y + 102);
+  ctx.textAlign = "left";
 }
 
 function drawMetricCard(
@@ -1056,16 +1014,147 @@ function drawMetricCard(
   roundRect(ctx, x, y, w, h, 24, true, true);
 
   ctx.fillStyle = "#94a3b8";
-  ctx.font = "bold 26px system-ui, -apple-system, sans-serif";
-  ctx.fillText(title, x + 35, y + 60);
+  ctx.font = "bold 22px system-ui, -apple-system, sans-serif";
+  ctx.fillText(title, x + 30, y + 50);
 
   ctx.fillStyle = valColor;
-  ctx.font = "900 76px system-ui, -apple-system, sans-serif";
-  ctx.fillText(value, x + 35, y + 160);
+  ctx.font = "900 68px system-ui, -apple-system, sans-serif";
+  ctx.fillText(value, x + 30, y + 135);
 
   ctx.fillStyle = "#94a3b8";
-  ctx.font = "600 28px system-ui, -apple-system, sans-serif";
-  ctx.fillText(unit, x + 35, y + 220);
+  ctx.font = "600 24px system-ui, -apple-system, sans-serif";
+  ctx.fillText(unit, x + 30, y + 185);
+}
+
+function drawRestStrip(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  durationStr: string,
+  restLabel: string,
+  timeLabel: string,
+  accentColor: string
+) {
+  ctx.fillStyle = "rgba(15, 23, 42, 0.85)";
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+  ctx.lineWidth = 2;
+  roundRect(ctx, x, y, w, h, 20, true, true);
+
+  ctx.fillStyle = "#cbd5e1";
+  ctx.font = "600 26px system-ui, -apple-system, sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText(
+    `⏱  ${timeLabel}: ${durationStr}    •    ⚡  ${restLabel}    •    🔥  СМТ-1 (Казаков)`,
+    x + w / 2,
+    y + 54
+  );
+  ctx.textAlign = "left";
+}
+
+function drawExercisesSection(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  supersets: any[],
+  language: AppLanguage,
+  sectionTitle: string,
+  t: { common: { kg: string; reps: string; sets: string } },
+  accentColor: string,
+  bgColor: string,
+  borderColor: string
+) {
+  // Container Box
+  ctx.fillStyle = bgColor;
+  ctx.strokeStyle = borderColor;
+  ctx.lineWidth = 3;
+  roundRect(ctx, x, y, w, h, 28, true, true);
+
+  // Section Header
+  ctx.fillStyle = accentColor;
+  ctx.font = "bold 30px system-ui, -apple-system, sans-serif";
+  ctx.fillText(`📋  ${sectionTitle}`, x + 35, y + 52);
+
+  const totalExCount = supersets.reduce((acc, s) => acc + (s.exercises?.length || 0), 0);
+  ctx.textAlign = "right";
+  ctx.fillStyle = "#94a3b8";
+  ctx.font = "600 22px system-ui, -apple-system, sans-serif";
+  ctx.fillText(`${totalExCount} вправ • ${supersets.length} суперсети`, x + w - 35, y + 52);
+  ctx.textAlign = "left";
+
+  // Separator Line
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(x + 35, y + 74);
+  ctx.lineTo(x + w - 35, y + 74);
+  ctx.stroke();
+
+  // Supersets loop (shows ALL exercises from ALL supersets!)
+  const availableH = h - 90;
+  const numSS = Math.max(1, supersets.length);
+  const blockH = availableH / numSS;
+
+  supersets.forEach((ss, ssIdx) => {
+    const ssY = y + 84 + ssIdx * blockH;
+
+    // Superset Header
+    ctx.fillStyle = accentColor;
+    ctx.font = "bold 22px system-ui, -apple-system, sans-serif";
+    ctx.fillText(`СУПЕРСЕТ ${ssIdx + 1}`, x + 35, ssY + 28);
+
+    ctx.fillStyle = "#64748b";
+    ctx.font = "500 20px system-ui, -apple-system, sans-serif";
+    ctx.fillText(`• відпочинок 30с`, x + 185, ssY + 28);
+
+    // Exercises inside this superset
+    ss.exercises.forEach((ex: any, exIdx: number) => {
+      const exY = ssY + 62 + exIdx * 42;
+      const weight = ex.sets[0]?.actualWeight ?? ex.sets[0]?.targetWeight ?? 0;
+      const reps = ex.sets[0]?.actualReps ?? ex.sets[0]?.targetReps ?? 10;
+      const completedSets = ex.sets.filter((s: any) => s.completed).length || ex.sets.length;
+      const exName = getLocalizedExerciseName(ex.exerciseId || ex.name, language, false);
+
+      // Exercise name (left)
+      ctx.fillStyle = "#f8fafc";
+      ctx.font = "600 26px system-ui, -apple-system, sans-serif";
+      const maxNameWidth = 470;
+      let displayName = exName;
+      if (ctx.measureText(displayName).width > maxNameWidth) {
+        while (displayName.length > 5 && ctx.measureText(displayName + "…").width > maxNameWidth) {
+          displayName = displayName.slice(0, -1);
+        }
+        displayName += "…";
+      }
+      ctx.fillText(`• ${displayName}`, x + 40, exY);
+
+      // Weight & Reps (right side, aligned right)
+      ctx.textAlign = "right";
+      ctx.fillStyle = accentColor;
+      ctx.font = "900 26px system-ui, -apple-system, sans-serif";
+      const valStr = `${weight} ${t.common.kg} × ${reps}`;
+      ctx.fillText(valStr, x + w - 160, exY);
+
+      // Completed sets
+      ctx.fillStyle = "#94a3b8";
+      ctx.font = "600 22px system-ui, -apple-system, sans-serif";
+      ctx.fillText(`(${completedSets} ${t.common.sets})`, x + w - 35, exY);
+      ctx.textAlign = "left";
+    });
+
+    // Divider between supersets (except last)
+    if (ssIdx < supersets.length - 1) {
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x + 35, ssY + blockH - 6);
+      ctx.lineTo(x + w - 35, ssY + blockH - 6);
+      ctx.stroke();
+    }
+  });
 }
 
 function drawPromoBanner(
@@ -1074,19 +1163,24 @@ function drawPromoBanner(
   inviteText: string,
   accentColor: string
 ) {
-  const y = 1660;
+  const x = 80;
+  const y = 1665;
+  const w = 920;
+  const h = 165;
+
   ctx.fillStyle = "rgba(15, 23, 42, 0.95)";
   ctx.strokeStyle = accentColor;
   ctx.lineWidth = 3;
-  roundRect(ctx, 80, y, 920, 160, 24, true, true);
+  roundRect(ctx, x, y, w, h, 24, true, true);
 
   ctx.fillStyle = "#ffffff";
-  ctx.font = "bold 28px system-ui, -apple-system, sans-serif";
+  ctx.font = "bold 26px system-ui, -apple-system, sans-serif";
   ctx.textAlign = "center";
-  ctx.fillText(inviteText, 540, y + 65);
+  ctx.fillText(inviteText, x + w / 2, y + 60);
 
   ctx.fillStyle = accentColor;
-  ctx.font = "900 44px system-ui, -apple-system, sans-serif";
-  ctx.fillText(botUsername, 540, y + 125);
+  ctx.font = "900 42px system-ui, -apple-system, sans-serif";
+  const cleanBot = botUsername.startsWith("@") ? botUsername : `@${botUsername}`;
+  ctx.fillText(cleanBot, x + w / 2, y + 120);
   ctx.textAlign = "left";
 }
