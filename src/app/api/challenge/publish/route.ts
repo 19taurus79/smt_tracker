@@ -11,12 +11,32 @@ interface PublishWorkoutBody {
   powerKgPerMin: number;
   athleticScore?: {
     score: number;
-    tier: string;
-    tierLabel: string;
+    tierKey?: "active" | "power_master" | "iron_pro" | "titan";
+    tier?: string;
+    tierLabel?: string;
   };
   athleteName?: string;
   athleteUsername?: string;
   notes?: string;
+}
+
+function resolveTierTitle(scoreObj?: PublishWorkoutBody["athleticScore"]): string {
+  if (!scoreObj) return "Активний Атлет";
+  if (scoreObj.tierLabel && scoreObj.tierLabel !== "undefined") {
+    return scoreObj.tierLabel;
+  }
+  const key = scoreObj.tierKey || scoreObj.tier;
+  switch (key) {
+    case "titan":
+      return "ТИТАН СИЛИ";
+    case "iron_pro":
+      return "Залізний Профі";
+    case "power_master":
+      return "Майстер Потужності";
+    case "active":
+    default:
+      return "Активний Атлет";
+  }
 }
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
@@ -45,8 +65,9 @@ export async function POST(req: Request) {
     const seconds = durationSeconds % 60;
     const timeFormatted = `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
 
+    const tierTitle = resolveTierTitle(athleticScore);
     const scoreDisplay = athleticScore
-      ? `🏆 <b>ІНДЕКС АТЛЕТИЧНОСТІ:</b> ${athleticScore.score} / 100 [<b>${athleticScore.tierLabel}</b>]`
+      ? `🏆 <b>ІНДЕКС АТЛЕТИЧНОСТІ:</b> ${athleticScore.score} / 100 [<b>${tierTitle}</b>]`
       : `⚡️ <b>Щільність:</b> ${powerKgPerMin} кг/хв`;
 
     const channelPost = [

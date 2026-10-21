@@ -115,7 +115,10 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
           durationSeconds: effectiveDuration,
           tonnageKg: tonnage,
           powerKgPerMin: power,
-          athleticScore,
+          athleticScore: {
+            ...athleticScore,
+            tierLabel,
+          },
           athleteName: traineeName || window.Telegram?.WebApp?.initDataUnsafe?.user?.first_name || "",
           athleteUsername: window.Telegram?.WebApp?.initDataUnsafe?.user?.username || "",
           notes,

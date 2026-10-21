@@ -94,7 +94,10 @@ export function WorkoutReportModal({
           durationSeconds: workout.durationSeconds || 45 * 60,
           tonnageKg: workout.tonnageKg || 0,
           powerKgPerMin: workout.powerKgPerMin || 0,
-          athleticScore,
+          athleticScore: {
+            ...athleticScore,
+            tierLabel,
+          },
           athleteName: traineeName || (typeof window !== "undefined" && window.Telegram?.WebApp?.initDataUnsafe?.user?.first_name) || "",
           athleteUsername: (typeof window !== "undefined" && window.Telegram?.WebApp?.initDataUnsafe?.user?.username) || "",
           notes: workout.notes,
