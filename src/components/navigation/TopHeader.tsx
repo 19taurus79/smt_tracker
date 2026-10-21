@@ -23,7 +23,27 @@ export function TopHeader() {
   useEffect(() => {
     initTelegramWebApp();
     setInTelegram(isTelegramWebApp());
-  }, []);
+
+    if (typeof window !== "undefined") {
+      const tgUser = (window.Telegram?.WebApp as any)?.initDataUnsafe?.user;
+      const effectiveUser = linkedTelegramUser || tgUser;
+      if (effectiveUser && userRole !== "coach" && !isCoachAccount(effectiveUser.username, effectiveUser.id)) {
+        const leadKey = `smt_lead_notified_${effectiveUser.id || effectiveUser.username}`;
+        if (!sessionStorage.getItem(leadKey)) {
+          sessionStorage.setItem(leadKey, "1");
+          fetch("/api/lead/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: effectiveUser.first_name || effectiveUser.firstName || "Атлет",
+              username: effectiveUser.username || "",
+              telegramUserId: effectiveUser.id,
+            }),
+          }).catch(() => {});
+        }
+      }
+    }
+  }, [linkedTelegramUser, userRole]);
 
   const activeWorkout = workouts.find((w) => w.id === activeWorkoutId);
 

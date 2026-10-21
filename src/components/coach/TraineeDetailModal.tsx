@@ -388,11 +388,48 @@ export function TraineeDetailModal({ trainee, open, onOpenChange }: TraineeDetai
         )}
       </div>
 
-      <div className="pt-2 border-t border-white/10 flex justify-end">
+      <div className="pt-2 border-t border-white/10 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className={`text-xs ${
+              trainee.status === "blocked"
+                ? "border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/10"
+                : "border-amber-500/30 text-amber-300 hover:bg-amber-500/10"
+            }`}
+            onClick={() => {
+              if (trainee.status === "blocked") {
+                useCoachStore.getState().unblockTrainee(trainee.id);
+              } else {
+                useCoachStore.getState().blockTrainee(trainee.id);
+              }
+            }}
+          >
+            {trainee.status === "blocked" ? "🔓 Розблокувати" : "🚫 Заблокувати"}
+          </Button>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="text-xs border-rose-500/30 text-rose-300 hover:bg-rose-500/10"
+            onClick={() => {
+              if (confirm(`Ви дійсно бажаєте видалити атлета ${trainee.name}?`)) {
+                useCoachStore.getState().deleteTrainee(trainee.id);
+                onOpenChange(false);
+              }
+            }}
+          >
+            🗑 Видалити
+          </Button>
+        </div>
+
         <Button
-          variant="outline"
+          variant="accent"
           size="sm"
-          className="text-xs"
+          className="text-xs font-bold"
           onClick={() => onOpenChange(false)}
         >
           {t.common.close}

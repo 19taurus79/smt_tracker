@@ -291,6 +291,23 @@ export async function POST(req: Request) {
                 ],
               },
             });
+
+            // Notify Coach about the new lead
+            const coachRecipient = process.env.COACH_TELEGRAM_CHAT_ID || CHANNEL_ID;
+            const athleteTag = from.username ? `@${from.username}` : "";
+            const leadAlert = [
+              `🎯 <b>НОВИЙ ПІДОПІЧНИЙ (ЛІД)!</b>`,
+              ``,
+              `👤 <b>Атлет:</b> ${from.first_name} ${athleteTag}`,
+              `📅 <b>Статус:</b> Підтвердив підписку на канал та перейшов до трекера!`,
+              from.username ? `💬 <i>Написати:</i> https://t.me/${from.username}` : "",
+            ].filter(Boolean).join("\n");
+
+            tgApi("sendMessage", {
+              chat_id: coachRecipient,
+              text: leadAlert,
+              parse_mode: "HTML",
+            }).catch(() => {});
           }
         } else {
           await tgApi("answerCallbackQuery", {

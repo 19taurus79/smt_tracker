@@ -10,7 +10,7 @@ export interface TraineeWorkoutRecord {
   tonnageKg: number;
   powerKgPerMin: number;
   athleticScore: number;
-  tierKey: "titan" | "iron_pro" | "power_master" | "active";
+  tierKey: "titan" | "iron_pro" | "power_master" | "active" | "lead";
   tierLabel: string;
   notes?: string;
   exercises: Array<{
@@ -46,26 +46,32 @@ export interface TraineeProfile {
   weightDeltaKg: number;
   lastWorkoutDate: string;
   athleticScore: number;
-  tierKey: "titan" | "iron_pro" | "power_master" | "active";
+  tierKey: "titan" | "iron_pro" | "power_master" | "active" | "lead";
   tierLabel: string;
-  status: "active" | "resting" | "needs_attention";
+  status: "active" | "resting" | "needs_attention" | "new_lead" | "blocked";
   coachNotes: string;
   workoutHistory: TraineeWorkoutRecord[];
   measurementHistory: TraineeMeasurementRecord[];
 }
 
+export type TraineeStatusFilter = "all" | "active" | "needs_attention" | "new_lead" | "blocked";
+
 interface CoachStoreState {
   trainees: TraineeProfile[];
   selectedTraineeId: string | null;
   searchQuery: string;
-  statusFilter: "all" | "active" | "needs_attention" | "resting";
+  statusFilter: TraineeStatusFilter;
   setSelectedTraineeId: (id: string | null) => void;
   setSearchQuery: (query: string) => void;
-  setStatusFilter: (filter: "all" | "active" | "needs_attention" | "resting") => void;
+  setStatusFilter: (filter: TraineeStatusFilter) => void;
   addTrainee: (trainee: Omit<TraineeProfile, "id">) => void;
   updateTrainee: (id: string, updates: Partial<TraineeProfile>) => void;
   updateCoachNotes: (id: string, notes: string) => void;
+  blockTrainee: (id: string) => void;
+  unblockTrainee: (id: string) => void;
   deleteTrainee: (id: string) => void;
+  clearAllTrainees: () => void;
+  registerLead: (lead: { name: string; username?: string; telegramChatId?: string }) => void;
   recordWorkoutForTrainee: (
     identifier: string, // id or username
     workout: Omit<TraineeWorkoutRecord, "id">
@@ -86,7 +92,7 @@ const initialTrainees: TraineeProfile[] = [
     totalWorkouts: 15,
     weightKg: 84.5,
     weightDeltaKg: 1.5,
-    lastWorkoutDate: new Date(Date.now() - 2 * 3600 * 1000).toISOString(), // 2 hours ago
+    lastWorkoutDate: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
     athleticScore: 92,
     tierKey: "titan",
     tierLabel: "ТИТАН СИЛИ ⚡",
@@ -139,15 +145,6 @@ const initialTrainees: TraineeProfile[] = [
         bicepsCm: 41,
         thighCm: 61,
       },
-      {
-        id: "m-0",
-        date: new Date(Date.now() - 21 * 86400 * 1000).toISOString(),
-        weightKg: 83.0,
-        waistCm: 82,
-        chestCm: 109,
-        bicepsCm: 40,
-        thighCm: 60,
-      },
     ],
   },
   {
@@ -162,7 +159,7 @@ const initialTrainees: TraineeProfile[] = [
     totalWorkouts: 7,
     weightKg: 78.0,
     weightDeltaKg: -0.8,
-    lastWorkoutDate: new Date(Date.now() - 22 * 3600 * 1000).toISOString(), // yesterday
+    lastWorkoutDate: new Date(Date.now() - 22 * 3600 * 1000).toISOString(),
     athleticScore: 84,
     tierKey: "iron_pro",
     tierLabel: "Залізний Профі 🦾",
@@ -180,7 +177,6 @@ const initialTrainees: TraineeProfile[] = [
         athleticScore: 84,
         tierKey: "iron_pro",
         tierLabel: "Залізний Профі 🦾",
-        notes: "Трохи забились квадріцепси до 3-го кола.",
         exercises: [
           { name: "Жим штанги стоячи (Армійський)", weight: 55, reps: 10, setsCount: 4 },
           { name: "Махи гантелями через сторони", weight: 14, reps: 10, setsCount: 4 },
@@ -212,12 +208,12 @@ const initialTrainees: TraineeProfile[] = [
     totalWorkouts: 4,
     weightKg: 61.2,
     weightDeltaKg: -1.2,
-    lastWorkoutDate: new Date(Date.now() - 76 * 3600 * 1000).toISOString(), // 3 days ago
+    lastWorkoutDate: new Date(Date.now() - 76 * 3600 * 1000).toISOString(),
     athleticScore: 78,
     tierKey: "power_master",
     tierLabel: "Майстер Потужності 💥",
     status: "needs_attention",
-    coachNotes: "Пропустила тренування в середу. Написати в Telegram та дізнатись самопочуття.",
+    coachNotes: "Пропустила тренування у середу. Написати в Telegram та дізнатися про самопочуття.",
     workoutHistory: [
       {
         id: "w-4",
@@ -230,11 +226,9 @@ const initialTrainees: TraineeProfile[] = [
         athleticScore: 78,
         tierKey: "power_master",
         tierLabel: "Майстер Потужності 💥",
-        notes: "Складнувато було тримати 30 сек між сетами.",
         exercises: [
           { name: "Присідання кубкові з гантеллю", weight: 24, reps: 10, setsCount: 4 },
           { name: "Сідничний місток зі штангою", weight: 65, reps: 10, setsCount: 4 },
-          { name: "Тяга верхнього блоку", weight: 40, reps: 10, setsCount: 4 },
         ],
       },
     ],
@@ -245,8 +239,6 @@ const initialTrainees: TraineeProfile[] = [
         weightKg: 61.2,
         waistCm: 65,
         chestCm: 89,
-        bicepsCm: 28,
-        thighCm: 54,
       },
     ],
   },
@@ -262,7 +254,7 @@ const initialTrainees: TraineeProfile[] = [
     totalWorkouts: 22,
     weightKg: 91.0,
     weightDeltaKg: 2.1,
-    lastWorkoutDate: new Date(Date.now() - 5 * 3600 * 1000).toISOString(), // 5 hours ago
+    lastWorkoutDate: new Date(Date.now() - 5 * 3600 * 1000).toISOString(),
     athleticScore: 96,
     tierKey: "titan",
     tierLabel: "ТИТАН СИЛИ ⚡",
@@ -280,25 +272,13 @@ const initialTrainees: TraineeProfile[] = [
         athleticScore: 96,
         tierKey: "titan",
         tierLabel: "ТИТАН СИЛИ ⚡",
-        notes: "Ідеальний темп! Робочі ваги зросли на 10 кг від старту МКЦ-1.",
         exercises: [
           { name: "Жим штанги лежачи", weight: 110, reps: 10, setsCount: 4 },
           { name: "Присідання зі штангою", weight: 140, reps: 10, setsCount: 4 },
-          { name: "Тяга штанги в нахилі", weight: 95, reps: 10, setsCount: 4 },
         ],
       },
     ],
-    measurementHistory: [
-      {
-        id: "m-mb-1",
-        date: new Date(Date.now() - 4 * 86400 * 1000).toISOString(),
-        weightKg: 91.0,
-        waistCm: 84,
-        chestCm: 118,
-        bicepsCm: 43.5,
-        thighCm: 64,
-      },
-    ],
+    measurementHistory: [],
   },
 ];
 
@@ -339,11 +319,82 @@ export const useCoachStore = create<CoachStoreState>()(
           ),
         })),
 
+      blockTrainee: (id) =>
+        set((state) => ({
+          trainees: state.trainees.map((t) =>
+            t.id === id ? { ...t, status: "blocked" } : t
+          ),
+        })),
+
+      unblockTrainee: (id) =>
+        set((state) => ({
+          trainees: state.trainees.map((t) =>
+            t.id === id ? { ...t, status: "active" } : t
+          ),
+        })),
+
       deleteTrainee: (id) =>
         set((state) => ({
           trainees: state.trainees.filter((t) => t.id !== id),
           selectedTraineeId: state.selectedTraineeId === id ? null : state.selectedTraineeId,
         })),
+
+      clearAllTrainees: () =>
+        set({
+          trainees: [],
+          selectedTraineeId: null,
+        }),
+
+      registerLead: ({ name, username, telegramChatId }) =>
+        set((state) => {
+          const cleanUsername = (username || "").replace(/^@/, "").toLowerCase();
+          const existing = state.trainees.find(
+            (t) =>
+              (cleanUsername && t.username.toLowerCase() === cleanUsername) ||
+              (telegramChatId && t.telegramChatId === telegramChatId)
+          );
+
+          if (existing) {
+            // Already in roster — make sure not blocked
+            return state;
+          }
+
+          const colors = [
+            "from-blue-500 to-indigo-600",
+            "from-emerald-500 to-teal-600",
+            "from-purple-500 to-violet-600",
+            "from-amber-500 to-orange-600",
+            "from-rose-500 to-pink-600",
+          ];
+          const randomColor = colors[Math.floor(Math.random() * colors.length)];
+
+          const newLead: TraineeProfile = {
+            id: `lead-${Date.now()}`,
+            name: name || "Новий атлет",
+            username: cleanUsername || "",
+            telegramChatId,
+            avatarColor: randomColor,
+            gender: "male",
+            age: 28,
+            currentMicrocycle: 1,
+            currentWorkoutNumber: 1,
+            totalWorkouts: 0,
+            weightKg: 80,
+            weightDeltaKg: 0,
+            lastWorkoutDate: new Date().toISOString(),
+            athleticScore: 70,
+            tierKey: "lead",
+            tierLabel: "НОВИЙ ЛІД 🔥",
+            status: "new_lead",
+            coachNotes: "Атлет підписався на канал та запустив трекер. Зв'язатися для вітання та підбору стартових ваг.",
+            workoutHistory: [],
+            measurementHistory: [],
+          };
+
+          return {
+            trainees: [newLead, ...state.trainees],
+          };
+        }),
 
       recordWorkoutForTrainee: (identifier, workout) =>
         set((state) => {
@@ -370,7 +421,7 @@ export const useCoachStore = create<CoachStoreState>()(
             athleticScore: workout.athleticScore,
             tierKey: workout.tierKey,
             tierLabel: workout.tierLabel,
-            status: "active",
+            status: target.status === "blocked" ? "blocked" : "active",
             workoutHistory: updatedHistory,
           };
 
@@ -389,7 +440,7 @@ export const useCoachStore = create<CoachStoreState>()(
         }),
     }),
     {
-      name: "smt_coach_v1",
+      name: "smt_coach_v2",
       storage: createJSONStorage(() => localStorage),
     }
   )
