@@ -100,15 +100,13 @@ async function setup() {
   const shortResRu = await callTg("setMyShortDescription", { short_description: shortRu, language_code: "ru" });
   console.log("✅ Short Description (RU):", shortResRu.ok ? "Success" : shortResRu);
 
-  // 5. Set Persistent Chat Menu Button (Launches Web App)
+  // 5. Set Persistent Chat Menu Button to Commands List (restores [/] menu with all commands)
   const menuRes = await callTg("setChatMenuButton", {
     menu_button: {
-      type: "web_app",
-      text: "🚀 Трекер СМТ-1",
-      web_app: { url: APP_URL },
+      type: "commands",
     },
   });
-  console.log(`✅ Menu Button (Web App -> ${APP_URL}):`, menuRes.ok ? "Success" : menuRes);
+  console.log("✅ Menu Button set to Commands List ([/] menu):", menuRes.ok ? "Success" : menuRes);
 
   console.log("\n🎉 Telegram Bot successfully configured programmatically!");
 }

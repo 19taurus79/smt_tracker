@@ -124,10 +124,12 @@ export async function POST(req: Request) {
 
         if (isSubscribed) {
           // User is subscribed -> provide direct WebApp access
+          const pwaLaunchUrl = `${APP_URL}/?tg_auth=1&id=${from.id}&first_name=${encodeURIComponent(from.first_name)}&username=${encodeURIComponent(from.username || "")}`;
+
           const welcomeMsg =
             lang === "uk"
-              ? `🔥 <b>Вітаємо в SMT-1 Tracker!</b>\n\nВи є учасником нашого Челенджу. Тренувальна система <b>Майка Казакова</b> (Steelfactor) налаштована під вас.\n\n⚡️ <i>Правило #1: Відпочинок суворо 30 секунд. 24 підходи = 24-30 хв.</i>\n\nНатисніть кнопку нижче, щоб відкрити персональний щоденник тренувань:`
-              : `🔥 <b>Добро пожаловать в SMT-1 Tracker!</b>\n\nВы являетесь участником Челленджа. Тренировочная система <b>Майка Казакова</b> (Steelfactor) готова к старту.\n\n⚡️ <i>Правило #1: Отдых строго 30 секунд. 24 подхода = 24-30 минут.</i>\n\nНажмите кнопку ниже, чтобы открыть персональный дневник:`;
+              ? `🔥 <b>Вітаємо в SMT-1 Tracker!</b>\n\nВи є учасником нашого Челенджу. Тренувальна система <b>Майка Казакова</b> (Steelfactor) налаштована під вас.\n\n⚡️ <i>Правило #1: Відпочинок суворо 30 секунд. 24 підходи = 24-30 хв.</i>\n\n📲 <i>Натисніть кнопку нижче, щоб відкрити трекер. Додайте його на екран «Додому», щоб тренуватися як у нативному додатку навіть без інтернету:</i>`
+              : `🔥 <b>Добро пожаловать в SMT-1 Tracker!</b>\n\nВы являетесь участником Челленджа. Тренировочная система <b>Майка Казакова</b> (Steelfactor) готова к старту.\n\n⚡️ <i>Правило #1: Отдых строго 30 секунд. 24 подхода = 24-30 минут.</i>\n\n📲 <i>Нажмите кнопку ниже, чтобы открыть трекер. Добавьте его на экран «Домой», чтобы тренироваться как в нативном приложении даже без интернета:</i>`;
 
           await tgApi("sendMessage", {
             chat_id: chat.id,
@@ -137,8 +139,8 @@ export async function POST(req: Request) {
               inline_keyboard: [
                 [
                   {
-                    text: lang === "uk" ? "🚀 Відкрити SMT-1 Трекер" : "🚀 Открыть SMT-1 Трекер",
-                    web_app: { url: APP_URL },
+                    text: lang === "uk" ? "📱 Відкрити нативний Трекер (PWA)" : "📱 Открыть нативный Трекер (PWA)",
+                    url: pwaLaunchUrl,
                   },
                 ],
                 [
@@ -196,8 +198,8 @@ export async function POST(req: Request) {
             inline_keyboard: [
               [
                 {
-                  text: lang === "uk" ? "🚀 Відкрити Трекер" : "🚀 Открыть Трекер",
-                  web_app: { url: APP_URL },
+                  text: lang === "uk" ? "📱 Відкрити Трекер (PWA)" : "📱 Открыть Трекер (PWA)",
+                  url: APP_URL,
                 },
               ],
             ],
@@ -243,8 +245,8 @@ export async function POST(req: Request) {
             inline_keyboard: [
               [
                 {
-                  text: lang === "uk" ? "🚀 Запустити Трекер" : "🚀 Запустить Трекер",
-                  web_app: { url: APP_URL },
+                  text: lang === "uk" ? "📱 Відкрити Трекер (PWA)" : "📱 Открыть Трекер (PWA)",
+                  url: `${APP_URL}/?tg_auth=1&id=${from.id}&first_name=${encodeURIComponent(from.first_name)}&username=${encodeURIComponent(from.username || "")}`,
                 },
               ],
             ],
@@ -270,19 +272,20 @@ export async function POST(req: Request) {
           });
 
           if (message?.chat?.id) {
+            const pwaLaunchUrl = `${APP_URL}/?tg_auth=1&id=${from.id}&first_name=${encodeURIComponent(from.first_name)}&username=${encodeURIComponent(from.username || "")}`;
             await tgApi("sendMessage", {
               chat_id: message.chat.id,
               text:
                 lang === "uk"
-                  ? "✅ <b>Успішно!</b> Ваш доступ до SMT-1 активовано.\nТисніть кнопку нижче, щоб розпочати перше тренування:"
-                  : "✅ <b>Успешно!</b> Ваш доступ к SMT-1 активирован.\nЖмите кнопку ниже, чтобы начать первую тренировку:",
+                  ? "✅ <b>Успішно!</b> Ваш доступ до SMT-1 активовано.\nТисніть кнопку нижче, щоб відкрити нативний трекер у браузері та додати на екран смартфона:"
+                  : "✅ <b>Успешно!</b> Ваш доступ к SMT-1 активирован.\nЖмите кнопку ниже, чтобы открыть нативный трекер в браузере и добавить на экран смартфона:",
               parse_mode: "HTML",
               reply_markup: {
                 inline_keyboard: [
                   [
                     {
-                      text: lang === "uk" ? "🚀 Запустити SMT-1 Трекер" : "🚀 Запустить SMT-1 Трекер",
-                      web_app: { url: APP_URL },
+                      text: lang === "uk" ? "📱 Відкрити нативний Трекер (PWA)" : "📱 Открыть нативный Трекер (PWA)",
+                      url: pwaLaunchUrl,
                     },
                   ],
                 ],
