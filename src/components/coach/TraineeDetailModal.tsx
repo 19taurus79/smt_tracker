@@ -75,37 +75,42 @@ export function TraineeDetailModal({ trainee, open, onOpenChange }: TraineeDetai
       case "titan":
         return {
           bg: "bg-amber-500/15",
-          border: "border-amber-500/40",
+          border: "border-amber-500/30",
           text: "text-amber-300",
-          label: trainee.tierLabel || "Титан Сили ⚡",
+          dot: "bg-amber-400 animate-pulse shadow-sm shadow-amber-400/50",
+          label: "Титан Сили ⚡",
         };
       case "iron_pro":
         return {
           bg: "bg-cyan-500/15",
-          border: "border-cyan-500/40",
+          border: "border-cyan-500/30",
           text: "text-cyan-300",
-          label: trainee.tierLabel || "Залізний Профі 🦾",
+          dot: "bg-cyan-400 animate-pulse shadow-sm shadow-cyan-400/50",
+          label: "Залізний Профі 🦾",
         };
       case "power_master":
         return {
           bg: "bg-emerald-500/15",
-          border: "border-emerald-500/40",
+          border: "border-emerald-500/30",
           text: "text-emerald-300",
-          label: trainee.tierLabel || "Майстер Потужності 💥",
+          dot: "bg-emerald-400 animate-pulse shadow-sm shadow-emerald-400/50",
+          label: "Майстер Потужності 💥",
         };
       case "lead":
         return {
           bg: "bg-rose-500/15",
-          border: "border-rose-500/40",
+          border: "border-rose-500/30",
           text: "text-rose-300",
+          dot: "bg-rose-400 animate-ping",
           label: "Новий Лід 🔥",
         };
       default:
         return {
           bg: "bg-slate-500/15",
-          border: "border-slate-500/40",
+          border: "border-slate-500/30",
           text: "text-slate-300",
-          label: trainee.tierLabel || "Активний Атлет 🏋️",
+          dot: "bg-slate-400",
+          label: "Активний Атлет 🏋️",
         };
     }
   };
@@ -113,7 +118,7 @@ export function TraineeDetailModal({ trainee, open, onOpenChange }: TraineeDetai
   const tierInfo = getTierColorInfo(trainee.tierKey);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange} className="max-w-xl">
       <DialogHeader>
         <DialogTitle onClose={() => onOpenChange(false)}>
           <div className="flex items-center gap-3">
@@ -147,13 +152,13 @@ export function TraineeDetailModal({ trainee, open, onOpenChange }: TraineeDetai
         </DialogDescription>
       </DialogHeader>
 
-      <div className="space-y-4 my-2 max-h-[72vh] overflow-y-auto pr-1 pb-4">
+      <div className="space-y-3.5 my-1 max-h-[72vh] overflow-y-auto pr-0.5 pb-2">
         {/* ======================================================== */}
         {/* BENTO GRID: Атлетичний статус та метрики підопічного    */}
         {/* ======================================================== */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {/* Bento 1: Индекс атлетичности */}
-          <div className="p-3.5 rounded-2xl bg-gradient-to-br from-slate-900/90 to-slate-950 border border-white/10 flex flex-col justify-between space-y-2">
+          <div className="p-3 rounded-2xl bg-gradient-to-br from-slate-900/90 to-slate-950 border border-white/10 flex flex-col justify-between space-y-2">
             <div className="flex items-center justify-between text-slate-400">
               <span className="text-[10px] font-bold uppercase tracking-wider">Індекс сили</span>
               <Trophy className="h-3.5 w-3.5 text-amber-400" />
@@ -163,14 +168,17 @@ export function TraineeDetailModal({ trainee, open, onOpenChange }: TraineeDetai
                 <span className="text-2xl font-black text-white font-mono">{trainee.athleticScore}</span>
                 <span className="text-[10px] text-slate-500 font-mono">/100</span>
               </div>
-              <span className={`inline-block mt-1 text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${tierInfo.bg} ${tierInfo.border} ${tierInfo.text}`}>
-                {isBlocked ? "Блок 🚫" : tierInfo.label}
-              </span>
+              <div className={`inline-flex items-center gap-1.5 mt-1.5 px-2.5 py-1 rounded-xl border backdrop-blur-sm ${tierInfo.bg} ${tierInfo.border}`}>
+                <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${tierInfo.dot}`} />
+                <span className={`text-[10px] font-black tracking-wide ${tierInfo.text}`}>
+                  {isBlocked ? "Блок 🚫" : tierInfo.label}
+                </span>
+              </div>
             </div>
           </div>
 
           {/* Bento 2: Прогресс в программе СМТ */}
-          <div className="p-3.5 rounded-2xl bg-gradient-to-br from-slate-900/90 to-slate-950 border border-white/10 flex flex-col justify-between space-y-2">
+          <div className="p-3 rounded-2xl bg-gradient-to-br from-slate-900/90 to-slate-950 border border-white/10 flex flex-col justify-between space-y-2">
             <div className="flex items-center justify-between text-slate-400">
               <span className="text-[10px] font-bold uppercase tracking-wider">Прогрес СМТ</span>
               <Dumbbell className="h-3.5 w-3.5 text-emerald-400" />
@@ -193,7 +201,7 @@ export function TraineeDetailModal({ trainee, open, onOpenChange }: TraineeDetai
           </div>
 
           {/* Bento 3: Текущий вес и динамика */}
-          <div className="p-3.5 rounded-2xl bg-gradient-to-br from-slate-900/90 to-slate-950 border border-white/10 flex flex-col justify-between space-y-2">
+          <div className="p-3 rounded-2xl bg-gradient-to-br from-slate-900/90 to-slate-950 border border-white/10 flex flex-col justify-between space-y-2">
             <div className="flex items-center justify-between text-slate-400">
               <span className="text-[10px] font-bold uppercase tracking-wider">Вага тіла</span>
               <Scale className="h-3.5 w-3.5 text-cyan-400" />
@@ -222,7 +230,7 @@ export function TraineeDetailModal({ trainee, open, onOpenChange }: TraineeDetai
           </div>
 
           {/* Bento 4: Быстрая связь в Telegram */}
-          <div className="p-3.5 rounded-2xl bg-gradient-to-br from-slate-900/90 to-slate-950 border border-white/10 flex flex-col justify-between space-y-2">
+          <div className="p-3 rounded-2xl bg-gradient-to-br from-slate-900/90 to-slate-950 border border-white/10 flex flex-col justify-between space-y-2">
             <div className="flex items-center justify-between text-slate-400">
               <span className="text-[10px] font-bold uppercase tracking-wider">Зв'язок</span>
               <MessageCircle className="h-3.5 w-3.5 text-cyan-400" />
@@ -327,11 +335,11 @@ export function TraineeDetailModal({ trainee, open, onOpenChange }: TraineeDetai
                       </div>
                     </div>
 
-                    <div className="text-right">
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-cyan-500/15 border border-cyan-500/30 text-cyan-300 font-mono font-bold text-xs">
-                        <span>{w.athleticScore}</span>
-                        <span className="text-[10px] text-cyan-400/70">/ 100</span>
-                      </span>
+                    <div className="shrink-0 text-right">
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-950/80 border border-white/10 text-xs font-mono font-bold whitespace-nowrap shadow-sm">
+                        <span className="text-amber-300 font-black text-xs">{w.athleticScore}</span>
+                        <span className="text-[10px] text-slate-400 font-medium">/ 100</span>
+                      </div>
                     </div>
                   </div>
 
@@ -493,13 +501,13 @@ export function TraineeDetailModal({ trainee, open, onOpenChange }: TraineeDetai
       </div>
 
       {/* ======================================================== */}
-      {/* ФУТЕР МОДАЛКИ: Гармонійні кнопки однакової висоти h-10   */}
+      {/* ФУТЕР МОДАЛКИ: Гармонійні кнопки однакової висоти h-9    */}
       {/* ======================================================== */}
-      <div className="pt-3 border-t border-white/10 flex items-center justify-between gap-2.5">
-        <div className="flex items-center gap-2">
+      <div className="pt-3 border-t border-white/10 flex items-center justify-between gap-2 shrink-0">
+        <div className="flex items-center gap-1.5 min-w-0">
           <button
             type="button"
-            className={`h-9 px-3 rounded-xl border text-xs font-semibold transition-all flex items-center gap-1.5 ${
+            className={`h-9 px-2.5 sm:px-3 rounded-xl border text-xs font-semibold transition-all flex items-center gap-1.5 shrink-0 ${
               isBlocked
                 ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20"
                 : "border-white/10 bg-white/5 text-slate-300 hover:text-white hover:bg-white/10"
@@ -514,20 +522,21 @@ export function TraineeDetailModal({ trainee, open, onOpenChange }: TraineeDetai
           >
             {isBlocked ? (
               <>
-                <Unlock className="h-3.5 w-3.5 text-emerald-400" />
+                <Unlock className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
                 <span>Розблокувати</span>
               </>
             ) : (
               <>
-                <Ban className="h-3.5 w-3.5 text-amber-400" />
-                <span>Заблокувати</span>
+                <Ban className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+                <span className="hidden sm:inline">Заблокувати</span>
+                <span className="sm:hidden">Блок</span>
               </>
             )}
           </button>
 
           <button
             type="button"
-            className="h-9 px-3 rounded-xl border border-rose-500/20 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 text-xs font-semibold transition-all flex items-center gap-1.5"
+            className="h-9 px-2.5 sm:px-3 rounded-xl border border-rose-500/20 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 text-xs font-semibold transition-all flex items-center gap-1.5 shrink-0"
             onClick={() => {
               if (confirm(`Ви дійсно бажаєте видалити атлета ${trainee.name}?`)) {
                 deleteTrainee(trainee.id);
@@ -535,7 +544,7 @@ export function TraineeDetailModal({ trainee, open, onOpenChange }: TraineeDetai
               }
             }}
           >
-            <Trash2 className="h-3.5 w-3.5 text-rose-400" />
+            <Trash2 className="h-3.5 w-3.5 text-rose-400 shrink-0" />
             <span>Видалити</span>
           </button>
         </div>
@@ -543,7 +552,7 @@ export function TraineeDetailModal({ trainee, open, onOpenChange }: TraineeDetai
         <button
           type="button"
           onClick={() => onOpenChange(false)}
-          className="h-9 px-5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition-colors shadow-md shadow-emerald-500/20"
+          className="h-9 px-4 sm:px-5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs transition-colors shadow-md shadow-emerald-500/20 shrink-0 min-w-[76px]"
         >
           {t.common.close}
         </button>

@@ -8,9 +8,10 @@ interface DialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   children: React.ReactNode;
+  className?: string;
 }
 
-export function Dialog({ open, onOpenChange, children }: DialogProps) {
+export function Dialog({ open, onOpenChange, children, className }: DialogProps) {
   React.useEffect(() => {
     if (open) {
       document.body.style.overflow = "hidden";
@@ -25,14 +26,19 @@ export function Dialog({ open, onOpenChange, children }: DialogProps) {
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/85 backdrop-blur-md animate-in fade-in transition-opacity"
         onClick={() => onOpenChange(false)}
       />
-      {/* Content Container */}
-      <div className="relative z-50 w-full max-w-lg max-h-[92vh] flex flex-col rounded-2xl sm:rounded-3xl border border-white/10 bg-slate-900/98 p-4 sm:p-6 shadow-2xl backdrop-blur-2xl animate-in zoom-in-95 overflow-hidden">
+      {/* Content Container: Removed heavy double-padding on mobile */}
+      <div
+        className={cn(
+          "relative z-50 w-full max-w-lg max-h-[92vh] flex flex-col rounded-2xl sm:rounded-3xl border border-white/10 bg-slate-900/98 p-3.5 sm:p-5 shadow-2xl backdrop-blur-2xl animate-in zoom-in-95 overflow-hidden",
+          className
+        )}
+      >
         {children}
       </div>
     </div>
@@ -58,9 +64,9 @@ export function DialogTitle({
   ...props
 }: React.HTMLAttributes<HTMLHeadingElement> & { onClose?: () => void }) {
   return (
-    <div className="flex items-center justify-between">
+    <div className="flex items-center justify-between gap-2">
       <h2
-        className={cn("text-lg sm:text-xl font-bold tracking-tight text-white", className)}
+        className={cn("text-lg sm:text-xl font-bold tracking-tight text-white min-w-0 flex-1", className)}
         {...props}
       >
         {children}
@@ -68,7 +74,7 @@ export function DialogTitle({
       {onClose && (
         <button
           onClick={onClose}
-          className="rounded-full p-1 text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+          className="rounded-full p-1 text-slate-400 hover:text-white hover:bg-white/10 transition-colors shrink-0 ml-2"
         >
           <X className="h-5 w-5" />
         </button>
