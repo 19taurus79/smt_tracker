@@ -23,11 +23,13 @@ import {
   Trash2,
   X,
   MessageCircle,
+  BarChart3,
 } from "lucide-react";
 import { useCoachStore, TraineeProfile, TraineeStatusFilter } from "@/lib/store/useCoachStore";
 import { useSettingsStore } from "@/lib/store/useSettingsStore";
 import { isCoachAccount, MASTER_COACH_USERNAME, BOT_USERNAME } from "@/lib/auth/roles";
 import { TraineeDetailModal } from "@/components/coach/TraineeDetailModal";
+import { CoachAnalyticsView } from "@/components/coach/CoachAnalyticsView";
 import { Dialog, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/lib/i18n";
@@ -88,6 +90,7 @@ export default function CoachDashboardPage() {
 
   const [selectedTrainee, setSelectedTrainee] = useState<TraineeProfile | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<"roster" | "analytics">("analytics");
 
   // Link copy state
   const [copiedLink, setCopiedLink] = useState(false);
@@ -348,8 +351,40 @@ export default function CoachDashboardPage() {
         </div>
       </div>
 
-      {/* Toolbar: Search & Clean Filter Pills */}
-      <div className="space-y-2.5">
+      {/* Mode Switcher: Roster vs Analytics */}
+      <div className="flex p-1 rounded-2xl bg-slate-900/90 border border-white/10 shadow-lg backdrop-blur-md">
+        <button
+          type="button"
+          onClick={() => setViewMode("roster")}
+          className={`flex-1 h-9 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-2 ${
+            viewMode === "roster"
+              ? "bg-white/20 text-white shadow-md border border-white/20"
+              : "text-slate-400 hover:text-white"
+          }`}
+        >
+          <Users className="h-4 w-4" />
+          <span>Картка команди ({totalTrainees})</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => setViewMode("analytics")}
+          className={`flex-1 h-9 rounded-xl text-xs sm:text-sm font-bold transition-all flex items-center justify-center gap-2 ${
+            viewMode === "analytics"
+              ? "bg-emerald-500 text-slate-950 font-black shadow-md shadow-emerald-500/25 border border-emerald-400"
+              : "text-slate-400 hover:text-white"
+          }`}
+        >
+          <BarChart3 className="h-4 w-4" />
+          <span>Аналітичний Дашборд</span>
+        </button>
+      </div>
+
+      {viewMode === "analytics" ? (
+        <CoachAnalyticsView onOpenDetail={handleOpenDetail} />
+      ) : (
+        <>
+          {/* Toolbar: Search & Clean Filter Pills */}
+          <div className="space-y-2.5">
         <div className="relative">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <input
@@ -695,6 +730,8 @@ export default function CoachDashboardPage() {
             );
           })}
         </div>
+      )}
+        </>
       )}
 
       {/* Trainee Detail Dossier Modal */}
