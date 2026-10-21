@@ -8,15 +8,17 @@ import { useWorkoutStore } from "@/lib/store/useWorkoutStore";
 import { WorkoutCard } from "@/components/program/WorkoutCard";
 import { WorkoutReportModal } from "@/components/program/WorkoutReportModal";
 import { InitialSetupModal } from "@/components/program/InitialSetupModal";
+import { PrepCalculatorModal } from "@/components/prep/PrepCalculatorModal";
 import { Button } from "@/components/ui/button";
 import { useTranslation } from "@/lib/i18n";
 
 export default function ProgramPage() {
   const router = useRouter();
   const { workouts, restartWorkout, startWorkout } = useWorkoutStore();
-  const { t } = useTranslation();
+  const { t, language } = useTranslation();
   const [selectedMkc, setSelectedMkc] = useState<number | "all">("all");
   const [isSetupOpen, setIsSetupOpen] = useState(false);
+  const [isPrepCalcOpen, setIsPrepCalcOpen] = useState(false);
   const [selectedReportWorkout, setSelectedReportWorkout] = useState<WorkoutSession | null>(null);
   const [mounted, setMounted] = useState(false);
 
@@ -53,15 +55,32 @@ export default function ProgramPage() {
           </p>
         </div>
 
-        <Button
-          variant="accent"
-          size="sm"
-          className="font-bold self-start sm:self-auto"
-          onClick={() => setIsSetupOpen(true)}
-        >
-          <Sparkles className="h-4 w-4 mr-1.5" />
-          <span>{t.program.setupButton}</span>
-        </Button>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <Button
+            variant="outline"
+            size="sm"
+            className="border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/10 text-xs font-semibold"
+            onClick={() => setIsPrepCalcOpen(true)}
+          >
+            <Sparkles className="h-4 w-4 mr-1.5 text-cyan-400" />
+            <span>
+              {language === "uk"
+                ? "Калькулятор старту"
+                : language === "en"
+                ? "Start Calculator"
+                : "Калькулятор старта"}
+            </span>
+          </Button>
+
+          <Button
+            variant="accent"
+            size="sm"
+            className="font-bold text-xs"
+            onClick={() => setIsSetupOpen(true)}
+          >
+            <span>{t.program.setupButton}</span>
+          </Button>
+        </div>
       </div>
 
       {/* Microcycle Filter Tabs */}
@@ -135,6 +154,7 @@ export default function ProgramPage() {
 
       {/* Modals */}
       <InitialSetupModal isOpen={isSetupOpen} onClose={() => setIsSetupOpen(false)} />
+      <PrepCalculatorModal open={isPrepCalcOpen} onOpenChange={setIsPrepCalcOpen} />
       <WorkoutReportModal
         open={Boolean(selectedReportWorkout)}
         onOpenChange={(open) => !open && setSelectedReportWorkout(null)}

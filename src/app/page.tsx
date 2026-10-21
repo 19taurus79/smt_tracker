@@ -15,6 +15,7 @@ import {
   Zap,
   Eye,
   ChevronRight,
+  RotateCcw,
 } from "lucide-react";
 import { useWorkoutStore } from "@/lib/store/useWorkoutStore";
 import { useBodyStore } from "@/lib/store/useBodyStore";
@@ -40,24 +41,67 @@ import {
   getTierColor,
   getTierLabel,
 } from "@/lib/scoring/athleticScore";
+import { usePrepStore } from "@/lib/store/usePrepStore";
+import { PrepWorkoutModal } from "@/components/prep/PrepWorkoutModal";
+import { PrepCalculatorModal } from "@/components/prep/PrepCalculatorModal";
+import { DEFAULT_EXERCISES } from "@/lib/smt/generator";
 
 export default function HomePage() {
   const router = useRouter();
   const { t, language } = useTranslation();
   const {
     workouts,
+    exercises,
+    initializeProgram,
     activeWorkoutId,
     setViewingWorkoutId,
     openWarmupModal,
   } = useWorkoutStore();
 
   const { measurements } = useBodyStore();
-  const { gender, userAge } = useSettingsStore();
+  const { gender, userAge, weightIncrementKg } = useSettingsStore();
+  const {
+    sessions: prepSessions,
+    prepWidgetDismissed,
+    setPrepWidgetDismissed,
+    hasAppliedPrepWeights,
+    setHasAppliedPrepWeights,
+    getSuggestedSmtWeights,
+  } = usePrepStore();
 
   const [mounted, setMounted] = useState(false);
   const [isSetupOpen, setIsSetupOpen] = useState(false);
   const [isBodyModalOpen, setIsBodyModalOpen] = useState(false);
   const [selectedReportWorkout, setSelectedReportWorkout] = useState<WorkoutSession | null>(null);
+  const [isPrepWorkoutOpen, setIsPrepWorkoutOpen] = useState(false);
+  const [isPrepCalcOpen, setIsPrepCalcOpen] = useState(false);
+  const [justApplied, setJustApplied] = useState(false);
+
+  const suggestedWeights = getSuggestedSmtWeights(weightIncrementKg || 2.5);
+  const hasCompletedAnyPrep = prepSessions.some((s) => s.completed);
+
+  const handleApplySuggestedWeights = () => {
+    const baseList = exercises.length > 0 ? exercises : DEFAULT_EXERCISES;
+    const mapping: Record<string, { oneRepMax: number; startWeight: number }> = {
+      bench_press: suggestedWeights.benchPress,
+      close_grip_bench: suggestedWeights.closeGripBench,
+      pull_ups: suggestedWeights.pullUps,
+      biceps_curl: suggestedWeights.bicepsCurl,
+      squat: suggestedWeights.squat,
+      ohp: suggestedWeights.ohp,
+    };
+    const updatedExercises = baseList.map((ex) => {
+      const target = mapping[ex.id];
+      if (target) {
+        return { ...ex, oneRepMax: target.oneRepMax, customStartWeight: target.startWeight };
+      }
+      return ex;
+    });
+    initializeProgram(updatedExercises, weightIncrementKg || 2.5);
+    setHasAppliedPrepWeights(true);
+    setJustApplied(true);
+    setTimeout(() => setJustApplied(false), 2500);
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -224,6 +268,125 @@ export default function HomePage() {
               </Button>
             </div>
           </CardContent>
+        </Card>
+      )}
+
+      {/* Preparatory Adaptation Cycle Widget (Bento) */}
+      {!prepWidgetDismissed && (
+        <Card className="relative overflow-hidden border-cyan-500/30 bg-gradient-to-r from-slate-900 via-slate-900 to-cyan-950/30 p-3.5 sm:p-5 shadow-xl">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="border-cyan-500/40 text-cyan-300 bg-cyan-500/10 text-[10px]">
+                  🌱 {language === "uk" ? "Адаптація 1–2 тижні" : language === "en" ? "Adaptation 1–2 wks" : "Адаптация 1–2 нед"}
+                </Badge>
+                <span className="text-[11px] text-slate-400">
+                  {prepSessions.filter((s) => s.completed).length}/6 {language === "uk" ? "тренувань пройдено" : language === "en" ? "sessions done" : "тренировок пройдено"}
+                </span>
+                {hasAppliedPrepWeights && (
+                  <Badge variant="outline" className="border-emerald-500/40 text-emerald-300 bg-emerald-500/10 text-[10px]">
+                    ✓ {language === "uk" ? "Синхронізовано з СМТ-1" : language === "en" ? "Synced" : "Синхронизировано"}
+                  </Badge>
+                )}
+              </div>
+              <h3 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-cyan-400" />
+                <span>
+                  {language === "uk"
+                    ? "Вводний цикл: підготовка серця, зв'язок та розрахунок ваг"
+                    : language === "en"
+                    ? "Prep Cycle: Cardio conditioning & weight calibration"
+                    : "Вводный цикл: подготовка сердца, связок и расчет весов"}
+                </span>
+              </h3>
+              <p className="text-xs text-slate-400 max-w-xl">
+                {language === "uk"
+                  ? "СМТ-1 має екстремальну щільність (паузи 30с). Пройдіть 3–6 вводних тренувань (жим, тяга, присед 4×10) зі скороченням пауз з 90с до 30с."
+                  : language === "en"
+                  ? "SMT-1 is high density (strict 30s rest). Complete 3–6 prep sessions (bench, pull, squat 4×10) reducing rest from 90s to 30s."
+                  : "СМТ-1 обладает экстремальной плотностью (паузы 30с). Пройдите 3–6 вводных тренировок (жим, тяга, присед 4×10) с сокращением пауз с 90с до 30с."}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                variant="accent"
+                size="sm"
+                className="bg-cyan-500 text-slate-950 hover:bg-cyan-400 font-bold text-xs"
+                onClick={() => setIsPrepWorkoutOpen(true)}
+              >
+                <Play className="h-3.5 w-3.5 mr-1 fill-current" />
+                <span>{language === "uk" ? "Тренування" : language === "en" ? "Workout" : "Тренировка"}</span>
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/10 text-xs font-semibold"
+                onClick={() => setIsPrepCalcOpen(true)}
+              >
+                <Zap className="h-3.5 w-3.5 mr-1 text-cyan-400" />
+                <span>{language === "uk" ? "Калькулятор" : language === "en" ? "Calculator" : "Калькулятор"}</span>
+              </Button>
+
+              <button
+                type="button"
+                onClick={() => setPrepWidgetDismissed(true)}
+                className="h-8 w-8 rounded-lg bg-white/5 text-slate-400 hover:text-white flex items-center justify-center text-xs"
+                title={language === "uk" ? "Сховати віджет" : language === "en" ? "Dismiss" : "Скрыть виджет"}
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+
+          {/* Real-time Suggested Weights Strip (shown when at least 1 session is completed) */}
+          {hasCompletedAnyPrep && (
+            <div className="mt-3 pt-3 border-t border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div className="space-y-0.5">
+                <span className="text-[10px] text-cyan-300 font-bold uppercase tracking-wider block">
+                  💡 {language === "uk" ? "Автоматично розраховані стартові ваги СМТ-1:" : language === "en" ? "Auto-calculated starting loads:" : "Автоматически рассчитанные стартовые веса:"}
+                </span>
+                <div className="text-xs text-slate-200 flex flex-wrap gap-2">
+                  <span>Жим: <strong className="text-emerald-400">{suggestedWeights.benchPress.startWeight} кг</strong></span>
+                  <span>•</span>
+                  <span>Тяга: <strong className="text-purple-400">{suggestedWeights.pullUps.startWeight} кг</strong></span>
+                  <span>•</span>
+                  <span>Присед: <strong className="text-purple-400">{suggestedWeights.squat.startWeight} кг</strong></span>
+                  <span>•</span>
+                  <span>Біцепс: <strong className="text-cyan-400">{suggestedWeights.bicepsCurl.startWeight} кг</strong></span>
+                </div>
+              </div>
+
+              <div>
+                {justApplied ? (
+                  <Badge className="bg-emerald-500 text-slate-950 font-bold text-xs py-1 px-2.5">
+                    ✅ {language === "uk" ? "Застосовано до СМТ-1!" : language === "en" ? "Applied to SMT-1!" : "Применено к СМТ-1!"}
+                  </Badge>
+                ) : hasAppliedPrepWeights ? (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-white/10 text-slate-300 hover:text-white text-xs h-8"
+                    onClick={handleApplySuggestedWeights}
+                  >
+                    <RotateCcw className="h-3 w-3 mr-1" />
+                    <span>{language === "uk" ? "Оновити ваги" : language === "en" ? "Re-apply" : "Обновить веса"}</span>
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    variant="accent"
+                    className="bg-gradient-to-r from-emerald-500 to-cyan-500 text-slate-950 font-bold text-xs shadow-md shadow-emerald-500/20 h-8"
+                    onClick={handleApplySuggestedWeights}
+                  >
+                    <Sparkles className="h-3.5 w-3.5 mr-1" />
+                    <span>{language === "uk" ? "Застосувати у 1 клік" : language === "en" ? "Apply in 1-Click" : "Применить в 1 клик"}</span>
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
         </Card>
       )}
 
@@ -412,6 +575,15 @@ export default function HomePage() {
         open={Boolean(selectedReportWorkout)}
         onOpenChange={(open) => !open && setSelectedReportWorkout(null)}
         workout={selectedReportWorkout}
+      />
+      <PrepWorkoutModal
+        open={isPrepWorkoutOpen}
+        onOpenChange={setIsPrepWorkoutOpen}
+        onOpenCalculator={() => setIsPrepCalcOpen(true)}
+      />
+      <PrepCalculatorModal
+        open={isPrepCalcOpen}
+        onOpenChange={setIsPrepCalcOpen}
       />
     </div>
   );

@@ -17,6 +17,7 @@ import {
   ArrowRight,
   ShieldCheck,
   Scale,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -34,13 +35,14 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
   const content = getHelpContent(language);
 
   const [activeTab, setActiveTab] = useState<
-    "method" | "exercises" | "cycles" | "progression" | "app"
+    "method" | "prep" | "exercises" | "cycles" | "progression" | "app"
   >("method");
 
   if (!isOpen) return null;
 
   const tabIcons: Record<string, any> = {
     method: Flame,
+    prep: Sparkles,
     exercises: Dumbbell,
     cycles: Layers,
     progression: TrendingUp,
@@ -103,6 +105,28 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
           {/* TAB 1: МЕТОДИКА СМТ */}
           {activeTab === "method" && (
             <div className="space-y-4">
+              {/* Critical Safety Warning Banner */}
+              {content.method.warningTitle && (
+                <div className="rounded-xl border border-amber-500/40 bg-amber-950/20 p-4 space-y-2">
+                  <h3 className="font-bold text-sm sm:text-base text-amber-400 flex items-center gap-2">
+                    <AlertTriangle className="h-4 w-4 shrink-0 text-amber-400" />
+                    {content.method.warningTitle}
+                  </h3>
+                  <p className="text-xs sm:text-sm text-amber-200/90 leading-relaxed">
+                    {content.method.warningDesc}
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="border-amber-500/30 text-amber-300 hover:bg-amber-500/10 text-xs mt-1"
+                    onClick={() => setActiveTab("prep")}
+                  >
+                    <span>Перейти до Підготовчого циклу</span>
+                    <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
+                  </Button>
+                </div>
+              )}
+
               <div className="rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-4">
                 <h3 className="font-bold text-sm sm:text-base text-emerald-400 flex items-center gap-2 mb-2">
                   <Flame className="h-4 w-4" />
@@ -142,7 +166,81 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
             </div>
           )}
 
-          {/* TAB 2: УПРАЖНЕНИЯ И СУПЕРСЕТЫ */}
+          {/* TAB 2: ПІДГОТОВЧИЙ ЦИКЛ (1-2 ТИЖНІ) */}
+          {activeTab === "prep" && (
+            <div className="space-y-4">
+              <div className="rounded-xl border border-cyan-500/30 bg-cyan-950/20 p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-bold text-sm sm:text-base text-cyan-400 flex items-center gap-2">
+                    <Sparkles className="h-4 w-4" />
+                    {content.prep.title}
+                  </h3>
+                  <Badge className="bg-cyan-500/20 text-cyan-300 border-cyan-500/30">
+                    {content.prep.badge}
+                  </Badge>
+                </div>
+                <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
+                  {content.prep.desc}
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-white/10 bg-slate-900/40 p-4 space-y-1.5">
+                <h4 className="font-bold text-white text-xs sm:text-sm">{content.prep.whyTitle}</h4>
+                <p className="text-xs text-slate-300 whitespace-pre-line leading-relaxed">
+                  {content.prep.whyDesc}
+                </p>
+              </div>
+
+              {/* 3 Exercises Scheme */}
+              <div className="space-y-2">
+                <h4 className="font-bold text-white text-xs sm:text-sm">{content.prep.schemeTitle}</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  {content.prep.exercises.map((ex, idx) => (
+                    <div
+                      key={idx}
+                      className="rounded-xl border border-white/10 bg-slate-900/60 p-3.5 space-y-2"
+                    >
+                      <div className="font-bold text-white text-xs leading-snug">{ex.name}</div>
+                      <Badge variant="outline" className="text-emerald-400 border-emerald-500/30 text-[10px]">
+                        {ex.scheme}
+                      </Badge>
+                      <p className="text-[11px] text-slate-400 leading-relaxed">{ex.notes}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Rest Progression Table */}
+              <div className="rounded-xl border border-white/10 bg-slate-900/50 p-4 space-y-3">
+                <h4 className="font-bold text-white text-xs sm:text-sm flex items-center gap-2">
+                  <Timer className="h-4 w-4 text-cyan-400" />
+                  {content.prep.restProgressionTitle}
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  {content.prep.restProgression.map((item, idx) => (
+                    <div
+                      key={idx}
+                      className="bg-slate-950/60 rounded-xl p-3 border border-white/5 space-y-1"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-slate-200">{item.workout}</span>
+                        <span className="font-black text-cyan-400">{item.rest}</span>
+                      </div>
+                      <p className="text-[11px] text-slate-400">{item.desc}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Calculation Guide */}
+              <div className="rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-4 space-y-2">
+                <h4 className="font-bold text-white text-xs sm:text-sm">{content.prep.calcTitle}</h4>
+                <p className="text-xs text-slate-300 leading-relaxed">{content.prep.calcDesc}</p>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: УПРАЖНЕНИЯ И СУПЕРСЕТЫ */}
           {activeTab === "exercises" && (
             <div className="space-y-4">
               <p className="text-xs text-slate-400">{content.exercises.intro}</p>
@@ -197,6 +295,44 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
                     )}
                   </div>
                 ))}
+              </div>
+
+              {/* Substitutions & Equivalence Guide */}
+              <div className="rounded-xl border border-white/10 bg-slate-900/50 p-4 space-y-3 mt-4">
+                <h4 className="font-bold text-white text-xs sm:text-sm text-amber-300">
+                  {content.exercises.substitutionsTitle}
+                </h4>
+                <p className="text-xs text-slate-400">{content.exercises.substitutionsIntro}</p>
+
+                <div className="space-y-2.5">
+                  {content.exercises.substitutions.map((sub, idx) => (
+                    <div
+                      key={idx}
+                      className="rounded-lg bg-slate-950/70 border border-white/5 p-3 space-y-1 text-xs"
+                    >
+                      <div className="font-bold text-white flex items-center gap-1.5">
+                        <span className="text-slate-400">Вправа:</span>
+                        <span>{sub.original}</span>
+                      </div>
+                      <div className="text-cyan-300 font-medium">
+                        ⇄ <span className="text-slate-300">{sub.alternatives}</span>
+                      </div>
+                      <div className="text-[11px] text-slate-400 italic pt-0.5">
+                        Чому підходить: {sub.reason}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* How to Configure in App */}
+              <div className="rounded-xl border border-emerald-500/20 bg-emerald-950/15 p-4 space-y-1.5">
+                <h4 className="font-bold text-emerald-400 text-xs sm:text-sm">
+                  {content.exercises.calcHowToTitle}
+                </h4>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  {content.exercises.calcHowToDesc}
+                </p>
               </div>
             </div>
           )}

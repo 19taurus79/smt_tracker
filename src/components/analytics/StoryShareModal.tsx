@@ -1075,7 +1075,7 @@ function drawRestStrip(
   ctx.font = "600 26px system-ui, -apple-system, sans-serif";
   ctx.textAlign = "center";
   ctx.fillText(
-    `⏱  ${timeLabel}: ${durationStr}    •    ⚡  ${restLabel}    •    🔥  СМТ-1 (Казаков)`,
+    `⏱  ${timeLabel}: ${durationStr}    •    ⚡  ${restLabel}    •    🔥  СМТ-1 (High-Density)`,
     x + w / 2,
     y + 54
   );
@@ -1197,7 +1197,11 @@ function drawPromoBanner(
   const y = 1645;
   const w = 920;
   const h = 240;
-  const qrSize = 196;
+  // qrSize + labelHeight(18) + labelGap(14) + top/bot padding(20*2) must fit in h=240
+  // 172 + 18 + 14 + 40 = 244 → shift qrY up 2px → fine
+  const qrSize = 172;
+  const labelH = 18;  // font-size approx cap height
+  const labelGap = 12;
   const qrPad = 22;
 
   // Banner background
@@ -1217,22 +1221,24 @@ function drawPromoBanner(
   if (qrImg) {
     // --- Layout with QR: [QR left] [text right] ---
     const qrX = x + qrPad;
-    const qrY = y + (h - qrSize) / 2;
+    // Center QR+label block vertically inside banner
+    const blockH = qrSize + labelGap + labelH;
+    const qrY = y + Math.floor((h - blockH) / 2);
 
     // QR background pill
     ctx.fillStyle = "rgba(255,255,255,0.06)";
     ctx.strokeStyle = "rgba(255,255,255,0.15)";
     ctx.lineWidth = 2;
-    roundRect(ctx, qrX - 10, qrY - 10, qrSize + 20, qrSize + 20, 20, true, true);
+    roundRect(ctx, qrX - 8, qrY - 8, qrSize + 16, qrSize + 16, 18, true, true);
 
     // Draw QR image
     ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
 
-    // Small "Scan" label under QR
+    // Small "Scan" label under QR — positioned exactly inside banner
     ctx.fillStyle = "rgba(255,255,255,0.45)";
-    ctx.font = "bold 20px system-ui, -apple-system, sans-serif";
+    ctx.font = "bold 18px system-ui, -apple-system, sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText("SCAN ME", qrX + qrSize / 2, qrY + qrSize + 28);
+    ctx.fillText("▼ SCAN ME", qrX + qrSize / 2, qrY + qrSize + labelGap + labelH);
 
     // Right side text (takes remaining width)
     const textX = qrX + qrSize + qrPad + 24;

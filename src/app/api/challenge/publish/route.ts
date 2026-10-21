@@ -74,7 +74,7 @@ export async function POST(req: Request) {
       `🔥 <b>НОВИЙ РЕЗУЛЬТАТ У SMT CHALLENGE!</b>`,
       ``,
       `👤 <b>Атлет:</b> ${athleteDisplay} ${athleteUsername ? `(@${athleteUsername.replace("@", "")})` : ""}`,
-      `🏋️‍♂️ <b>Програма:</b> СМТ-1 (Майк Казаков / Steelfactor)`,
+      `🏋️‍♂️ <b>Програма:</b> СМТ-1 (High-Density Training)`,
       `📅 <b>Тренування:</b> #${workoutNumber} (МКЦ-${microcycle})`,
       `⏱ <b>Час:</b> ${timeFormatted} (відпочинок суворо 30с)`,
       `📦 <b>Тоннаж:</b> ${tonnageKg.toLocaleString()} кг`,
