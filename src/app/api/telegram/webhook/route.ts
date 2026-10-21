@@ -92,6 +92,32 @@ export async function POST(req: Request) {
       const isStart = text.startsWith("/start");
       const lang = from.language_code === "uk" ? "uk" : from.language_code === "ru" ? "ru" : "uk";
 
+      // Handle 1-click PWA Linking from standalone Home Screen app
+      if (text.startsWith("/start link_")) {
+        const sid = text.replace("/start link_", "").trim();
+        const linkUrl = `${APP_URL}/settings?tg_auth=1&id=${from.id}&first_name=${encodeURIComponent(from.first_name)}&username=${encodeURIComponent(from.username || "")}&sid=${sid}`;
+
+        await tgApi("sendMessage", {
+          chat_id: chat.id,
+          text:
+            lang === "uk"
+              ? `🔗 <b>Підключення Telegram до вашого PWA на телефоні!</b>\n\nНатисніть кнопку нижче, щоб відкрити PWA-трекер та завершити авторизацію:`
+              : `🔗 <b>Подключение Telegram к вашему PWA на телефоне!</b>\n\nНажмите кнопку ниже, чтобы открыть PWA-трекер и завершить авторизацию:`,
+          parse_mode: "HTML",
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: lang === "uk" ? "📱 Підтвердити в PWA" : "📱 Подтвердить в PWA",
+                  url: linkUrl,
+                },
+              ],
+            ],
+          },
+        });
+        return NextResponse.json({ ok: true });
+      }
+
       if (isStart) {
         const isSubscribed = await isUserSubscribed(from.id);
 

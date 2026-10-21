@@ -12,6 +12,18 @@ export interface BodyMeasurement {
 
 export type AppLanguage = "uk" | "en" | "ru";
 
+export type UserRole = "coach" | "trainee" | "guest";
+
+export interface LinkedTelegramAccount {
+  id: number;
+  firstName: string;
+  lastName?: string;
+  username?: string;
+  photoUrl?: string;
+  authDate: number;
+  isCoach?: boolean;
+}
+
 export interface AppSettings {
   language: AppLanguage;      // default: "uk"
   defaultRestSeconds: number; // e.g. 30
@@ -26,5 +38,7 @@ export interface AppSettings {
   gender?: "male" | "female"; // для точного индекса атлетичности
   userAge?: number;
   storyBotUsername?: string; // ник бота/канала для виральной плашки в Stories
+  linkedTelegramUser?: LinkedTelegramAccount | null;
+  userRole?: UserRole;
 }
 

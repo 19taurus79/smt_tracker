@@ -17,11 +17,16 @@ import {
   BookOpen,
   Smartphone,
   Sun,
-  Send,
   User,
   Globe,
   Share2,
+  Crown,
+  Link as LinkIcon,
+  Unlink,
+  ShieldCheck,
+  Send,
 } from "lucide-react";
+import { MASTER_COACH_USERNAME, isCoachAccount, generateTelegramLinkUrl } from "@/lib/auth/roles";
 import { useWorkoutStore } from "@/lib/store/useWorkoutStore";
 import { useBodyStore } from "@/lib/store/useBodyStore";
 import { useSettingsStore } from "@/lib/store/useSettingsStore";
@@ -64,6 +69,10 @@ export default function SettingsPage() {
     setUserAge,
     storyBotUsername,
     setStoryBotUsername,
+    linkedTelegramUser,
+    linkTelegramAccount,
+    unlinkTelegramAccount,
+    userRole,
   } = useSettingsStore();
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -72,6 +81,54 @@ export default function SettingsPage() {
 
   useEffect(() => {
     setMounted(true);
+
+    // 1. Direct login if opened inside Telegram TMA
+    if (typeof window !== "undefined" && window.Telegram?.WebApp?.initDataUnsafe?.user) {
+      const tgUser = window.Telegram.WebApp.initDataUnsafe.user;
+      const isCoach = isCoachAccount(tgUser.username, tgUser.id);
+      linkTelegramAccount({
+        id: tgUser.id,
+        firstName: tgUser.first_name,
+        lastName: tgUser.last_name,
+        username: tgUser.username,
+        authDate: Date.now(),
+        isCoach,
+      });
+      if (!isCoach) {
+        setCoachTelegramUsername(MASTER_COACH_USERNAME);
+      }
+    }
+
+    // 2. 1-click redirect from Telegram bot back into PWA
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("tg_auth") === "1") {
+        const id = Number(params.get("id"));
+        const firstName = params.get("first_name") || "Атлет";
+        const username = params.get("username") || undefined;
+        if (id) {
+          const isCoach = isCoachAccount(username, id);
+          linkTelegramAccount({
+            id,
+            firstName,
+            username,
+            authDate: Date.now(),
+            isCoach,
+          });
+          if (!isCoach) {
+            setCoachTelegramUsername(MASTER_COACH_USERNAME);
+          }
+          showToast(
+            language === "uk"
+              ? "🎉 Telegram успішно підключено до вашого PWA!"
+              : language === "en"
+              ? "🎉 Telegram linked successfully to your PWA!"
+              : "🎉 Telegram успешно подключен к вашему PWA!"
+          );
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+      }
+    }
   }, []);
 
   const showToast = (msg: string) => {
@@ -383,43 +440,177 @@ export default function SettingsPage() {
         </div>
       </Card>
 
-      {/* 4. Telegram Coach & Story Bot Settings */}
-      <Card className="border-cyan-500/30 bg-slate-900/60 p-4 sm:p-5 space-y-4">
+      {/* 4. Telegram Account & Coach Linking (RBAC) */}
+      <Card
+        className={`p-4 sm:p-5 space-y-4 transition-all ${
+          userRole === "coach"
+            ? "border-amber-500/40 bg-gradient-to-br from-amber-950/20 via-slate-900/60 to-slate-900/90 shadow-lg shadow-amber-500/5"
+            : "border-cyan-500/30 bg-slate-900/60"
+        }`}
+      >
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm sm:text-base flex items-center gap-2 text-white">
-            <Send className="h-4 w-4 text-cyan-400" />
-            <span>{t.settings.coachIntegration}</span>
+            {userRole === "coach" ? (
+              <>
+                <Crown className="h-4 w-4 text-amber-400" />
+                <span className="text-amber-300">
+                  {language === "uk"
+                    ? "Панель Головного Тренера"
+                    : language === "en"
+                    ? "Master Coach Panel"
+                    : "Панель Главного Тренера"}
+                </span>
+              </>
+            ) : (
+              <>
+                <Send className="h-4 w-4 text-cyan-400" />
+                <span>{t.settings.coachIntegration}</span>
+              </>
+            )}
           </CardTitle>
-          <span className="text-[10px] text-cyan-400 font-mono">1-Click</span>
+          <span
+            className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+              userRole === "coach"
+                ? "bg-amber-500/20 text-amber-300 border border-amber-500/30"
+                : linkedTelegramUser
+                ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+                : "bg-slate-800 text-slate-400 border border-white/10"
+            }`}
+          >
+            {userRole === "coach"
+              ? "👑 COACH"
+              : linkedTelegramUser
+              ? "TRAINEE"
+              : "PWA STANDALONE"}
+          </span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-          <div>
-            <label className="text-xs font-semibold text-slate-300 block mb-1">
-              {t.settings.traineeName}
-            </label>
-            <input
-              type="text"
-              value={traineeName}
-              onChange={(e) => setTraineeName(e.target.value)}
-              placeholder="Наприклад: Олександр"
-              className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-400"
-            />
+        {/* Coach Mode Banner */}
+        {userRole === "coach" ? (
+          <div className="rounded-xl border border-amber-500/30 bg-amber-950/25 p-3.5 space-y-2 text-xs">
+            <div className="flex items-center gap-2 font-bold text-amber-300">
+              <ShieldCheck className="h-4 w-4" />
+              <span>
+                {language === "uk"
+                  ? `Ви авторизовані як Тренер (@${linkedTelegramUser?.username || MASTER_COACH_USERNAME})`
+                  : language === "en"
+                  ? `Authenticated as Master Coach (@${linkedTelegramUser?.username || MASTER_COACH_USERNAME})`
+                  : `Вы авторизованы как Тренер (@${linkedTelegramUser?.username || MASTER_COACH_USERNAME})`}
+              </span>
+            </div>
+            <p className="text-slate-300 leading-relaxed text-[11px]">
+              {language === "uk"
+                ? "Усі звіти підопічних атлетів автоматично надсилаються у ваш особистий Telegram. Ви маєте повні права модерації результатів Челенджу."
+                : language === "en"
+                ? "All trainee workout reports are delivered directly to your Telegram. You hold full moderation rights for the SMT Challenge."
+                : "Все отчеты подопечных атлетов автоматически отправляются в ваш личный Telegram. Вы обладаете полными правами модерации Челленджа."}
+            </p>
           </div>
+        ) : (
+          /* Trainee or Guest Mode */
+          <div className="space-y-3">
+            {linkedTelegramUser ? (
+              <div className="rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-3 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="h-8 w-8 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-xs font-bold text-emerald-300">
+                    {linkedTelegramUser.firstName.charAt(0)}
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-white block">
+                      {linkedTelegramUser.firstName}
+                    </span>
+                    <span className="text-[11px] text-emerald-400 block">
+                      {linkedTelegramUser.username ? `@${linkedTelegramUser.username}` : "Telegram ID: " + linkedTelegramUser.id}
+                    </span>
+                  </div>
+                </div>
 
-          <div>
-            <label className="text-xs font-semibold text-slate-300 block mb-1">
-              {t.settings.coachUsername}
-            </label>
-            <input
-              type="text"
-              value={coachTelegramUsername}
-              onChange={(e) => setCoachTelegramUsername(e.target.value)}
-              placeholder="@coach_username"
-              className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-400"
-            />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    unlinkTelegramAccount();
+                    showToast(
+                      language === "uk" ? "Telegram відв'язано" : "Telegram unlinked"
+                    );
+                  }}
+                  className="text-[11px] h-7 border-rose-500/30 text-rose-400 hover:bg-rose-500/10"
+                >
+                  <Unlink className="h-3 w-3 mr-1" />
+                  <span>{language === "uk" ? "Відв'язати" : "Unlink"}</span>
+                </Button>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-cyan-500/30 bg-cyan-950/20 p-3.5 space-y-2">
+                <span className="text-xs font-bold text-cyan-300 block">
+                  {language === "uk"
+                    ? "📱 Нативне PWA на екрані смартфона"
+                    : "📱 Standalone Home Screen PWA"}
+                </span>
+                <p className="text-[11px] text-slate-300 leading-relaxed">
+                  {language === "uk"
+                    ? "Підключіть свій Telegram в 1 клік для збереження результатів у захищене хмарне сховище та миттєвої відправки звітів тренеру."
+                    : "Link your Telegram in 1 click for seamless cloud backup and 1-click workout reporting to your coach."}
+                </p>
+                <Button
+                  type="button"
+                  variant="accent"
+                  size="sm"
+                  onClick={() => window.open(generateTelegramLinkUrl(), "_blank")}
+                  className="w-full text-xs font-bold bg-gradient-to-r from-cyan-500 to-emerald-500 text-slate-950 hover:opacity-90 flex items-center justify-center gap-1.5"
+                >
+                  <LinkIcon className="h-3.5 w-3.5" />
+                  <span>
+                    {language === "uk"
+                      ? "🔗 Підключити Telegram в 1 клік"
+                      : "🔗 Link Telegram in 1 Click"}
+                  </span>
+                </Button>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <div>
+                <label className="text-xs font-semibold text-slate-300 block mb-1">
+                  {t.settings.traineeName}
+                </label>
+                <input
+                  type="text"
+                  value={traineeName}
+                  onChange={(e) => setTraineeName(e.target.value)}
+                  placeholder="Наприклад: Олександр"
+                  className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-400"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-slate-300 block mb-1">
+                  {language === "uk" ? "Персональний Тренер" : "Personal Coach"}
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    disabled={Boolean(linkedTelegramUser)}
+                    value={linkedTelegramUser ? `@${MASTER_COACH_USERNAME}` : coachTelegramUsername}
+                    onChange={(e) => setCoachTelegramUsername(e.target.value)}
+                    placeholder={`@${MASTER_COACH_USERNAME}`}
+                    className={`w-full rounded-xl border px-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none ${
+                      linkedTelegramUser
+                        ? "bg-slate-900 border-white/10 text-slate-400 cursor-not-allowed"
+                        : "bg-slate-950 border-white/10 focus:border-cyan-400"
+                    }`}
+                  />
+                  {linkedTelegramUser && (
+                    <span className="absolute right-2.5 top-2 text-[10px] text-emerald-400 font-semibold">
+                      Закріплено
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Story Bot / Channel Username */}
         <div className="pt-2 border-t border-white/5">

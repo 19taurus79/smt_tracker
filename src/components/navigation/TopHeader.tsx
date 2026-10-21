@@ -2,8 +2,9 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { Dumbbell, Activity, Timer, HelpCircle } from "lucide-react";
+import { Dumbbell, Activity, Timer, HelpCircle, Crown } from "lucide-react";
 import { useWorkoutStore } from "@/lib/store/useWorkoutStore";
+import { useSettingsStore } from "@/lib/store/useSettingsStore";
 import { formatTime } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { isTelegramWebApp, initTelegramWebApp } from "@/lib/tma/telegram";
@@ -13,8 +14,8 @@ import { formatWorkoutTitle } from "@/lib/i18n/exercises";
 
 export function TopHeader() {
   const { t, language } = useTranslation();
-  const { activeWorkoutId, workoutElapsedSeconds, workouts, isStopwatchRunning } =
-    useWorkoutStore();
+  const { activeWorkoutId, workoutElapsedSeconds, workouts } = useWorkoutStore();
+  const { userRole, linkedTelegramUser } = useSettingsStore();
   const [inTelegram, setInTelegram] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
 
@@ -54,10 +55,35 @@ export function TopHeader() {
               </Link>
             )}
 
-            {inTelegram && (
+            {userRole === "coach" ? (
+              <Link
+                href="/settings"
+                className="flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-500/20 to-amber-600/20 border border-amber-500/40 px-2.5 py-0.5 text-[11px] font-bold text-amber-300 hover:scale-105 transition-all shadow-sm shadow-amber-500/20"
+                title="Панель Головного Тренера"
+              >
+                <Crown className="h-3 w-3 text-amber-400" />
+                <span>ТРЕНЕР</span>
+              </Link>
+            ) : linkedTelegramUser ? (
+              <Link
+                href="/settings"
+                className="hidden sm:flex items-center gap-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-0.5 text-[11px] font-medium text-emerald-400 hover:bg-emerald-500/20 transition-all"
+                title="Ваш Telegram підключено"
+              >
+                <span>@{linkedTelegramUser.username || linkedTelegramUser.firstName}</span>
+              </Link>
+            ) : inTelegram ? (
               <Badge variant="secondary" className="hidden sm:inline-flex text-[10px] py-0 px-2">
-                TMA Ready
+                TMA
               </Badge>
+            ) : (
+              <Link
+                href="/settings"
+                className="hidden sm:inline-flex text-[11px] font-semibold text-slate-400 hover:text-cyan-400 transition-colors"
+                title="Підключити Telegram"
+              >
+                🔗 Telegram
+              </Link>
             )}
 
             <button

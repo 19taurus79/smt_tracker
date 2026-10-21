@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import { AppSettings, AppLanguage } from "@/types/body";
+import { AppSettings, AppLanguage, LinkedTelegramAccount, UserRole } from "@/types/body";
 
 interface SettingsState extends AppSettings {
   setLanguage: (lang: AppLanguage) => void;
@@ -16,6 +16,9 @@ interface SettingsState extends AppSettings {
   setGender: (gender: "male" | "female") => void;
   setUserAge: (age: number) => void;
   setStoryBotUsername: (username: string) => void;
+  linkTelegramAccount: (account: LinkedTelegramAccount) => void;
+  unlinkTelegramAccount: () => void;
+  setUserRole: (role: UserRole) => void;
   resetSettings: () => void;
 }
 
@@ -33,6 +36,8 @@ const defaultSettings: AppSettings = {
   gender: "male",
   userAge: 28,
   storyBotUsername: "@smt_workout_bot",
+  linkedTelegramUser: null,
+  userRole: "guest",
 };
 
 export const useSettingsStore = create<SettingsState>()(
@@ -52,6 +57,18 @@ export const useSettingsStore = create<SettingsState>()(
       setGender: (gender) => set({ gender }),
       setUserAge: (userAge) => set({ userAge }),
       setStoryBotUsername: (storyBotUsername) => set({ storyBotUsername }),
+      linkTelegramAccount: (linkedTelegramUser) =>
+        set({
+          linkedTelegramUser,
+          userRole: linkedTelegramUser.isCoach ? "coach" : "trainee",
+          traineeName: linkedTelegramUser.firstName,
+        }),
+      unlinkTelegramAccount: () =>
+        set({
+          linkedTelegramUser: null,
+          userRole: "guest",
+        }),
+      setUserRole: (userRole) => set({ userRole }),
       resetSettings: () => set(defaultSettings),
     }),
     {
