@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useTranslation } from "@/lib/i18n";
+import { getHelpContent } from "@/lib/i18n/helpContent";
 
 interface HelpModalProps {
   isOpen: boolean;
@@ -29,59 +30,22 @@ interface HelpModalProps {
 }
 
 export function HelpModal({ isOpen, onClose }: HelpModalProps) {
-  const { t, language } = useTranslation();
+  const { language } = useTranslation();
+  const content = getHelpContent(language);
+
   const [activeTab, setActiveTab] = useState<
     "method" | "exercises" | "cycles" | "progression" | "app"
   >("method");
 
   if (!isOpen) return null;
 
-  const modalTitle =
-    language === "en"
-      ? "SMT Method & Reference"
-      : language === "ru"
-      ? "Справка и Методика СМТ-1"
-      : "Довідка та Методика СМТ";
-
-  const modalSubtitle =
-    language === "en"
-      ? "Complete guide to Mike Kazakov (Steelfactor) system and tracker features"
-      : language === "ru"
-      ? "Полное руководство по системе Майка Казакова (Steelfactor) и функциям приложения"
-      : "Повний посібник із системи Майка Казакова (Steelfactor) та функцій додатку";
-
-  const tabs = [
-    {
-      id: "method",
-      label: language === "en" ? "SMT Method" : language === "ru" ? "Методика СМТ" : "Методика СМТ",
-      icon: Flame,
-    },
-    {
-      id: "exercises",
-      label: language === "en" ? "Exercises" : language === "ru" ? "Упражнения" : "Вправи",
-      icon: Dumbbell,
-    },
-    {
-      id: "cycles",
-      label: language === "en" ? "4 Microcycles" : language === "ru" ? "4 Микроцикла" : "4 Мікроцикли",
-      icon: Layers,
-    },
-    {
-      id: "progression",
-      label:
-        language === "en"
-          ? "Progression & Body"
-          : language === "ru"
-          ? "Прогрессия и Замеры"
-          : "Прогресія та Заміри",
-      icon: TrendingUp,
-    },
-    {
-      id: "app",
-      label: language === "en" ? "App & PWA" : language === "ru" ? "Приложение и PWA" : "Додаток та PWA",
-      icon: Smartphone,
-    },
-  ];
+  const tabIcons: Record<string, any> = {
+    method: Flame,
+    exercises: Dumbbell,
+    cycles: Layers,
+    progression: TrendingUp,
+    app: Smartphone,
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
@@ -97,25 +61,25 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
             </div>
             <div>
               <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-                {modalTitle}
+                {content.modalTitle}
               </h2>
-              <p className="text-[11px] text-slate-400">
-                {modalSubtitle}
+              <p className="text-xs text-slate-400 hidden sm:block">
+                {content.modalSubtitle}
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="rounded-lg p-1.5 text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+            className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/5 text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
           >
-            <X className="h-5 w-5" />
+            <X className="h-4 w-4" />
           </button>
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex border-b border-white/10 bg-slate-900/40 px-3 py-2 overflow-x-auto gap-1 scrollbar-none">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
+        <div className="flex border-b border-white/10 bg-slate-900/40 p-1.5 overflow-x-auto gap-1 scrollbar-none">
+          {content.tabs.map((tab) => {
+            const Icon = tabIcons[tab.id] || BookOpen;
             const isActive = activeTab === tab.id;
             return (
               <button
@@ -142,48 +106,37 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
               <div className="rounded-xl border border-emerald-500/30 bg-emerald-950/20 p-4">
                 <h3 className="font-bold text-sm sm:text-base text-emerald-400 flex items-center gap-2 mb-2">
                   <Flame className="h-4 w-4" />
-                  Суть Сверхмощного тренинга (Майк Казаков / Steelfactor)
+                  {content.method.heroTitle}
                 </h3>
-                <p className="text-slate-300">
-                  <strong>СМТ (Сверхмощный тренинг)</strong> — высокоплотная силовая методика,
-                  направленная на одновременную рекомпозицию тела (сжигание подкожного жира при росте
-                  жесткости и плотности мышц), мощную капилляризацию и развитие силовой выносливости.
-                </p>
+                <p className="text-slate-300 leading-relaxed">{content.method.heroDesc}</p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <Card className="border-white/10 bg-slate-900/50 p-3.5 space-y-1.5">
                   <div className="flex items-center gap-2 text-cyan-400 font-bold text-xs uppercase tracking-wider">
                     <Timer className="h-4 w-4" />
-                    Отдых строго 30 секунд
+                    {content.method.restTitle}
                   </div>
-                  <p className="text-xs text-slate-400">
-                    Между подходами и кругами пауза ровно 30 сек. Это не позволяет лактату
-                    полностью рассеяться и вызывает максимальный анаболический гормональный отклик
-                    (выброс соматотропина).
-                  </p>
+                  <p className="text-xs text-slate-400">{content.method.restDesc}</p>
                 </Card>
 
                 <Card className="border-white/10 bg-slate-900/50 p-3.5 space-y-1.5">
                   <div className="flex items-center gap-2 text-amber-400 font-bold text-xs uppercase tracking-wider">
                     <ShieldCheck className="h-4 w-4" />
-                    Безопасные веса (40–55%)
+                    {content.method.safetyTitle}
                   </div>
-                  <p className="text-xs text-slate-400">
-                    Веса рассчитываются от разового максимума (1ПМ). Умеренный тоннаж защищает
-                    суставы и сухожилия, переводя стимул в глубокую мышечную накачку и выносливость.
-                  </p>
+                  <p className="text-xs text-slate-400">{content.method.safetyDesc}</p>
                 </Card>
               </div>
 
               <div className="rounded-xl border border-white/10 bg-slate-900/40 p-4 space-y-2">
-                <h4 className="font-bold text-white text-xs sm:text-sm">
-                  ⚡️ Золотые правила Майка Казакова:
-                </h4>
-                <ul className="text-xs text-slate-300 space-y-1.5 list-disc list-inside">
-                  <li><strong>Этап 1:</strong> закрыть тренировку с отдыхом <strong>строго до 30 секунд</strong>. <strong>Этап 2:</strong> добавить +2.5 кг. Без первого этапа нет СМТ!</li>
-                  <li><strong>Темп тренировки:</strong> 1 подход = ~1 минута. Вся тренировка из 24 подходов длится <strong>24–30 минут</strong>.</li>
-                  <li>Если тяжело — снизьте рабочий вес, но <strong>не растягивайте паузу</strong>. СМТ работает именно за счет непрерывной высокой плотности.</li>
+                <h4 className="font-bold text-white text-xs sm:text-sm">{content.method.rulesTitle}</h4>
+                <ul className="text-xs text-slate-300 space-y-2 list-disc list-inside">
+                  {content.method.rules.map((rule, idx) => (
+                    <li key={idx} className="leading-relaxed">
+                      {rule}
+                    </li>
+                  ))}
                 </ul>
               </div>
             </div>
@@ -192,93 +145,58 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
           {/* TAB 2: УПРАЖНЕНИЯ И СУПЕРСЕТЫ */}
           {activeTab === "exercises" && (
             <div className="space-y-4">
-              <p className="text-xs text-slate-400">
-                Комплекс упражнений в СМТ-1 остается неизменным на протяжении всех 36 тренировок!
-                Это формирует безупречный двигательный навык и стабильную силовую прогрессию.
-              </p>
+              <p className="text-xs text-slate-400">{content.exercises.intro}</p>
 
               <div className="space-y-3">
-                {/* Block 1 */}
-                <div className="rounded-xl border border-white/10 bg-slate-900/50 p-3.5 space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-white">Блок 1: Жим штанги лежа</span>
-                    <Badge variant="outline" className="text-emerald-400 border-emerald-500/30">
-                      Одиночный блок • 4 подхода
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-slate-400">
-                    Базовый грудной жим. 4 подхода по плану микроцикла (10/8/6/4 повт) с весом 40–55%
-                    от 1ПМ. Отдых между подходами: ровно 30 сек.
-                  </p>
-                </div>
+                {content.exercises.blocks.map((block, idx) => (
+                  <div
+                    key={idx}
+                    className={`rounded-xl border p-3.5 space-y-2 ${
+                      block.isSuperset
+                        ? "border-purple-500/25 bg-purple-950/15"
+                        : "border-white/10 bg-slate-900/50"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className={`font-bold ${block.isSuperset ? "text-purple-300" : "text-white"}`}>
+                        {block.title}
+                      </span>
+                      <Badge
+                        variant="outline"
+                        className={
+                          block.isSuperset
+                            ? "text-purple-400 border-purple-500/30"
+                            : "text-emerald-400 border-emerald-500/30"
+                        }
+                      >
+                        {block.badge}
+                      </Badge>
+                    </div>
 
-                {/* Block 2 */}
-                <div className="rounded-xl border border-white/10 bg-slate-900/50 p-3.5 space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-white">Блок 2: Жим узким хватом</span>
-                    <Badge variant="outline" className="text-emerald-400 border-emerald-500/30">
-                      Одиночный блок • 4 подхода
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-slate-400">
-                    Акцент на трицепс и переднюю дельту. 4 подхода по плану микроцикла с паузами
-                    30 сек.
-                  </p>
-                </div>
+                    {block.desc && <p className="text-xs text-slate-400">{block.desc}</p>}
 
-                {/* Block 3 */}
-                <div className="rounded-xl border border-purple-500/25 bg-purple-950/15 p-3.5 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-purple-300">
-                      Блок 3: Суперсет 1 (Спина + Бицепс)
-                    </span>
-                    <Badge variant="outline" className="text-purple-400 border-purple-500/30">
-                      4 Круга
-                    </Badge>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="bg-slate-900/80 rounded-lg p-2 border border-white/5">
-                      <span className="text-slate-400 block text-[10px] font-bold">ОСНОВНОЕ (40%)</span>
-                      <strong className="text-white">Подтягивания</strong>
-                      <div className="text-slate-400 text-[11px]">10 повт • Вес 40% 1ПМ</div>
-                    </div>
-                    <div className="bg-slate-900/80 rounded-lg p-2 border border-white/5">
-                      <span className="text-slate-400 block text-[10px] font-bold">ПОДСОБКА (30%)</span>
-                      <strong className="text-white">Штанга на бицепс</strong>
-                      <div className="text-slate-400 text-[11px]">15 повт • Вес 30% 1ПМ</div>
-                    </div>
-                  </div>
-                  <p className="text-[11px] text-slate-400">
-                    Порядок: Подтягивания (10) → отдых 30с → Бицепс (15) → отдых 30с → следующий круг.
-                  </p>
-                </div>
+                    {block.exercises && (
+                      <div className="grid grid-cols-2 gap-2 text-xs pt-1">
+                        {block.exercises.map((ex, exIdx) => (
+                          <div
+                            key={exIdx}
+                            className="bg-slate-900/80 rounded-lg p-2 border border-white/5"
+                          >
+                            <span className="text-slate-400 block text-[10px] font-bold">
+                              {ex.category}
+                            </span>
+                            <strong className="text-white block mt-0.5">{ex.name}</strong>
+                            <div className="text-slate-400 text-[11px] mt-0.5">{ex.details}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
 
-                {/* Block 4 */}
-                <div className="rounded-xl border border-cyan-500/25 bg-cyan-950/15 p-3.5 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-cyan-300">
-                      Блок 4: Суперсет 2 (Ноги + Плечи)
-                    </span>
-                    <Badge variant="outline" className="text-cyan-400 border-cyan-500/30">
-                      4 Круга
-                    </Badge>
+                    {block.footerNote && (
+                      <p className="text-[11px] text-slate-400 pt-0.5">{block.footerNote}</p>
+                    )}
                   </div>
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="bg-slate-900/80 rounded-lg p-2 border border-white/5">
-                      <span className="text-slate-400 block text-[10px] font-bold">ОСНОВНОЕ (40%)</span>
-                      <strong className="text-white">Приседания со штангой</strong>
-                      <div className="text-slate-400 text-[11px]">10 повт • Вес 40% 1ПМ</div>
-                    </div>
-                    <div className="bg-slate-900/80 rounded-lg p-2 border border-white/5">
-                      <span className="text-slate-400 block text-[10px] font-bold">ПОДСОБКА (30%)</span>
-                      <strong className="text-white">Армейский жим стоя</strong>
-                      <div className="text-slate-400 text-[11px]">15 повт • Вес 30% 1ПМ</div>
-                    </div>
-                  </div>
-                  <p className="text-[11px] text-slate-400">
-                    Аналогично первому суперсету: 4 круга с раздельными весами и отдыхом 30 сек.
-                  </p>
-                </div>
+                ))}
               </div>
             </div>
           )}
@@ -286,79 +204,42 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
           {/* TAB 3: 4 МИКРОЦИКЛА */}
           {activeTab === "cycles" && (
             <div className="space-y-4">
-              <p className="text-xs text-slate-400">
-                Программа рассчитана на 12 недель (36 тренировок при режиме 3 раза в неделю:
-                Пн-Ср-Пт). Она делится на 4 прогрессирующих микроцикла:
-              </p>
+              <p className="text-xs text-slate-400">{content.cycles.intro}</p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="rounded-xl border border-white/10 bg-slate-900/60 p-3.5 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-white text-sm">МКЦ-1: Вкатывание</span>
-                    <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
-                      Тр 1 – 9
-                    </Badge>
-                  </div>
-                  <div className="text-xs space-y-1 text-slate-300">
-                    <div>• <strong>4 подхода по 10 повторений</strong></div>
-                    <div>• Основное: <strong>40% от 1ПМ</strong></div>
-                    <div>• Подсобка: <strong>30% (15 повт)</strong></div>
-                    <div className="text-[11px] text-slate-400 pt-1">
-                      Адаптация ССС, капилляризация, наработка дыхания и темпа.
+                {content.cycles.items.map((cycle, idx) => {
+                  const badgeColors = [
+                    "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
+                    "bg-cyan-500/20 text-cyan-400 border-cyan-500/30",
+                    "bg-purple-500/20 text-purple-400 border-purple-500/30",
+                    "bg-amber-500/20 text-amber-400 border-amber-500/30",
+                  ];
+                  return (
+                    <div
+                      key={idx}
+                      className="rounded-xl border border-white/10 bg-slate-900/60 p-3.5 space-y-2"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-white text-sm">{cycle.title}</span>
+                        <Badge className={badgeColors[idx % badgeColors.length]}>{cycle.badge}</Badge>
+                      </div>
+                      <div className="text-xs space-y-1 text-slate-300">
+                        <div>
+                          • <strong>{cycle.reps}</strong>
+                        </div>
+                        <div>
+                          • <strong>{cycle.mainWeight}</strong>
+                        </div>
+                        <div>
+                          • <strong>{cycle.accessoryWeight}</strong>
+                        </div>
+                        <div className="text-[11px] text-slate-400 pt-1 leading-relaxed">
+                          {cycle.desc}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-
-                <div className="rounded-xl border border-white/10 bg-slate-900/60 p-3.5 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-white text-sm">МКЦ-2: Набор плотности</span>
-                    <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30">
-                      Тр 10 – 18
-                    </Badge>
-                  </div>
-                  <div className="text-xs space-y-1 text-slate-300">
-                    <div>• <strong>4 подхода по 8 повторений</strong></div>
-                    <div>• Основное: <strong>45% от 1ПМ</strong></div>
-                    <div>• Подсобка: <strong>35% (12 повт)</strong></div>
-                    <div className="text-[11px] text-slate-400 pt-1">
-                      Рост плотности мышечного волокна, повышение рабочего веса.
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-xl border border-white/10 bg-slate-900/60 p-3.5 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-white text-sm">МКЦ-3: Гипертрофия</span>
-                    <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30">
-                      Тр 19 – 27
-                    </Badge>
-                  </div>
-                  <div className="text-xs space-y-1 text-slate-300">
-                    <div>• <strong>4 подхода по 6 повторений</strong></div>
-                    <div>• Основное: <strong>50% от 1ПМ</strong></div>
-                    <div>• Подсобка: <strong>40% (10 повт)</strong></div>
-                    <div className="text-[11px] text-slate-400 pt-1">
-                      Мощная миофибриллярная гипертрофия на фоне сокращенного отдыха.
-                    </div>
-                  </div>
-                </div>
-
-                <div className="rounded-xl border border-white/10 bg-slate-900/60 p-3.5 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-bold text-white text-sm">МКЦ-4: Силовой пик</span>
-                    <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">
-                      Тр 28 – 36
-                    </Badge>
-                  </div>
-                  <div className="text-xs space-y-1 text-slate-300">
-                    <div>• <strong>4 подхода по 4 повторения</strong></div>
-                    <div>• Основное: <strong>55% от 1ПМ</strong></div>
-                    <div>• Подсобка: <strong>45% (8 повт)</strong></div>
-                    <div className="text-[11px] text-slate-400 pt-1">
-                      Финал программы, максимальная жесткость мускулов и пиковая выносливость.
-                    </div>
-                  </div>
-                </div>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -369,23 +250,21 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
               <div className="rounded-xl border border-white/10 bg-slate-900/50 p-4 space-y-3">
                 <h4 className="font-bold text-white text-sm flex items-center gap-2">
                   <TrendingUp className="h-4 w-4 text-emerald-400" />
-                  Автоприбавка +2.5 кг
+                  {content.progression.autoIncrementTitle}
                 </h4>
-                <div className="space-y-2 text-xs text-slate-300">
+                <div className="space-y-2.5 text-xs text-slate-300">
                   <div className="flex items-start gap-2">
                     <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
                     <span>
-                      <strong>Успех:</strong> Если во всех 4 подходах каждого упражнения выполнено
-                      заданное количество повторений, на следующую тренировку расчетный 1ПМ
-                      автоматически вырастет на <strong>+2.5 кг</strong> (настраивается в Опциях).
+                      <strong className="text-emerald-300">{content.progression.successTitle}</strong>{" "}
+                      {content.progression.successDesc}
                     </span>
                   </div>
                   <div className="flex items-start gap-2">
                     <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
                     <span>
-                      <strong>Срыв:</strong> Если вы сделали хотя бы в одном подходе меньше повторений
-                      (например, 8 из 10), вес не растет. Следующая тренировка проводится с теми же
-                      весами.
+                      <strong className="text-amber-300">{content.progression.failTitle}</strong>{" "}
+                      {content.progression.failDesc}
                     </span>
                   </div>
                 </div>
@@ -394,25 +273,16 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
               <div className="rounded-xl border border-white/10 bg-slate-900/50 p-4 space-y-2">
                 <h4 className="font-bold text-white text-sm flex items-center gap-2">
                   <Scale className="h-4 w-4 text-cyan-400" />
-                  Контроль тела (Замеры)
+                  {content.progression.bodyTitle}
                 </h4>
-                <p className="text-xs text-slate-400">
-                  На СМТ вес на весах может стоять на месте из-за одновременного сжигания жира и роста
-                  мышечной ткани. Поэтому главный показатель — сантиметровая лента!
-                </p>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-1 text-xs">
-                  <div className="bg-black/40 rounded-lg p-2 border border-white/5">
-                    <span className="text-slate-400 block text-[10px]">Критерий успеха</span>
-                    <strong className="text-emerald-400">Талия уменьшается</strong>
-                  </div>
-                  <div className="bg-black/40 rounded-lg p-2 border border-white/5">
-                    <span className="text-slate-400 block text-[10px]">Критерий успеха</span>
-                    <strong className="text-cyan-400">Бицепс / грудь растут</strong>
-                  </div>
-                  <div className="bg-black/40 rounded-lg p-2 border border-white/5">
-                    <span className="text-slate-400 block text-[10px]">Частота</span>
-                    <strong className="text-white">1 раз в 1-2 недели</strong>
-                  </div>
+                <p className="text-xs text-slate-400">{content.progression.bodyDesc}</p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 text-xs">
+                  {content.progression.criteria.map((cr, idx) => (
+                    <div key={idx} className="bg-black/40 rounded-lg p-2.5 border border-white/5">
+                      <span className="text-slate-400 block text-[10px]">{cr.label}</span>
+                      <strong className={`${cr.colorClass} block mt-0.5`}>{cr.value}</strong>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -421,43 +291,36 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
           {/* TAB 5: ПРИЛОЖЕНИЕ И PWA */}
           {activeTab === "app" && (
             <div className="space-y-4">
-              <div className="rounded-xl border border-white/10 bg-slate-900/60 p-4 space-y-2">
+              <div className="rounded-xl border border-white/10 bg-slate-900/60 p-4 space-y-2.5">
                 <h4 className="font-bold text-white text-sm flex items-center gap-2">
                   <Smartphone className="h-4 w-4 text-emerald-400" />
-                  Установка как приложение (PWA)
+                  {content.app.pwaTitle}
                 </h4>
-                <p className="text-xs text-slate-400">
-                  Приложение работает во весь экран без браузерных панелей даже без интернета:
-                </p>
+                <p className="text-xs text-slate-400">{content.app.pwaDesc}</p>
                 <div className="space-y-2 text-xs pt-1">
                   <div className="bg-black/40 p-2.5 rounded-lg border border-white/5">
-                    <strong className="text-white block mb-0.5">📱 На iPhone (iOS Safari):</strong>
-                    Нажмите иконку <strong>«Поделиться»</strong> (квадрат со стрелкой вверх) →
-                    выберите <strong>«На экран "Домой"»</strong> → нажмите «Добавить».
+                    <strong className="text-white block mb-0.5">{content.app.iosTitle}</strong>
+                    <span className="text-slate-300">{content.app.iosDesc}</span>
                   </div>
                   <div className="bg-black/40 p-2.5 rounded-lg border border-white/5">
-                    <strong className="text-white block mb-0.5">🤖 На Android (Google Chrome):</strong>
-                    Нажмите меню <strong>«⋮»</strong> в правом верхнем углу → выберите{" "}
-                    <strong>«Установить приложение»</strong>.
+                    <strong className="text-white block mb-0.5">{content.app.androidTitle}</strong>
+                    <span className="text-slate-300">{content.app.androidDesc}</span>
                   </div>
                   <div className="bg-black/40 p-2.5 rounded-lg border border-white/5">
-                    <strong className="text-white block mb-0.5">✈️ Telegram Mini App:</strong>
-                    Внутри Telegram цвета адаптируются под вашу тему, а при отметке подходов работает
-                    нативная тактильная отдача (вибрация TMA Haptics).
+                    <strong className="text-white block mb-0.5">{content.app.tmaTitle}</strong>
+                    <span className="text-slate-300">{content.app.tmaDesc}</span>
                   </div>
                 </div>
               </div>
 
               <div className="rounded-xl border border-white/10 bg-slate-900/60 p-4 space-y-2">
-                <h4 className="font-bold text-white text-sm">
-                  Резервное копирование и сохранность данных
-                </h4>
-                <p className="text-xs text-slate-400">
-                  Все данные хранятся на вашем устройстве (Local-First). В разделе{" "}
-                  <strong className="text-white">Опции</strong> вы можете в любой момент нажать{" "}
-                  <strong className="text-emerald-400">«Экспорт в JSON»</strong>, чтобы сохранить файл
-                  бэкапа или перенести весь прогресс на новый телефон.
-                </p>
+                <h4 className="font-bold text-white text-sm">{content.app.backupTitle}</h4>
+                <p className="text-xs text-slate-400 leading-relaxed">{content.app.backupDesc}</p>
+              </div>
+
+              <div className="rounded-xl border border-cyan-500/25 bg-cyan-950/20 p-4 space-y-2">
+                <h4 className="font-bold text-cyan-300 text-sm">{content.app.coachTitle}</h4>
+                <p className="text-xs text-slate-300 leading-relaxed">{content.app.coachDesc}</p>
               </div>
             </div>
           )}
@@ -465,15 +328,15 @@ export function HelpModal({ isOpen, onClose }: HelpModalProps) {
 
         {/* Modal Footer */}
         <div className="border-t border-white/10 px-4 sm:px-6 py-3 bg-slate-900/80 flex items-center justify-between">
-          <span className="text-[11px] text-slate-400">
-            Подробный файл справки доступен в корне: <code className="text-emerald-400">SMT_GUIDE.md</code>
+          <span className="text-[11px] text-slate-400 truncate max-w-[280px] sm:max-w-none">
+            {content.footer.guideNotice}
           </span>
           <Button
             size="sm"
             onClick={onClose}
-            className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs"
+            className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs shrink-0"
           >
-            Понятно
+            {content.footer.closeBtn}
           </Button>
         </div>
       </div>
