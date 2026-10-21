@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
+import QRCode from "qrcode";
 import { Dialog, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { WorkoutSession } from "@/types/smt";
@@ -140,7 +141,7 @@ export function StoryShareModal({
       ? storyBotUsername
       : "@athletic_smt_bot";
 
-  const renderCanvas = () => {
+  const renderCanvas = async () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -152,6 +153,34 @@ export function StoryShareModal({
     canvas.height = height;
 
     const labels = t.story.labels;
+
+    // --- QR Code generation ---
+    // Build deep-link to bot with start param = username for tracking
+    const tgUser = typeof window !== "undefined"
+      ? (window as any).Telegram?.WebApp?.initDataUnsafe?.user?.username || ""
+      : "";
+    const cleanBotName = botHandle.startsWith("@") ? botHandle.slice(1) : botHandle;
+    const qrUrl = tgUser
+      ? `https://t.me/${cleanBotName}?start=ref_${tgUser}`
+      : `https://t.me/${cleanBotName}`;
+
+    let qrImg: HTMLImageElement | null = null;
+    try {
+      const qrDataUrl = await QRCode.toDataURL(qrUrl, {
+        width: 300,
+        margin: 1,
+        color: { dark: "#ffffff", light: "#00000000" },
+        errorCorrectionLevel: "M",
+      });
+      qrImg = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = qrDataUrl;
+      });
+    } catch (e) {
+      console.warn("QR generation failed:", e);
+    }
 
     // --- TEMPLATE 1: POWER & SETS (Neon Emerald Cyberpunk) ---
     if (selectedTemplate === "power") {
@@ -242,8 +271,8 @@ export function StoryShareModal({
         "rgba(16, 185, 129, 0.25)"
       );
 
-      // Bottom Viral Banner (y = 1665, h = 165)
-      drawPromoBanner(ctx, botHandle, labels.joinTelegramBot, "#10b981");
+      // Bottom Viral Banner (y = 1665, h = 255)
+      drawPromoBanner(ctx, botHandle, labels.joinTelegramBot, "#10b981", qrImg);
     }
 
     // --- TEMPLATE 2: RECOMPOSITION (Frosted Glass & Gradient) ---
@@ -343,7 +372,7 @@ export function StoryShareModal({
       );
 
       // Bottom Viral Banner
-      drawPromoBanner(ctx, botHandle, labels.joinTelegramBot, "#38bdf8");
+      drawPromoBanner(ctx, botHandle, labels.joinTelegramBot, "#38bdf8", qrImg);
     }
 
     // --- TEMPLATE 3: PROGRESS & PR (Brutal Gold / Amber) ---
@@ -435,7 +464,7 @@ export function StoryShareModal({
       );
 
       // Bottom Viral Banner
-      drawPromoBanner(ctx, botHandle, labels.joinTelegramBot, "#f59e0b");
+      drawPromoBanner(ctx, botHandle, labels.joinTelegramBot, "#f59e0b", qrImg);
     }
 
     // --- TEMPLATE 4: DENSITY & GRIT (Crimson Dark Neon) ---
@@ -528,7 +557,7 @@ export function StoryShareModal({
       );
 
       // Bottom Viral Banner
-      drawPromoBanner(ctx, botHandle, labels.joinTelegramBot, "#f43f5e");
+      drawPromoBanner(ctx, botHandle, labels.joinTelegramBot, "#f43f5e", qrImg);
     }
 
     // --- TEMPLATE 5: MINIMALIST / PHOTO POSTER (Deep Charcoal / Clean Lines) ---
@@ -617,7 +646,7 @@ export function StoryShareModal({
       );
 
       // Clean minimal invite
-      drawPromoBanner(ctx, botHandle, labels.joinTelegramBot, "#ffffff");
+      drawPromoBanner(ctx, botHandle, labels.joinTelegramBot, "#ffffff", qrImg);
     }
 
     // --- TEMPLATE 6: CHALLENGE & DUEL (Electric Violet & Cyan) ---
@@ -716,13 +745,13 @@ export function StoryShareModal({
       );
 
       // Bottom Viral Banner
-      drawPromoBanner(ctx, botHandle, labels.joinTelegramBot, "#06b6d4");
+      drawPromoBanner(ctx, botHandle, labels.joinTelegramBot, "#06b6d4", qrImg);
     }
   };
 
   useEffect(() => {
     if (open) {
-      renderCanvas();
+      void renderCanvas();
     }
   }, [open, selectedTemplate, workout, language, athleticScore.score]);
 
@@ -1161,26 +1190,101 @@ function drawPromoBanner(
   ctx: CanvasRenderingContext2D,
   botUsername: string,
   inviteText: string,
-  accentColor: string
+  accentColor: string,
+  qrImg: HTMLImageElement | null = null
 ) {
   const x = 80;
-  const y = 1665;
+  const y = 1645;
   const w = 920;
-  const h = 165;
+  const h = 240;
+  const qrSize = 196;
+  const qrPad = 22;
 
+  // Banner background
   ctx.fillStyle = "rgba(15, 23, 42, 0.95)";
   ctx.strokeStyle = accentColor;
   ctx.lineWidth = 3;
-  roundRect(ctx, x, y, w, h, 24, true, true);
+  roundRect(ctx, x, y, w, h, 28, true, true);
 
-  ctx.fillStyle = "#ffffff";
-  ctx.font = "bold 26px system-ui, -apple-system, sans-serif";
-  ctx.textAlign = "center";
-  ctx.fillText(inviteText, x + w / 2, y + 60);
+  // Accent top border stripe
+  const stripe = ctx.createLinearGradient(x, y, x + w, y);
+  stripe.addColorStop(0, "rgba(255,255,255,0)");
+  stripe.addColorStop(0.5, accentColor);
+  stripe.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.fillStyle = stripe;
+  roundRect(ctx, x + 2, y + 2, w - 4, 4, 2, true, false);
 
-  ctx.fillStyle = accentColor;
-  ctx.font = "900 42px system-ui, -apple-system, sans-serif";
-  const cleanBot = botUsername.startsWith("@") ? botUsername : `@${botUsername}`;
-  ctx.fillText(cleanBot, x + w / 2, y + 120);
-  ctx.textAlign = "left";
+  if (qrImg) {
+    // --- Layout with QR: [QR left] [text right] ---
+    const qrX = x + qrPad;
+    const qrY = y + (h - qrSize) / 2;
+
+    // QR background pill
+    ctx.fillStyle = "rgba(255,255,255,0.06)";
+    ctx.strokeStyle = "rgba(255,255,255,0.15)";
+    ctx.lineWidth = 2;
+    roundRect(ctx, qrX - 10, qrY - 10, qrSize + 20, qrSize + 20, 20, true, true);
+
+    // Draw QR image
+    ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
+
+    // Small "Scan" label under QR
+    ctx.fillStyle = "rgba(255,255,255,0.45)";
+    ctx.font = "bold 20px system-ui, -apple-system, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("SCAN ME", qrX + qrSize / 2, qrY + qrSize + 28);
+
+    // Right side text (takes remaining width)
+    const textX = qrX + qrSize + qrPad + 24;
+    const textW = x + w - textX - 30;
+    const textCX = textX + textW / 2;
+
+    // Telegram icon-like pill
+    ctx.fillStyle = "rgba(6, 182, 212, 0.12)";
+    ctx.strokeStyle = "rgba(6, 182, 212, 0.35)";
+    ctx.lineWidth = 2;
+    roundRect(ctx, textX, y + 30, textW, 42, 14, true, true);
+    ctx.fillStyle = "rgba(6,182,212,0.9)";
+    ctx.font = "bold 22px system-ui, -apple-system, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("✈ TELEGRAM", textCX, y + 58);
+
+    // Invite text
+    ctx.fillStyle = "rgba(255,255,255,0.75)";
+    ctx.font = "600 24px system-ui, -apple-system, sans-serif";
+    // Word-wrap if needed
+    const words = inviteText.split(" ");
+    let line = "";
+    let lineY = y + 112;
+    for (const word of words) {
+      const test = line ? `${line} ${word}` : word;
+      if (ctx.measureText(test).width > textW) {
+        ctx.fillText(line, textCX, lineY);
+        line = word;
+        lineY += 32;
+      } else {
+        line = test;
+      }
+    }
+    if (line) ctx.fillText(line, textCX, lineY);
+
+    // @handle
+    ctx.fillStyle = accentColor;
+    ctx.font = "900 38px system-ui, -apple-system, sans-serif";
+    const cleanBot = botUsername.startsWith("@") ? botUsername : `@${botUsername}`;
+    ctx.fillText(cleanBot, textCX, y + h - 30);
+    ctx.textAlign = "left";
+  } else {
+    // --- Fallback: text-only layout ---
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "bold 26px system-ui, -apple-system, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(inviteText, x + w / 2, y + 80);
+
+    ctx.fillStyle = accentColor;
+    ctx.font = "900 42px system-ui, -apple-system, sans-serif";
+    const cleanBot = botUsername.startsWith("@") ? botUsername : `@${botUsername}`;
+    ctx.fillText(cleanBot, x + w / 2, y + 150);
+    ctx.textAlign = "left";
+  }
 }
