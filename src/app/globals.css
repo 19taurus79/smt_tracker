@@ -3,14 +3,37 @@
 :root {
   --background: #020618;
   --foreground: #f1f5f9;
-  --tg-safe-area-inset-top: 0px;
-  --tg-safe-area-inset-bottom: 0px;
-  --tg-safe-area-inset-left: 0px;
-  --tg-safe-area-inset-right: 0px;
-  --tg-content-safe-area-inset-top: 0px;
-  --tg-content-safe-area-inset-bottom: 0px;
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --tma-top-padding: max(
+    env(safe-area-inset-top, 0px),
+    var(--tg-content-safe-area-inset-top, 0px),
+    var(--tg-safe-area-inset-top, 0px)
+  );
+  --tma-bottom-padding: max(
+    env(safe-area-inset-bottom, 0px),
+    var(--tg-content-safe-area-inset-bottom, 0px),
+    var(--tg-safe-area-inset-bottom, 0px)
+  );
+}
+
+/* Telegram Mini App environment */
+html.is-telegram,
+body.is-telegram,
+.is-telegram {
+  /* In Telegram fullscreen mode, floating [✕ Закрити] and [⋮] buttons require at least 62px clearance */
+  --tma-top-padding: max(
+    env(safe-area-inset-top, 0px),
+    var(--tg-content-safe-area-inset-top, 0px),
+    var(--tg-safe-area-inset-top, 0px),
+    62px
+  );
+  --tma-bottom-padding: max(
+    env(safe-area-inset-bottom, 0px),
+    var(--tg-content-safe-area-inset-bottom, 0px),
+    var(--tg-safe-area-inset-bottom, 0px),
+    16px
+  );
 }
 
 html {
@@ -30,24 +53,16 @@ body {
   user-select: none;
 }
 
-/* Universal Top Header Safe Area padding (Android punch-hole, notch & iOS Dynamic Island) */
+/* Universal Top Header Safe Area padding (prevents Telegram buttons from overlapping header content) */
 .ios-safe-top,
 .tg-safe-top {
-  padding-top: max(
-    env(safe-area-inset-top, 0px),
-    var(--tg-safe-area-inset-top, 0px),
-    var(--tg-content-safe-area-inset-top, 0px)
-  );
+  padding-top: var(--tma-top-padding) !important;
 }
 
 /* Universal Bottom Navigation Safe Area padding (Android & iOS home gesture bars) */
 .ios-safe-bottom,
 .tg-safe-bottom {
-  padding-bottom: max(
-    env(safe-area-inset-bottom, 0px),
-    var(--tg-safe-area-inset-bottom, 0px),
-    var(--tg-content-safe-area-inset-bottom, 0px)
-  );
+  padding-bottom: var(--tma-bottom-padding) !important;
 }
 
 /* Smooth custom scrollbars */

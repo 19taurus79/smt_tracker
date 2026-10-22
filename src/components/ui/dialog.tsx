@@ -26,7 +26,13 @@ export function Dialog({ open, onOpenChange, children, className }: DialogProps)
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4"
+      style={{
+        paddingTop: "max(12px, var(--tma-top-padding, 0px))",
+        paddingBottom: "max(12px, var(--tma-bottom-padding, 0px))",
+      }}
+    >
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/85 backdrop-blur-md animate-in fade-in transition-opacity"

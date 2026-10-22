@@ -39,6 +39,17 @@ export default function RootLayout({
           src="https://telegram.org/js/telegram-web-app.js"
           strategy="beforeInteractive"
         />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              try {
+                if (window.TelegramWebviewProxy || window.Telegram || window.location.hash.includes('tgWebAppData')) {
+                  document.documentElement.classList.add('is-telegram');
+                }
+              } catch (_) {}
+            `,
+          }}
+        />
       </head>
       <body className="min-h-screen min-h-[100dvh] flex flex-col bg-slate-950 text-slate-100 selection:bg-emerald-500/30 selection:text-emerald-300">
         <TelegramProvider>

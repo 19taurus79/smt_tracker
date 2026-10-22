@@ -155,16 +155,29 @@ export function initTelegramWebApp(): void {
     // 6. Safe Area insets
     const updateSafeArea = () => {
       const root = document.documentElement;
+      const isTg = Boolean(window.Telegram?.WebApp?.initData || window.Telegram?.WebApp?.initDataUnsafe?.user);
+      if (isTg) {
+        root.classList.add("is-telegram");
+        document.body?.classList.add("is-telegram");
+      }
+
+      const safeTop = tg.safeAreaInset?.top || 0;
+      const contentTop = tg.contentSafeAreaInset?.top || 0;
+
       if (tg.safeAreaInset) {
-        root.style.setProperty("--tg-safe-area-inset-top", `${tg.safeAreaInset.top}px`);
+        root.style.setProperty("--tg-safe-area-inset-top", `${safeTop}px`);
         root.style.setProperty("--tg-safe-area-inset-bottom", `${tg.safeAreaInset.bottom}px`);
         root.style.setProperty("--tg-safe-area-inset-left", `${tg.safeAreaInset.left}px`);
         root.style.setProperty("--tg-safe-area-inset-right", `${tg.safeAreaInset.right}px`);
       }
       if (tg.contentSafeAreaInset) {
-        root.style.setProperty("--tg-content-safe-area-inset-top", `${tg.contentSafeAreaInset.top}px`);
+        root.style.setProperty("--tg-content-safe-area-inset-top", `${contentTop}px`);
         root.style.setProperty("--tg-content-safe-area-inset-bottom", `${tg.contentSafeAreaInset.bottom}px`);
       }
+
+      // In fullscreen TMA, Telegram overlay buttons ([✕ Закрити] and [⋮]) require at least 62px clearance
+      const effectiveTop = Math.max(safeTop, contentTop, isTg ? 62 : 0);
+      root.style.setProperty("--tma-top-padding", `${effectiveTop}px`);
     };
 
     updateSafeArea();

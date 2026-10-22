@@ -221,6 +221,7 @@ export default function SettingsPage() {
         measurements,
       };
       const jsonStr = JSON.stringify(backupData);
+      const b64 = btoa(unescape(encodeURIComponent(jsonStr)));
       if (navigator.clipboard?.writeText) {
         navigator.clipboard.writeText(b64).then(() => {
           setCopiedCode(true);
