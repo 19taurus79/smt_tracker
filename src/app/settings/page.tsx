@@ -221,16 +221,32 @@ export default function SettingsPage() {
         measurements,
       };
       const jsonStr = JSON.stringify(backupData);
-      const b64 = btoa(unescape(encodeURIComponent(jsonStr)));
-      navigator.clipboard.writeText(b64);
-      setCopiedCode(true);
-      setTimeout(() => setCopiedCode(false), 3000);
-      showToast(
-        language === "uk"
-          ? "📋 Код скопійовано! Відкрийте Telegram-трекер та натисніть «Вставити код»."
-          : "📋 Код скопирован! Откройте Telegram-трекер и нажмите «Вставить код»."
-      );
-      triggerHaptic("success");
+      if (navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(b64).then(() => {
+          setCopiedCode(true);
+          setTimeout(() => setCopiedCode(false), 3000);
+          showToast(
+            language === "uk"
+              ? "📋 Код скопійовано! Відкрийте Telegram-трекер та натисніть «Вставити код»."
+              : "📋 Код скопирован! Откройте Telegram-трекер и нажмите «Вставить код»."
+          );
+          triggerHaptic("success");
+        }).catch(() => {
+          prompt(
+            language === "uk"
+              ? "Скопіюйте цей код перенесення:"
+              : "Скопируйте этот код переноса:",
+            b64
+          );
+        });
+      } else {
+        prompt(
+          language === "uk"
+            ? "Скопіюйте цей код перенесення:"
+            : "Скопируйте этот код переноса:",
+          b64
+        );
+      }
     } catch {
       showToast(t.common.error);
     }
