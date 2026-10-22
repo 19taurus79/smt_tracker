@@ -27,7 +27,7 @@ export function Dialog({ open, onOpenChange, children, className }: DialogProps)
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4"
+      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 overflow-y-auto overscroll-contain"
       style={{
         paddingTop: "max(12px, var(--tma-top-padding, 0px))",
         paddingBottom: "max(12px, var(--tma-bottom-padding, 0px))",
@@ -38,10 +38,10 @@ export function Dialog({ open, onOpenChange, children, className }: DialogProps)
         className="fixed inset-0 bg-black/85 backdrop-blur-md animate-in fade-in transition-opacity"
         onClick={() => onOpenChange(false)}
       />
-      {/* Content Container: Removed heavy double-padding on mobile */}
+      {/* Content Container: Dynamic dvh and safe-area bounded */}
       <div
         className={cn(
-          "relative z-50 w-full max-w-lg max-h-[92vh] flex flex-col rounded-2xl sm:rounded-3xl border border-white/10 bg-slate-900/98 p-2.5 sm:p-4.5 shadow-2xl backdrop-blur-2xl animate-in zoom-in-95 overflow-hidden",
+          "relative z-50 w-full max-w-lg max-h-[calc(100dvh-max(12px,var(--tma-top-padding,0px))-max(12px,var(--tma-bottom-padding,0px))-16px)] flex flex-col rounded-2xl sm:rounded-3xl border border-white/10 bg-slate-900/98 p-2.5 sm:p-4 shadow-2xl backdrop-blur-2xl animate-in zoom-in-95 overflow-hidden",
           className
         )}
       >

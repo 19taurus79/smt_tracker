@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { WorkoutSession } from "@/types/smt";
 import { BodyMeasurement, AppLanguage } from "@/types/body";
 import { formatTime, formatDate } from "@/lib/utils";
-import { Download, Sparkles, Check, Zap, Trophy, Flame, Activity, Award, Dumbbell, Share2 } from "lucide-react";
+import { Download, Sparkles, Check, Zap, Trophy, Flame, Activity, Award, Dumbbell, Share2, X } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { getLocalizedExerciseName } from "@/lib/i18n/exercises";
 import { useSettingsStore } from "@/lib/store/useSettingsStore";
@@ -1126,15 +1126,20 @@ export function StoryShareModal({
   }, [open, selectedTemplate, workout, language, athleticScore.score, prepData]);
 
   const [isSharing, setIsSharing] = useState(false);
+  const [telegramSentStatus, setTelegramSentStatus] = useState<"success" | "saved" | null>(null);
+  const [showFullPreview, setShowFullPreview] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   const handleShare = async () => {
     const canvas = canvasRef.current;
     if (!canvas || isSharing) return;
 
     setIsSharing(true);
+    setTelegramSentStatus(null);
     triggerHaptic("selection");
 
     try {
+      const dataUrl = canvas.toDataURL("image/png");
       const blob = await new Promise<Blob | null>((resolve) =>
         canvas.toBlob((b) => resolve(b), "image/png", 0.95)
       );
@@ -1149,52 +1154,119 @@ export function StoryShareModal({
       const filename = `${filenamePrefix}_${selectedTemplate}_${language}.png`;
       const file = new File([blob], filename, { type: "image/png" });
 
+      const tg = typeof window !== "undefined" ? (window as any).Telegram?.WebApp : null;
+      const tgUserId = tg?.initDataUnsafe?.user?.id || (useSettingsStore.getState().linkedTelegramUser?.id);
+
+      let sharedViaNative = false;
+
+      // 1. Try native Web Share API (if supported by OS/browser)
       if (typeof navigator !== "undefined" && navigator.canShare && navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          files: [file],
-          title: "SMT-1 Story",
-          text: `Тренування #${workout.workoutNumber} СМТ-1 (Високощільний тренінг) завершено! 🔥`,
-        });
-        triggerHaptic("success");
-      } else if (typeof navigator !== "undefined" && navigator.share) {
-        await navigator.share({
-          title: "SMT-1 Story",
-          text: `Тренування #${workout.workoutNumber} СМТ-1 завершено! 🔥`,
-          url: "https://t.me/athletic_smt_bot",
-        });
-      } else {
+        try {
+          await navigator.share({
+            files: [file],
+            title: "SMT-1 Story",
+            text: `Тренування #${workout.workoutNumber} СМТ-1 (Високощільний тренінг) завершено! 🔥`,
+          });
+          sharedViaNative = true;
+          triggerHaptic("success");
+        } catch (e: any) {
+          if (e?.name === "AbortError") {
+            setIsSharing(false);
+            return;
+          }
+          console.warn("navigator.share({ files }) failed, will fallback to Telegram bot:", e);
+        }
+      }
+
+      // 2. If inside Telegram WebApp or native share not available: deliver directly to athlete's chat with bot!
+      if (!sharedViaNative && tgUserId) {
+        try {
+          const res = await fetch("/api/story/share", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              chatId: tgUserId,
+              photoBase64: dataUrl,
+              workoutNumber: workout.workoutNumber,
+              template: selectedTemplate,
+            }),
+          });
+          const result = await res.json();
+          if (result.ok) {
+            triggerHaptic("success");
+            setTelegramSentStatus("success");
+            setIsSharing(false);
+            return;
+          }
+        } catch (err) {
+          console.error("Failed to send story to Telegram chat:", err);
+        }
+      }
+
+      // 3. Fallback: Open preview modal so user can long-press to save to gallery
+      if (!sharedViaNative) {
+        setPreviewUrl(dataUrl);
+        setShowFullPreview(true);
         handleDownload();
       }
     } catch (err: any) {
-      if (err?.name !== "AbortError") {
-        console.warn("Share failed, falling back to download:", err);
-        handleDownload();
-      }
+      console.error("Story share general error:", err);
+      handleDownload();
     } finally {
       setIsSharing(false);
     }
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
     setIsGenerating(true);
-    setTimeout(() => {
-      try {
-        const link = document.createElement("a");
-        const filenamePrefix = prepData
-          ? `smt_prep_s${prepData.prepSessionNumber}`
-          : `smt_story_w${workout.workoutNumber}`;
-        link.download = `${filenamePrefix}_${selectedTemplate}_${language}.png`;
-        link.href = canvas.toDataURL("image/png");
-        link.click();
-      } catch (err) {
-        console.error("Story download error", err);
-      } finally {
-        setIsGenerating(false);
+    triggerHaptic("selection");
+
+    try {
+      const dataUrl = canvas.toDataURL("image/png");
+      setPreviewUrl(dataUrl);
+
+      const tg = typeof window !== "undefined" ? (window as any).Telegram?.WebApp : null;
+      const tgUserId = tg?.initDataUnsafe?.user?.id || (useSettingsStore.getState().linkedTelegramUser?.id);
+
+      // Also send to Telegram chat in background so athlete always has permanent copy
+      if (tgUserId) {
+        fetch("/api/story/share", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chatId: tgUserId,
+            photoBase64: dataUrl,
+            workoutNumber: workout.workoutNumber,
+            template: selectedTemplate,
+          }),
+        })
+          .then((r) => r.json())
+          .then((d) => {
+            if (d.ok) setTelegramSentStatus("saved");
+          })
+          .catch(() => {});
       }
-    }, 150);
+
+      // Trigger standard browser download
+      const filenamePrefix = prepData
+        ? `smt_prep_s${prepData.prepSessionNumber}`
+        : `smt_story_w${workout.workoutNumber}`;
+      const link = document.createElement("a");
+      link.download = `${filenamePrefix}_${selectedTemplate}_${language}.png`;
+      link.href = dataUrl;
+      link.click();
+
+      // Show preview lightbox with long-press instruction on mobile
+      setShowFullPreview(true);
+      triggerHaptic("success");
+    } catch (err) {
+      console.error("Story download error", err);
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const prepOptions: { id: StoryTemplateType; name: string; desc: string; icon: React.ReactNode }[] = prepData
@@ -1255,113 +1327,213 @@ export function StoryShareModal({
   ];
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogHeader>
-        <DialogTitle onClose={() => onOpenChange(false)}>
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-pink-400" />
-            <span>{t.story.modalTitle}</span>
-          </div>
-        </DialogTitle>
-        <DialogDescription>{t.story.modalDesc}</DialogDescription>
-      </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogHeader className="shrink-0 mb-2">
+          <DialogTitle onClose={() => onOpenChange(false)}>
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-pink-400" />
+              <span>{t.story.modalTitle}</span>
+            </div>
+          </DialogTitle>
+          <DialogDescription>{t.story.modalDesc}</DialogDescription>
+        </DialogHeader>
 
-      <div className="space-y-4 my-2 max-h-[72vh] overflow-y-auto pr-1">
-        {/* 6 Specialized Templates Selector Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-          {templateOptions.map((tmpl) => {
-            const isSelected = selectedTemplate === tmpl.id;
-            return (
-              <button
-                key={tmpl.id}
-                type="button"
-                onClick={() => setSelectedTemplate(tmpl.id)}
-                className={`p-2.5 rounded-xl border text-left transition-all ${
-                  isSelected
-                    ? "bg-emerald-500/15 border-emerald-500 text-white shadow-lg shadow-emerald-500/20"
-                    : "bg-slate-900 border-white/10 text-slate-400 hover:text-white"
-                }`}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center gap-1.5">
-                    {tmpl.icon}
-                    <span className="text-[11px] font-bold block">{tmpl.name}</span>
+        {/* Scrollable Modal Body: Uses flex-1 min-h-0 so footer NEVER overflows screen */}
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain space-y-3 pr-1 py-0.5">
+          {/* Telegram Share Success Banner */}
+          {telegramSentStatus === "success" && (
+            <div className="rounded-xl border border-emerald-500/40 bg-emerald-950/70 p-3 shadow-lg flex flex-col gap-1.5 animate-in fade-in zoom-in-95">
+              <div className="flex items-center gap-2 text-emerald-400 font-bold text-xs sm:text-sm">
+                <Check className="h-4 w-4 shrink-0 text-emerald-300" />
+                <span>{language === "uk" ? "Історію надіслано в чат з ботом!" : "История отправлена в чат с ботом!"}</span>
+              </div>
+              <p className="text-[11px] text-slate-300 leading-tight">
+                {language === "uk"
+                  ? `Картинку 1080×1920 доставлено в особистий чат з ${botHandle}. Відкрийте чат, щоб зберегти у галерею або додати в Stories.`
+                  : `Картинка 1080×1920 доставлена в личный чат с ${botHandle}. Откройте чат, чтобы сохранить в галерею или добавить в Stories.`}
+              </p>
+              <div className="flex items-center gap-2 mt-1">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs border-emerald-500/50 text-emerald-300 hover:bg-emerald-500/20 font-semibold"
+                  onClick={() => {
+                    const bot = botHandle.replace("@", "");
+                    const tg = (window as any).Telegram?.WebApp;
+                    if (tg?.openTelegramLink) {
+                      tg.openTelegramLink(`https://t.me/${bot}`);
+                    } else {
+                      window.open(`https://t.me/${bot}`, "_blank");
+                    }
+                  }}
+                >
+                  <span>{language === "uk" ? "Відкрити чат з ботом ↗" : "Открыть чат с ботом ↗"}</span>
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* 6 Specialized Templates Selector Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+            {templateOptions.map((tmpl) => {
+              const isSelected = selectedTemplate === tmpl.id;
+              return (
+                <button
+                  key={tmpl.id}
+                  type="button"
+                  onClick={() => {
+                    setSelectedTemplate(tmpl.id);
+                    setTelegramSentStatus(null);
+                  }}
+                  className={`p-2 rounded-xl border text-left transition-all ${
+                    isSelected
+                      ? "bg-emerald-500/15 border-emerald-500 text-white shadow-lg shadow-emerald-500/20"
+                      : "bg-slate-900 border-white/10 text-slate-400 hover:text-white"
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-0.5">
+                    <div className="flex items-center gap-1.5">
+                      {tmpl.icon}
+                      <span className="text-[11px] font-bold block">{tmpl.name}</span>
+                    </div>
+                    {isSelected && <Check className="h-3 w-3 text-emerald-400" />}
                   </div>
-                  {isSelected && <Check className="h-3.5 w-3.5 text-emerald-400" />}
-                </div>
-                <span className="text-[9px] text-slate-400 block leading-tight">{tmpl.desc}</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Live Canvas Preview */}
-        <div className="flex flex-col items-center justify-center p-3 rounded-2xl bg-slate-950 border border-white/10">
-          <div className="w-[200px] h-[355px] sm:w-[240px] sm:h-[426px] overflow-hidden rounded-xl shadow-2xl border border-white/20 relative">
-            <canvas ref={canvasRef} className="w-full h-full object-contain pointer-events-none" />
+                  <span className="text-[9px] text-slate-400 block leading-tight">{tmpl.desc}</span>
+                </button>
+              );
+            })}
           </div>
-          <span className="text-[10px] text-slate-400 mt-2">{t.story.exportResolution}</span>
+
+          {/* Live Canvas Preview */}
+          <div className="flex flex-col items-center justify-center p-2.5 rounded-2xl bg-slate-950 border border-white/10">
+            <div
+              onClick={() => {
+                const c = canvasRef.current;
+                if (c) {
+                  setPreviewUrl(c.toDataURL("image/png"));
+                  setShowFullPreview(true);
+                }
+              }}
+              className="w-[150px] h-[267px] sm:w-[200px] sm:h-[355px] cursor-pointer overflow-hidden rounded-xl shadow-2xl border border-white/20 relative group transition-transform active:scale-98"
+              title={language === "uk" ? "Натисніть для перегляду" : "Нажмите для просмотра"}
+            >
+              <canvas ref={canvasRef} className="w-full h-full object-contain pointer-events-none" />
+              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[11px] font-semibold">
+                🔍 {language === "uk" ? "Перегляд" : "Просмотр"}
+              </div>
+            </div>
+            <span className="text-[10px] text-slate-400 mt-1.5">{t.story.exportResolution}</span>
+          </div>
         </div>
-      </div>
 
-      <div className="pt-2 border-t border-white/10 flex flex-col sm:flex-row gap-2 shrink-0">
-        <Button
-          variant="accent"
-          size="lg"
-          className="flex-1 font-bold text-xs sm:text-sm bg-gradient-to-r from-pink-500 via-rose-500 to-amber-500 text-white hover:opacity-90 flex items-center justify-center gap-2 shadow-lg shadow-pink-500/20"
-          onClick={handleShare}
-          disabled={isSharing || isGenerating}
-        >
-          <Share2 className="h-4 w-4 shrink-0" />
-          <span>
-            {isSharing
-              ? (language === "uk" ? "Підготовка..." : "Подготовка...")
-              : (language === "uk" ? "Поділитися в Instagram / Stories" : language === "en" ? "Share to Instagram / Stories" : "Поделиться в Instagram / Stories")}
-          </span>
-        </Button>
+        {/* Compact Ergonomic Footer: 3 Tiers, Always Visible */}
+        <div className="pt-2 border-t border-white/10 flex flex-col gap-1.5 shrink-0">
+          {/* Row 1: Primary Action (Share to Stories) */}
+          <Button
+            variant="accent"
+            size="default"
+            className="w-full h-11 font-bold text-xs sm:text-sm bg-gradient-to-r from-pink-500 via-rose-500 to-amber-500 text-white hover:opacity-95 flex items-center justify-center gap-2 shadow-lg shadow-pink-500/20 active:scale-[0.99] transition-transform"
+            onClick={handleShare}
+            disabled={isSharing || isGenerating}
+          >
+            <Share2 className="h-4 w-4 shrink-0" />
+            <span>
+              {isSharing
+                ? (language === "uk" ? "Відправка в Stories..." : "Отправка в Stories...")
+                : (language === "uk" ? "Поділитися в Instagram / Stories" : language === "en" ? "Share to Instagram / Stories" : "Поделиться в Instagram / Stories")}
+            </span>
+          </Button>
 
-        <Button
-          variant="outline"
-          size="lg"
-          className="border-white/10 text-slate-300 hover:text-white hover:bg-white/5 text-xs font-semibold flex items-center justify-center gap-1.5"
-          onClick={handleDownload}
-          disabled={isGenerating || isSharing}
-        >
-          <Download className="h-3.5 w-3.5 shrink-0" />
-          <span>{isGenerating ? t.story.generating : (language === "uk" ? "Зберегти" : language === "en" ? "Save PNG" : "Сохранить")}</span>
-        </Button>
+          {/* Row 2: Secondary Actions in 2-Column Grid */}
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 border-white/10 text-slate-200 hover:text-white hover:bg-white/5 text-xs font-semibold flex items-center justify-center gap-1.5"
+              onClick={handleDownload}
+              disabled={isGenerating || isSharing}
+            >
+              <Download className="h-3.5 w-3.5 shrink-0 text-cyan-400" />
+              <span className="truncate">
+                {isGenerating ? t.story.generating : (language === "uk" ? "Зберегти PNG" : language === "en" ? "Save PNG" : "Сохранить PNG")}
+              </span>
+            </Button>
 
-        <Button
-          variant="outline"
-          size="lg"
-          disabled={isPublishingChallenge || publishedChallenge}
-          className={`font-semibold text-xs transition-all ${
-            publishedChallenge
-              ? "border-emerald-500/40 text-emerald-300 bg-emerald-500/10"
-              : "border-amber-500/30 text-amber-300 hover:bg-amber-500/10"
-          }`}
-          onClick={handlePublishChallenge}
-        >
-          <Flame className="h-4 w-4 mr-1 text-amber-400" />
-          <span>
-            {publishedChallenge
-              ? (language === "uk" ? "В каналі!" : language === "en" ? "In Channel!" : "В канале!")
-              : isPublishingChallenge
-              ? (language === "uk" ? "Публікація..." : language === "en" ? "Publishing..." : "Публикация...")
-              : (language === "uk" ? "В Челендж" : language === "en" ? "To Challenge" : "В Челлендж")}
-          </span>
-        </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isPublishingChallenge || publishedChallenge}
+              className={`h-9 font-semibold text-xs transition-all flex items-center justify-center gap-1 ${
+                publishedChallenge
+                  ? "border-emerald-500/40 text-emerald-300 bg-emerald-500/10"
+                  : "border-amber-500/30 text-amber-300 hover:bg-amber-500/10"
+              }`}
+              onClick={handlePublishChallenge}
+            >
+              <Flame className="h-3.5 w-3.5 shrink-0 text-amber-400" />
+              <span className="truncate">
+                {publishedChallenge
+                  ? (language === "uk" ? "В Челенджі ✓" : "В Челлендже ✓")
+                  : isPublishingChallenge
+                  ? (language === "uk" ? "Публікація..." : "Публикация...")
+                  : (language === "uk" ? "В Челендж" : language === "en" ? "To Challenge" : "В Челлендж")}
+              </span>
+            </Button>
+          </div>
 
-        <Button
-          variant="outline"
-          size="lg"
-          className="font-semibold text-xs border-white/20"
-          onClick={() => onOpenChange(false)}
+          {/* Row 3: Close Button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full h-7 text-xs font-medium text-slate-400 hover:text-white hover:bg-white/5"
+            onClick={() => onOpenChange(false)}
+          >
+            {t.story.closeButton}
+          </Button>
+        </div>
+      </Dialog>
+
+      {/* Full-Screen Lightbox Preview for Mobile (Allows native long-press save) */}
+      {showFullPreview && previewUrl && (
+        <div
+          className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-md flex flex-col items-center justify-between p-3 animate-in fade-in"
+          onClick={() => setShowFullPreview(false)}
         >
-          {t.story.closeButton}
-        </Button>
-      </div>
-    </Dialog>
+          <div className="w-full flex items-center justify-between text-white shrink-0 pt-2 pb-1 max-w-sm">
+            <span className="text-xs font-semibold text-slate-300">
+              {language === "uk" ? "Повний розмір 1080×1920" : "Полный размер 1080×1920"}
+            </span>
+            <button
+              onClick={() => setShowFullPreview(false)}
+              className="p-1 rounded-full bg-white/10 hover:bg-white/20 text-white"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          <div className="flex-1 min-h-0 flex items-center justify-center py-2 max-w-full">
+            <img
+              src={previewUrl}
+              alt="Story Preview"
+              className="max-h-full max-w-full object-contain rounded-xl shadow-2xl border border-white/20 select-none"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+
+          <div
+            className="w-full max-w-sm bg-slate-900/90 border border-white/10 rounded-xl p-2.5 text-center shrink-0 mb-2"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p className="text-xs text-amber-300 font-medium">
+              {language === "uk"
+                ? "💡 Затисніть картинку пальцем, щоб зберегти у фотогалерею"
+                : "💡 Зажмите картинку пальцем, чтобы сохранить в фотогалерею"}
+            </p>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
