@@ -32,15 +32,13 @@ export function TopHeader() {
         // Use localStorage so the user is only registered once permanently per device
         if (!localStorage.getItem(leadKey)) {
           localStorage.setItem(leadKey, "1");
-          fetch("/api/lead/register", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
+          import("@/lib/tma/sync").then(({ syncTrainee }) => {
+            syncTrainee({
               name: effectiveUser.first_name || effectiveUser.firstName || "Атлет",
               username: effectiveUser.username || "",
               telegramUserId: effectiveUser.id,
-            }),
-          }).catch(() => {});
+            }).catch(() => {});
+          });
         }
       }
     }
@@ -90,23 +88,11 @@ export function TopHeader() {
               <Link
                 href="/settings"
                 className="hidden sm:flex items-center gap-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-0.5 text-[11px] font-medium text-emerald-400 hover:bg-emerald-500/20 transition-all"
-                title="Ваш Telegram підключено"
+                title="Ваш профіль у Telegram"
               >
                 <span>@{linkedTelegramUser.username || linkedTelegramUser.firstName}</span>
               </Link>
-            ) : inTelegram ? (
-              <Badge variant="secondary" className="hidden sm:inline-flex text-[10px] py-0 px-2">
-                TMA
-              </Badge>
-            ) : (
-              <Link
-                href="/settings"
-                className="hidden sm:inline-flex text-[11px] font-semibold text-slate-400 hover:text-cyan-400 transition-colors"
-                title="Підключити Telegram"
-              >
-                🔗 Telegram
-              </Link>
-            )}
+            ) : null}
 
             <button
               onClick={() => setIsHelpOpen(true)}

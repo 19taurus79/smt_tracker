@@ -214,8 +214,10 @@ export async function POST(req: Request) {
             inline_keyboard: [
               [
                 {
-                  text: lang === "uk" ? "📱 Відкрити Трекер (PWA)" : "📱 Открыть Трекер (PWA)",
-                  url: APP_URL,
+                  text: lang === "uk" ? "⚡️ Відкрити SMT-1 Трекер" : "⚡️ Открыть SMT-1 Трекер",
+                  web_app: {
+                    url: APP_URL,
+                  },
                 },
               ],
             ],

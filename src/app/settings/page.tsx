@@ -552,27 +552,23 @@ export default function SettingsPage() {
             ) : (
               <div className="rounded-xl border border-cyan-500/30 bg-cyan-950/20 p-3.5 space-y-2">
                 <span className="text-xs font-bold text-cyan-300 block">
-                  {language === "uk"
-                    ? "📱 Нативне PWA на екрані смартфона"
-                    : "📱 Standalone Home Screen PWA"}
+                  🏋️‍♂️ Telegram Mini App
                 </span>
                 <p className="text-[11px] text-slate-300 leading-relaxed">
                   {language === "uk"
-                    ? "Підключіть свій Telegram в 1 клік для збереження результатів у захищене хмарне сховище та миттєвої відправки звітів тренеру."
-                    : "Link your Telegram in 1 click for seamless cloud backup and 1-click workout reporting to your coach."}
+                    ? "Для повноцінної роботи, синхронізації та відправки звітів тренеру відкрийте трекер через офіційного бота."
+                    : "Open the tracker via the official Telegram bot for full cloud sync and direct coach reporting."}
                 </p>
                 <Button
                   type="button"
                   variant="accent"
                   size="sm"
-                  onClick={() => window.open(generateTelegramLinkUrl(), "_blank")}
+                  onClick={() => window.open("https://t.me/athletic_smt_bot", "_blank")}
                   className="w-full text-xs font-bold bg-gradient-to-r from-cyan-500 to-emerald-500 text-slate-950 hover:opacity-90 flex items-center justify-center gap-1.5"
                 >
                   <LinkIcon className="h-3.5 w-3.5" />
                   <span>
-                    {language === "uk"
-                      ? "🔗 Підключити Telegram в 1 клік"
-                      : "🔗 Link Telegram in 1 Click"}
+                    {language === "uk" ? "Відкрити в Telegram" : "Open in Telegram"}
                   </span>
                 </Button>
               </div>

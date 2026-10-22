@@ -298,7 +298,7 @@ export const useWorkoutStore = create<WorkoutState>()(
           // Звук тика на последних 3 секундах
           if (restTimerSeconds <= 4) {
             soundPlayer.playTick();
-            triggerHaptic("selection");
+            triggerHaptic("light");
           }
           set({ restTimerSeconds: restTimerSeconds - 1 });
         }
@@ -383,7 +383,7 @@ export const useWorkoutStore = create<WorkoutState>()(
         }));
 
         if (willBeCompleted) {
-          if (hapticsEnabled) triggerHaptic("impact");
+          if (hapticsEnabled) triggerHaptic("medium");
           if (soundEnabled) soundPlayer.playBeep(600, 0.1, "sine");
           // Автостарт таймера отдыха
           startRestTimer(restDuration);
@@ -555,6 +555,8 @@ export const useWorkoutStore = create<WorkoutState>()(
           isRestTimerActive: false,
         });
 
+        setWorkoutActiveMode(false);
+
         if (soundEnabled) soundPlayer.playWorkoutComplete();
         if (hapticsEnabled) triggerHaptic("success");
 
@@ -564,6 +566,8 @@ export const useWorkoutStore = create<WorkoutState>()(
       cancelWorkout: () => {
         const { activeWorkoutId, workouts } = get();
         if (!activeWorkoutId) return;
+
+        setWorkoutActiveMode(false);
 
         set({
           activeWorkoutId: null,

@@ -279,16 +279,10 @@ export async function sendDirectCoachReport(payload: {
   exercises?: any[];
   notes?: string;
 }): Promise<boolean> {
-  try {
-    const res = await fetch("/api/coach/report", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    const data = await res.json();
-    return Boolean(data.ok);
-  } catch (err) {
-    console.error("Direct coach report error:", err);
-    return false;
-  }
+  const { syncWorkout } = await import("@/lib/tma/sync");
+  return syncWorkout({
+    ...payload,
+    name: payload.traineeName,
+    username: payload.traineeUsername,
+  });
 }

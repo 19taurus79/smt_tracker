@@ -7,12 +7,13 @@ import { Button } from "@/components/ui/button";
 import { WorkoutSession } from "@/types/smt";
 import { BodyMeasurement, AppLanguage } from "@/types/body";
 import { formatTime, formatDate } from "@/lib/utils";
-import { Download, Sparkles, Check, Zap, Trophy, Flame, Activity, Award, Dumbbell } from "lucide-react";
+import { Download, Sparkles, Check, Zap, Trophy, Flame, Activity, Award, Dumbbell, Share2 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { getLocalizedExerciseName } from "@/lib/i18n/exercises";
 import { useSettingsStore } from "@/lib/store/useSettingsStore";
 import { useWorkoutStore } from "@/lib/store/useWorkoutStore";
 import { calculateAthleticScore } from "@/lib/scoring/athleticScore";
+import { triggerHaptic } from "@/lib/tma/telegram";
 
 export interface PrepStoryData {
   prepSessionNumber: number;
@@ -1124,6 +1125,56 @@ export function StoryShareModal({
     }
   }, [open, selectedTemplate, workout, language, athleticScore.score, prepData]);
 
+  const [isSharing, setIsSharing] = useState(false);
+
+  const handleShare = async () => {
+    const canvas = canvasRef.current;
+    if (!canvas || isSharing) return;
+
+    setIsSharing(true);
+    triggerHaptic("selection");
+
+    try {
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob((b) => resolve(b), "image/png", 0.95)
+      );
+
+      if (!blob) {
+        throw new Error("Canvas export failed");
+      }
+
+      const filenamePrefix = prepData
+        ? `smt_prep_s${prepData.prepSessionNumber}`
+        : `smt_story_w${workout.workoutNumber}`;
+      const filename = `${filenamePrefix}_${selectedTemplate}_${language}.png`;
+      const file = new File([blob], filename, { type: "image/png" });
+
+      if (typeof navigator !== "undefined" && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: "SMT-1 Story",
+          text: `Тренування #${workout.workoutNumber} СМТ-1 (Високощільний тренінг) завершено! 🔥`,
+        });
+        triggerHaptic("success");
+      } else if (typeof navigator !== "undefined" && navigator.share) {
+        await navigator.share({
+          title: "SMT-1 Story",
+          text: `Тренування #${workout.workoutNumber} СМТ-1 завершено! 🔥`,
+          url: "https://t.me/athletic_smt_bot",
+        });
+      } else {
+        handleDownload();
+      }
+    } catch (err: any) {
+      if (err?.name !== "AbortError") {
+        console.warn("Share failed, falling back to download:", err);
+        handleDownload();
+      }
+    } finally {
+      setIsSharing(false);
+    }
+  };
+
   const handleDownload = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -1257,12 +1308,27 @@ export function StoryShareModal({
         <Button
           variant="accent"
           size="lg"
-          className="flex-1 font-bold text-xs sm:text-sm bg-gradient-to-r from-pink-500 via-rose-500 to-amber-500 text-white hover:opacity-90 flex items-center justify-center gap-2"
-          onClick={handleDownload}
-          disabled={isGenerating}
+          className="flex-1 font-bold text-xs sm:text-sm bg-gradient-to-r from-pink-500 via-rose-500 to-amber-500 text-white hover:opacity-90 flex items-center justify-center gap-2 shadow-lg shadow-pink-500/20"
+          onClick={handleShare}
+          disabled={isSharing || isGenerating}
         >
-          <Download className="h-4 w-4 shrink-0" />
-          <span>{isGenerating ? t.story.generating : t.story.downloadButton}</span>
+          <Share2 className="h-4 w-4 shrink-0" />
+          <span>
+            {isSharing
+              ? (language === "uk" ? "Підготовка..." : "Подготовка...")
+              : (language === "uk" ? "Поділитися в Instagram / Stories" : language === "en" ? "Share to Instagram / Stories" : "Поделиться в Instagram / Stories")}
+          </span>
+        </Button>
+
+        <Button
+          variant="outline"
+          size="lg"
+          className="border-white/10 text-slate-300 hover:text-white hover:bg-white/5 text-xs font-semibold flex items-center justify-center gap-1.5"
+          onClick={handleDownload}
+          disabled={isGenerating || isSharing}
+        >
+          <Download className="h-3.5 w-3.5 shrink-0" />
+          <span>{isGenerating ? t.story.generating : (language === "uk" ? "Зберегти" : language === "en" ? "Save PNG" : "Сохранить")}</span>
         </Button>
 
         <Button

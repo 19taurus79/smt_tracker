@@ -596,6 +596,27 @@ export const useCoachStore = create<CoachStoreState>()(
       fetchServerTrainees: async () => {
         try {
           set({ isLoadingServer: true });
+
+          // 1. Try Telegram Serverless first if running inside Telegram Mini App
+          const tg = typeof window !== "undefined" ? (window.Telegram?.WebApp as any) : null;
+          if (tg?.Serverless && typeof tg.Serverless.call === "function") {
+            try {
+              const res: any = await new Promise((resolve, reject) => {
+                tg.Serverless.call("getCoachTrainees", {}, (err: unknown, data: unknown) => {
+                  if (err) reject(err);
+                  else resolve(data);
+                });
+              });
+              if (res && res.ok && Array.isArray(res.trainees) && res.trainees.length > 0) {
+                set({ trainees: res.trainees });
+                return;
+              }
+            } catch (tgErr) {
+              console.warn("[useCoachStore] tgcloud getCoachTrainees fallback to HTTP:", tgErr);
+            }
+          }
+
+          // 2. HTTP Fallback to Next.js API
           const res = await fetch("/api/coach/trainees");
           if (!res.ok) return;
           const data = await res.json();

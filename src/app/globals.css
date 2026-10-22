@@ -19,7 +19,7 @@ html {
   background-color: #020618;
 }
 
-/* Telegram WebApp & iOS Safari Theme styles */
+/* Telegram WebApp Theme & Safe-Area Styles */
 body {
   background-color: var(--tg-theme-bg-color, var(--background));
   color: var(--tg-theme-text-color, var(--foreground));
@@ -27,29 +27,27 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   overflow-x: hidden;
   -webkit-tap-highlight-color: transparent;
+  user-select: none;
 }
 
-/* Base Top Header Safe Area padding */
-.ios-safe-top {
-  padding-top: env(safe-area-inset-top, 0px);
-  padding-top: max(env(safe-area-inset-top, 0px), var(--tg-safe-area-inset-top, 0px));
+/* Universal Top Header Safe Area padding (Android punch-hole, notch & iOS Dynamic Island) */
+.ios-safe-top,
+.tg-safe-top {
+  padding-top: max(
+    env(safe-area-inset-top, 0px),
+    var(--tg-safe-area-inset-top, 0px),
+    var(--tg-content-safe-area-inset-top, 0px)
+  );
 }
 
-/* When running as standalone PWA on iOS devices, guarantee at least 47px padding to clear the notch/Dynamic Island */
-@supports (-webkit-touch-callout: none) {
-  @media all and (display-mode: standalone) {
-    .ios-safe-top {
-      padding-top: max(env(safe-area-inset-top, 0px), 47px) !important;
-    }
-    .ios-safe-bottom {
-      padding-bottom: max(env(safe-area-inset-bottom, 0px), 24px) !important;
-    }
-  }
-}
-
-.ios-safe-bottom {
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-  padding-bottom: max(env(safe-area-inset-bottom, 0px), var(--tg-safe-area-inset-bottom, 0px));
+/* Universal Bottom Navigation Safe Area padding (Android & iOS home gesture bars) */
+.ios-safe-bottom,
+.tg-safe-bottom {
+  padding-bottom: max(
+    env(safe-area-inset-bottom, 0px),
+    var(--tg-safe-area-inset-bottom, 0px),
+    var(--tg-content-safe-area-inset-bottom, 0px)
+  );
 }
 
 /* Smooth custom scrollbars */
@@ -84,4 +82,3 @@ body {
   -ms-overflow-style: none !important;
   scrollbar-width: none !important;
 }
-

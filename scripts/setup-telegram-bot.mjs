@@ -69,12 +69,12 @@ async function setup() {
 
   // 3. Set Description (Full text shown before clicking Start)
   const descUk =
-    "Офіційний розумний трекер та 12-тижневий Челендж за високощільною методикою СМТ-1 (Сверхмощный тренинг).\n\n" +
+    "Офіційний розумний трекер та 12-тижневий Челендж за високощільною методикою СМТ-1.\n\n" +
     "⚡️ 36 тренувань • 4 мікроцикли\n" +
     "⏱ Відпочинок СУВОРО ДО 30 СЕКУНД (24 підходи = ~25 хв)\n" +
-    "💪 Натуральна рекомпозиція (спалювання жиру та ріст щільності м'язів)\n" +
+    "💪 Натуральна рекомпозиція (спалювання жиру та ріст м'язів)\n" +
     "🏆 Персональний розрахунок Індексу Атлетичності\n\n" +
-    "⚠️ УВАГА: Програма не для новачків без підготовки! Для старту потрібен 1–2 тижневий ввідний адаптаційний цикл та розрахунок робочих ваг.\n\n" +
+    "⚠️ Програма високої щільності. Потрібен ввідний адаптаційний цикл та розрахунок робочих ваг.\n\n" +
     "Тисніть 'Розпочати', щоб забрати трекер та приєднатися до Челенджу!";
 
   const descRu =
@@ -102,17 +102,13 @@ async function setup() {
   const shortResRu = await callTg("setMyShortDescription", { short_description: shortRu, language_code: "ru" });
   console.log("✅ Short Description (RU):", shortResRu.ok ? "Success" : shortResRu);
 
-  // 5. Set Persistent Chat Menu Button to direct WebApp (100% Pure TMA!)
+  // 5. Set Persistent Chat Menu Button to Commands List (preserves [/] menu with all commands)
   const menuRes = await callTg("setChatMenuButton", {
     menu_button: {
-      type: "web_app",
-      text: "⚡️ СМТ-1 Трекер",
-      web_app: {
-        url: APP_URL,
-      },
+      type: "commands",
     },
   });
-  console.log("✅ Menu Button set to WebApp:", menuRes.ok ? "Success" : menuRes);
+  console.log("✅ Menu Button set to Commands List ([/] menu):", menuRes.ok ? "Success" : menuRes);
 
   console.log("\n🎉 Telegram Bot successfully configured for 100% TMA!");
 }

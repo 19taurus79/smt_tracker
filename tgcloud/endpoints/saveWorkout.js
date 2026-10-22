@@ -1,113 +1,108 @@
-import { db, api, EndpointError } from "sdk";
-import { eq, sql } from "sdk/db";
-import { trainees, workoutReports } from "../schema.js";
+import { api, db } from 'sdk';
+import { trainees, workoutLogs } from 'schema';
+import { eq, sql } from 'sdk/db';
 
-const COACH_CHAT_ID = 548019148;
+const COACH_CHAT_ID = '548019148';
 
-export default async function (input, ctx) {
-  const user = ctx.initData?.user;
-  if (!user || !user.id) {
-    throw new EndpointError("Unauthorized: Telegram user data missing", { code: "UNAUTHORIZED" });
+export default async function (input, context) {
+  const userId = context?.userId || input?.telegramId;
+  if (!userId) {
+    throw new Error('Unauthorized: missing userId');
   }
 
-  const tgId = user.id;
-  const username = (user.username || input.traineeUsername || "").replace(/^@/, "");
-  const name = user.first_name ? `${user.first_name}${user.last_name ? " " + user.last_name : ""}` : (input.traineeName || "Атлет");
+  const now = Date.now();
+  const {
+    workoutNumber = 1,
+    microcycle = 1,
+    durationSeconds = 0,
+    tonnageKg = 0,
+    powerKgPerMin = 0,
+    athleticScore = 70,
+    exercises = [],
+    notes = '',
+    weightKg = 80,
+    name = 'Атлет',
+    username = '',
+  } = input;
 
-  const workoutNumber = Number(input.workoutNumber) || 1;
-  const microcycle = Number(input.microcycle) || 1;
-  const durationSeconds = Number(input.durationSeconds) || 0;
-  const tonnageKg = Number(input.tonnageKg) || 0;
-  const powerKgPerMin = Number(input.powerKgPerMin) || 0;
-  const athleticScore = Number(input.athleticScore?.score) || 75;
-  const tierLabel = input.athleticScore?.tierLabel || "Активний Атлет";
-  const notes = input.notes || "";
-  const exercises = input.exercises || [];
-
-  // 1. Insert report
-  await db.insert(workoutReports).values({
-    traineeTgId: tgId,
+  // 1. Record workout log in SQLite
+  await db.insert(workoutLogs).values({
+    traineeTelegramId: userId,
     workoutNumber,
     microcycle,
     durationSeconds,
     tonnageKg,
     powerKgPerMin,
     athleticScore,
-    tierLabel,
+    exercisesJson: JSON.stringify(exercises),
     notes,
-    exercises,
-  });
+    createdAt: now,
+  }).run();
 
-  // 2. Upsert trainee in SQLite
-  const existing = await db.select().from(trainees).where(eq(trainees.tgId, tgId)).get();
-
-  if (existing) {
-    await db.update(trainees)
-      .set({
-        name,
-        username,
-        currentWorkoutNumber: workoutNumber,
-        currentMicrocycle: microcycle,
-        totalWorkouts: (existing.totalWorkouts || 0) + 1,
-        weightKg: Number(input.latestMeasurement?.weightKg) || existing.weightKg,
-        athleticScore,
-        tierKey: input.athleticScore?.tierKey || existing.tierKey,
-        tierLabel,
-        status: existing.status === "blocked" ? "blocked" : "active",
-        updatedAt: sql`(unixepoch())`,
-      })
-      .where(eq(trainees.tgId, tgId));
-  } else {
-    await db.insert(trainees).values({
-      tgId,
-      username,
-      name,
-      currentWorkoutNumber: workoutNumber,
+  // 2. Upsert trainee profile in SQLite
+  await db.insert(trainees).values({
+    telegramId: userId,
+    username: username.replace(/^@/, ''),
+    firstName: name,
+    coachId: COACH_CHAT_ID,
+    currentMicrocycle: microcycle,
+    currentWorkout: workoutNumber,
+    totalWorkouts: 1,
+    weightKg,
+    athleticScore,
+    status: 'active',
+    updatedAt: now,
+    createdAt: now,
+  }).onConflictDoUpdate({
+    target: trainees.telegramId,
+    set: {
       currentMicrocycle: microcycle,
-      totalWorkouts: 1,
-      weightKg: Number(input.latestMeasurement?.weightKg) || 80.0,
+      currentWorkout: workoutNumber,
+      totalWorkouts: sql`${trainees.totalWorkouts} + 1`,
+      weightKg,
       athleticScore,
-      tierKey: input.athleticScore?.tierKey || "active",
-      tierLabel,
-      status: "active",
-      coachNotes: "Виконав перше тренування в трекері.",
-    });
-  }
+      status: 'active',
+      updatedAt: now,
+    },
+  }).run();
 
-  // 3. Send Telegram report to Coach
-  const durationMin = Math.floor(durationSeconds / 60);
-  const durationSec = durationSeconds % 60;
-  const durationFormatted = `${durationMin}хв ${durationSec < 10 ? "0" : ""}${durationSec}с`;
-
-  const lines = [
-    `🏋️‍♂️ <b>ЗВІТ ПРО ТРЕНУВАННЯ СМТ-1</b>`,
-    ``,
-    `👤 <b>Атлет:</b> ${name} ${username ? `(@${username})` : ""}`,
-    `⚡ <b>Тренування:</b> #${workoutNumber} (Мікроцикл ${microcycle})`,
-    `⏱ <b>Тривалість:</b> ${durationFormatted}`,
-    `💪 <b>Тоннаж:</b> ${Math.round(tonnageKg)} кг`,
-    `⚡ <b>Щільність:</b> ${Math.round(powerKgPerMin)} кг/хв`,
-    `🏆 <b>Індекс Атлетичності:</b> ${athleticScore} (${tierLabel})`,
-  ];
-
-  if (notes) {
-    lines.push(``);
-    lines.push(`💬 <i>"${notes}"</i>`);
-  }
-
-  lines.push(``);
-  lines.push(`━━━━━━━━━━━━━━━━━━`);
-  lines.push(`💬 <i>Відповісти:</i> ${username ? `https://t.me/${username}` : "в особисті повідомлення"}`);
-
+  // 3. Send Telegram report directly to coach PM
   try {
+    const cleanUsername = username.replace(/^@/, '');
+    const athleteTag = cleanUsername ? `@${cleanUsername}` : name;
+    const minutes = Math.floor(durationSeconds / 60);
+    const seconds = durationSeconds % 60;
+    const timeFormatted = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+
+    const lines = [
+      `👑 <b>НОВИЙ ЗВІТ ДЛЯ ТРЕНЕРА!</b>`,
+      ``,
+      `👤 <b>Підопічний:</b> ${athleteTag}`,
+      `📅 <b>Тренування:</b> #${workoutNumber} (МКЦ-${microcycle})`,
+      `⏱ <b>Час:</b> ${timeFormatted} (паузи суворо 30с)`,
+      `📦 <b>Тоннаж:</b> ${tonnageKg.toLocaleString()} кг`,
+      `⚡ <b>Потужність:</b> ${powerKgPerMin} кг/хв`,
+      `🏆 <b>Індекс:</b> ${athleticScore} / 100`,
+    ];
+
+    if (notes) {
+      lines.push(``, `💬 <i>"${notes}"</i>`);
+    }
+
+    lines.push(``, `━━━━━━━━━━━━━━━━━━`);
+    if (cleanUsername) {
+      lines.push(`💬 <i>Написати:</i> https://t.me/${cleanUsername}`);
+    }
+
     await api.sendMessage({
       chat_id: COACH_CHAT_ID,
-      text: lines.join("\n"),
-      parse_mode: "HTML",
+      text: lines.join('\n'),
+      parse_mode: 'HTML',
+      disable_web_page_preview: true,
     });
-  } catch (err) {
-    console.warn("Error sending telegram report to coach:", err);
+  } catch (e) {
+    console.warn('Coach notification warning:', e);
   }
 
-  return { ok: true, saved: true };
+  return { ok: true, savedAt: now };
 }
