@@ -51,7 +51,7 @@ export function SupersetCard({ workoutId, superset }: SupersetCardProps) {
 
   return (
     <Card className="border-white/10 bg-slate-900/70 overflow-hidden shadow-lg">
-      <CardHeader className="p-4 sm:p-5 bg-white/[0.02] border-b border-white/5 space-y-3">
+      <CardHeader className="p-3 sm:p-5 bg-white/[0.02] border-b border-white/5 space-y-2">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2.5">
             <div
@@ -141,7 +141,7 @@ export function SupersetCard({ workoutId, superset }: SupersetCardProps) {
         )}
       </CardHeader>
 
-      <CardContent className="p-4 space-y-4">
+      <CardContent className="p-2 sm:p-4 space-y-3">
         {isSingle ? (
           /* Single Exercise: sequential sets */
           <div className="space-y-1.5">

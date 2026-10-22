@@ -55,7 +55,7 @@ export default function RootLayout({
         <TelegramProvider>
           <TelegramBackButton />
           <TopHeader />
-          <main className="flex-1 pb-20 sm:pb-24 max-w-5xl w-full mx-auto px-4 sm:px-6 pt-3 sm:pt-4">
+          <main className="flex-1 pb-20 sm:pb-24 max-w-5xl w-full mx-auto px-2 sm:px-6 pt-2 sm:pt-4">
             {children}
           </main>
           <RestTimerOverlay />

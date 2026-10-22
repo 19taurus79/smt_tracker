@@ -169,11 +169,13 @@ function WorkoutContent() {
   return (
     <div className="space-y-4 animate-in fade-in duration-200">
       {/* Sticky Compact Workout Dashboard Header */}
-      <div className="rounded-xl sm:rounded-2xl border border-white/10 bg-slate-900/90 p-2.5 sm:p-4 backdrop-blur-xl shadow-xl sticky top-[calc(3.5rem+max(env(safe-area-inset-top,0px),var(--tg-safe-area-inset-top,0px)))] z-30">
-        <div className="flex items-center justify-between gap-1.5 sm:gap-2">
-          <div className="flex items-center gap-1.5">
+      <div className="rounded-xl sm:rounded-2xl border border-white/10 bg-slate-900/95 p-2 sm:p-3.5 backdrop-blur-xl shadow-xl sticky top-[calc(var(--tma-top-padding,44px)+0.25rem)] z-30">
+        {/* ROW 1: Stopwatch / Controls on left, Primary Action (Finish / Start) on right */}
+        <div className="flex items-center justify-between gap-2">
+          {/* Left: Stopwatch & utilities */}
+          <div className="flex items-center gap-1.5 shrink-0">
             {/* Stopwatch pill */}
-            <div className="flex items-center gap-1.5 rounded-lg bg-slate-950 px-2 sm:px-2.5 py-1 border border-white/10 shrink-0">
+            <div className="flex items-center gap-1.5 rounded-lg bg-slate-950 px-2 py-1 border border-white/10 shrink-0">
               <Timer
                 className={cn(
                   "h-3.5 w-3.5 shrink-0",
@@ -237,25 +239,16 @@ function WorkoutContent() {
             )}
           </div>
 
+          {/* Right: Primary Action Button (Finish / Start / Report) */}
           <div className="flex items-center gap-1.5 shrink-0">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={openWarmupModal}
-              className="h-8 px-2 sm:px-2.5 text-[11px] sm:text-xs font-semibold border-amber-500/30 text-amber-300 hover:bg-amber-500/10"
-            >
-              <Flame className="h-3.5 w-3.5 mr-1 text-amber-400 shrink-0" />
-              <span>{t.workout.warmup}</span>
-            </Button>
-
             {isCurrentActive && (
               <Button
                 variant="accent"
                 size="sm"
-                className="h-8 px-2.5 sm:px-3 text-[11px] sm:text-xs font-bold"
+                className="h-8 px-3 text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-md shadow-emerald-500/25"
                 onClick={handleOpenFinishModal}
               >
-                <CheckCircle className="h-3.5 w-3.5 mr-1 shrink-0" />
+                <CheckCircle className="h-3.5 w-3.5 mr-1 shrink-0 text-slate-950" />
                 <span>{t.workout.finish}</span>
               </Button>
             )}
@@ -264,10 +257,10 @@ function WorkoutContent() {
               <Button
                 variant="accent"
                 size="sm"
-                className="h-8 px-2.5 sm:px-3 text-[11px] sm:text-xs font-bold"
+                className="h-8 px-3 text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-md shadow-emerald-500/25"
                 onClick={handleStartThisWorkout}
               >
-                <Play className="h-3.5 w-3.5 mr-1 fill-current" />
+                <Play className="h-3.5 w-3.5 mr-1 fill-current text-slate-950" />
                 <span>{t.workout.start}</span>
               </Button>
             )}
@@ -276,7 +269,7 @@ function WorkoutContent() {
               <Button
                 variant="default"
                 size="sm"
-                className="h-8 px-2.5 sm:px-3 text-[11px] sm:text-xs font-bold bg-emerald-600 hover:bg-emerald-500"
+                className="h-8 px-3 text-xs font-bold bg-emerald-600 hover:bg-emerald-500"
                 onClick={() => setIsReportOpen(true)}
               >
                 <FileText className="h-3.5 w-3.5 mr-1" />
@@ -286,20 +279,32 @@ function WorkoutContent() {
           </div>
         </div>
 
-        {/* Progress Bar of sets */}
-        <div className="mt-2 space-y-1">
-          <div className="flex items-center justify-between text-[11px] text-slate-300">
-            <span>
-              {t.dashboard.progress}:{" "}
-              <strong className="text-emerald-400">
-                {completedSets} / {totalSets}
-              </strong>
-            </span>
-            <span className="font-mono text-slate-400">
-              {Math.round((completedSets / (totalSets || 1)) * 100)}%
-            </span>
+        {/* ROW 2: Progress Bar of sets + Warmup trigger */}
+        <div className="mt-2 pt-1.5 border-t border-white/5 flex items-center justify-between gap-2.5">
+          <div className="flex-1 space-y-1">
+            <div className="flex items-center justify-between text-[11px] text-slate-300">
+              <span>
+                {t.dashboard.progress}:{" "}
+                <strong className="text-emerald-400">
+                  {completedSets} / {totalSets}
+                </strong>
+              </span>
+              <span className="font-mono text-slate-400 text-[10px]">
+                {Math.round((completedSets / (totalSets || 1)) * 100)}%
+              </span>
+            </div>
+            <Progress value={completedSets} max={totalSets} className="h-1.5" />
           </div>
-          <Progress value={completedSets} max={totalSets} className="h-1.5" />
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={openWarmupModal}
+            className="h-7 px-2 text-[10px] font-semibold border-amber-500/30 text-amber-300 hover:bg-amber-500/10 shrink-0"
+          >
+            <Flame className="h-3 w-3 mr-1 text-amber-400 shrink-0" />
+            <span>{t.workout.warmup}</span>
+          </Button>
         </div>
       </div>
 
