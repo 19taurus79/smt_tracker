@@ -52,9 +52,9 @@ export async function POST(req: Request) {
       caption ||
       `🔥 <b>Ваша історія SMT-1 готова!</b>\n\n` +
       `🏋️‍♂️ <i>Тренування #${workoutNumber} (${template})</i>\n\n` +
-      `📌 <b>Як використати:</b>\n` +
-      `1. Натисніть на фото та збережіть його у галерею 📲\n` +
-      `2. Або натисніть кнопку «Поділитися в Stories» прямо в Telegram!`;
+      `📌 <b>Як опублікувати:</b>\n` +
+      `1. ✈️ <b>В Telegram Stories:</b> Відкрийте це фото та натисніть значок «В історію» вгорі.\n` +
+      `2. 📸 <b>В Instagram Stories:</b> Натисніть «Зберегти в галерею» 📲 та опублікуйте в Instagram!`;
 
     const formData = new FormData();
     formData.append("chat_id", String(chatId));
@@ -62,13 +62,17 @@ export async function POST(req: Request) {
     formData.append("parse_mode", "HTML");
     formData.append("photo", imageBlob, `smt_story_${workoutNumber}_${Date.now()}.png`);
 
-    // Add inline keyboard with direct link back to TMA
+    // Add inline keyboard with direct links
     const inlineKeyboard = {
       inline_keyboard: [
         [
           {
             text: "🚀 Відкрити SMT Трекер",
             url: `https://t.me/${cleanBotName}`,
+          },
+          {
+            text: "📸 В Instagram",
+            url: "https://instagram.com",
           },
         ],
       ],

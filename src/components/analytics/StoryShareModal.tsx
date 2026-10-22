@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { WorkoutSession } from "@/types/smt";
 import { BodyMeasurement, AppLanguage } from "@/types/body";
 import { formatTime, formatDate } from "@/lib/utils";
-import { Download, Sparkles, Check, Zap, Trophy, Flame, Activity, Award, Dumbbell, Share2, X } from "lucide-react";
+import { Download, Sparkles, Check, Zap, Trophy, Flame, Activity, Award, Dumbbell, Share2, X, Camera, Send } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { getLocalizedExerciseName } from "@/lib/i18n/exercises";
 import { useSettingsStore } from "@/lib/store/useSettingsStore";
@@ -1126,11 +1126,31 @@ export function StoryShareModal({
   }, [open, selectedTemplate, workout, language, athleticScore.score, prepData]);
 
   const [isSharing, setIsSharing] = useState(false);
-  const [telegramSentStatus, setTelegramSentStatus] = useState<"success" | "saved" | null>(null);
+  const [telegramSentStatus, setTelegramSentStatus] = useState<"telegram_success" | "instagram_ready" | "saved" | null>(null);
   const [showFullPreview, setShowFullPreview] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
-  const handleShare = async () => {
+  const openInstagramStoryCamera = () => {
+    triggerHaptic("selection");
+    try {
+      window.location.href = "instagram://story-camera";
+      setTimeout(() => {
+        const tg = (window as any).Telegram?.WebApp;
+        if (tg?.openLink) {
+          tg.openLink("https://instagram.com");
+        }
+      }, 1200);
+    } catch {
+      const tg = (window as any).Telegram?.WebApp;
+      if (tg?.openLink) {
+        tg.openLink("https://instagram.com");
+      } else {
+        window.open("https://instagram.com", "_blank");
+      }
+    }
+  };
+
+  const handleShareTelegram = async () => {
     const canvas = canvasRef.current;
     if (!canvas || isSharing) return;
 
@@ -1140,84 +1160,40 @@ export function StoryShareModal({
 
     try {
       const dataUrl = canvas.toDataURL("image/png");
-      const blob = await new Promise<Blob | null>((resolve) =>
-        canvas.toBlob((b) => resolve(b), "image/png", 0.95)
-      );
-
-      if (!blob) {
-        throw new Error("Canvas export failed");
-      }
-
-      const filenamePrefix = prepData
-        ? `smt_prep_s${prepData.prepSessionNumber}`
-        : `smt_story_w${workout.workoutNumber}`;
-      const filename = `${filenamePrefix}_${selectedTemplate}_${language}.png`;
-      const file = new File([blob], filename, { type: "image/png" });
-
       const tg = typeof window !== "undefined" ? (window as any).Telegram?.WebApp : null;
       const tgUserId = tg?.initDataUnsafe?.user?.id || (useSettingsStore.getState().linkedTelegramUser?.id);
 
-      let sharedViaNative = false;
-
-      // 1. Try native Web Share API (if supported by OS/browser)
-      if (typeof navigator !== "undefined" && navigator.canShare && navigator.canShare({ files: [file] })) {
-        try {
-          await navigator.share({
-            files: [file],
-            title: "SMT-1 Story",
-            text: `Тренування #${workout.workoutNumber} СМТ-1 (Високощільний тренінг) завершено! 🔥`,
-          });
-          sharedViaNative = true;
+      if (tgUserId) {
+        const res = await fetch("/api/story/share", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chatId: tgUserId,
+            photoBase64: dataUrl,
+            workoutNumber: workout.workoutNumber,
+            template: selectedTemplate,
+          }),
+        });
+        const result = await res.json();
+        if (result.ok) {
           triggerHaptic("success");
-        } catch (e: any) {
-          if (e?.name === "AbortError") {
-            setIsSharing(false);
-            return;
-          }
-          console.warn("navigator.share({ files }) failed, will fallback to Telegram bot:", e);
+          setTelegramSentStatus("telegram_success");
+          setIsSharing(false);
+          return;
         }
       }
 
-      // 2. If inside Telegram WebApp or native share not available: deliver directly to athlete's chat with bot!
-      if (!sharedViaNative && tgUserId) {
-        try {
-          const res = await fetch("/api/story/share", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              chatId: tgUserId,
-              photoBase64: dataUrl,
-              workoutNumber: workout.workoutNumber,
-              template: selectedTemplate,
-            }),
-          });
-          const result = await res.json();
-          if (result.ok) {
-            triggerHaptic("success");
-            setTelegramSentStatus("success");
-            setIsSharing(false);
-            return;
-          }
-        } catch (err) {
-          console.error("Failed to send story to Telegram chat:", err);
-        }
-      }
-
-      // 3. Fallback: Open preview modal so user can long-press to save to gallery
-      if (!sharedViaNative) {
-        setPreviewUrl(dataUrl);
-        setShowFullPreview(true);
-        handleDownload();
-      }
+      // Fallback if not inside Telegram
+      await handleForInstagram();
     } catch (err: any) {
-      console.error("Story share general error:", err);
-      handleDownload();
+      console.error("Telegram story share error:", err);
+      await handleForInstagram();
     } finally {
       setIsSharing(false);
     }
   };
 
-  const handleDownload = async () => {
+  const handleForInstagram = async () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -1227,11 +1203,12 @@ export function StoryShareModal({
     try {
       const dataUrl = canvas.toDataURL("image/png");
       setPreviewUrl(dataUrl);
+      setTelegramSentStatus("instagram_ready");
 
       const tg = typeof window !== "undefined" ? (window as any).Telegram?.WebApp : null;
       const tgUserId = tg?.initDataUnsafe?.user?.id || (useSettingsStore.getState().linkedTelegramUser?.id);
 
-      // Also send to Telegram chat in background so athlete always has permanent copy
+      // Send backup copy to Telegram chat in background
       if (tgUserId) {
         fetch("/api/story/share", {
           method: "POST",
@@ -1242,28 +1219,25 @@ export function StoryShareModal({
             workoutNumber: workout.workoutNumber,
             template: selectedTemplate,
           }),
-        })
-          .then((r) => r.json())
-          .then((d) => {
-            if (d.ok) setTelegramSentStatus("saved");
-          })
-          .catch(() => {});
+        }).catch(() => {});
       }
 
-      // Trigger standard browser download
-      const filenamePrefix = prepData
-        ? `smt_prep_s${prepData.prepSessionNumber}`
-        : `smt_story_w${workout.workoutNumber}`;
-      const link = document.createElement("a");
-      link.download = `${filenamePrefix}_${selectedTemplate}_${language}.png`;
-      link.href = dataUrl;
-      link.click();
+      // Try browser download
+      try {
+        const filenamePrefix = prepData
+          ? `smt_prep_s${prepData.prepSessionNumber}`
+          : `smt_story_w${workout.workoutNumber}`;
+        const link = document.createElement("a");
+        link.download = `${filenamePrefix}_${selectedTemplate}_${language}.png`;
+        link.href = dataUrl;
+        link.click();
+      } catch {}
 
-      // Show preview lightbox with long-press instruction on mobile
+      // Open lightbox with instant action to launch Instagram
       setShowFullPreview(true);
       triggerHaptic("success");
     } catch (err) {
-      console.error("Story download error", err);
+      console.error("Instagram prep error", err);
     } finally {
       setIsGenerating(false);
     }
@@ -1341,23 +1315,23 @@ export function StoryShareModal({
 
         {/* Scrollable Modal Body: Uses flex-1 min-h-0 so footer NEVER overflows screen */}
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain space-y-3 pr-1 py-0.5">
-          {/* Telegram Share Success Banner */}
-          {telegramSentStatus === "success" && (
-            <div className="rounded-xl border border-emerald-500/40 bg-emerald-950/70 p-3 shadow-lg flex flex-col gap-1.5 animate-in fade-in zoom-in-95">
-              <div className="flex items-center gap-2 text-emerald-400 font-bold text-xs sm:text-sm">
-                <Check className="h-4 w-4 shrink-0 text-emerald-300" />
+          {/* Telegram Stories Success Banner */}
+          {telegramSentStatus === "telegram_success" && (
+            <div className="rounded-xl border border-cyan-500/40 bg-cyan-950/70 p-3 shadow-lg flex flex-col gap-1.5 animate-in fade-in zoom-in-95">
+              <div className="flex items-center gap-2 text-cyan-300 font-bold text-xs sm:text-sm">
+                <Check className="h-4 w-4 shrink-0 text-cyan-400" />
                 <span>{language === "uk" ? "Історію надіслано в чат з ботом!" : "История отправлена в чат с ботом!"}</span>
               </div>
               <p className="text-[11px] text-slate-300 leading-tight">
                 {language === "uk"
-                  ? `Картинку 1080×1920 доставлено в особистий чат з ${botHandle}. Відкрийте чат, щоб зберегти у галерею або додати в Stories.`
-                  : `Картинка 1080×1920 доставлена в личный чат с ${botHandle}. Откройте чат, чтобы сохранить в галерею или добавить в Stories.`}
+                  ? `Фото 1080×1920 доставлено в чат з ${botHandle}. Відкрийте фото в чаті та натисніть «В історію» вгорі!`
+                  : `Фото 1080×1920 доставлено в чат с ${botHandle}. Откройте фото в чате и нажмите «В историю» вверху!`}
               </p>
               <div className="flex items-center gap-2 mt-1">
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-7 text-xs border-emerald-500/50 text-emerald-300 hover:bg-emerald-500/20 font-semibold"
+                  className="h-7 text-xs border-cyan-500/50 text-cyan-200 hover:bg-cyan-500/20 font-semibold"
                   onClick={() => {
                     const bot = botHandle.replace("@", "");
                     const tg = (window as any).Telegram?.WebApp;
@@ -1368,7 +1342,42 @@ export function StoryShareModal({
                     }
                   }}
                 >
+                  <Send className="h-3 w-3 mr-1" />
                   <span>{language === "uk" ? "Відкрити чат з ботом ↗" : "Открыть чат с ботом ↗"}</span>
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs border-pink-500/40 text-pink-300 hover:bg-pink-500/20 font-semibold"
+                  onClick={openInstagramStoryCamera}
+                >
+                  <Camera className="h-3 w-3 mr-1" />
+                  <span>Instagram ↗</span>
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Instagram Ready Banner */}
+          {telegramSentStatus === "instagram_ready" && (
+            <div className="rounded-xl border border-pink-500/40 bg-pink-950/70 p-3 shadow-lg flex flex-col gap-1.5 animate-in fade-in zoom-in-95">
+              <div className="flex items-center gap-2 text-pink-300 font-bold text-xs sm:text-sm">
+                <Camera className="h-4 w-4 shrink-0 text-pink-400" />
+                <span>{language === "uk" ? "Фото збережено для Instagram!" : "Фото сохранено для Instagram!"}</span>
+              </div>
+              <p className="text-[11px] text-slate-300 leading-tight">
+                {language === "uk"
+                  ? "Зображення збережено. Натисніть кнопку нижче, щоб відкрити камеру Instagram Stories (фото буде першим у вашій галереї):"
+                  : "Изображение сохранено. Нажмите кнопку ниже, чтобы открыть камеру Instagram Stories (фото будет первым в вашей галерее):"}
+              </p>
+              <div className="flex items-center gap-2 mt-1">
+                <Button
+                  size="sm"
+                  className="h-7 text-xs font-bold bg-gradient-to-r from-pink-500 via-rose-500 to-amber-500 text-white shadow-md"
+                  onClick={openInstagramStoryCamera}
+                >
+                  <Camera className="h-3 w-3 mr-1" />
+                  <span>{language === "uk" ? "Відкрити Instagram Stories ↗" : "Открыть Instagram Stories ↗"}</span>
                 </Button>
               </div>
             </div>
@@ -1429,34 +1438,34 @@ export function StoryShareModal({
 
         {/* Compact Ergonomic Footer: 3 Tiers, Always Visible */}
         <div className="pt-2 border-t border-white/10 flex flex-col gap-1.5 shrink-0">
-          {/* Row 1: Primary Action (Share to Stories) */}
+          {/* Row 1: Primary Telegram Stories Button */}
           <Button
             variant="accent"
             size="default"
-            className="w-full h-11 font-bold text-xs sm:text-sm bg-gradient-to-r from-pink-500 via-rose-500 to-amber-500 text-white hover:opacity-95 flex items-center justify-center gap-2 shadow-lg shadow-pink-500/20 active:scale-[0.99] transition-transform"
-            onClick={handleShare}
+            className="w-full h-11 font-bold text-xs sm:text-sm bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500 text-white hover:opacity-95 flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/20 active:scale-[0.99] transition-transform"
+            onClick={handleShareTelegram}
             disabled={isSharing || isGenerating}
           >
-            <Share2 className="h-4 w-4 shrink-0" />
+            <Send className="h-4 w-4 shrink-0" />
             <span>
               {isSharing
-                ? (language === "uk" ? "Відправка в Stories..." : "Отправка в Stories...")
-                : (language === "uk" ? "Поділитися в Instagram / Stories" : language === "en" ? "Share to Instagram / Stories" : "Поделиться в Instagram / Stories")}
+                ? (language === "uk" ? "Відправка в Telegram..." : "Отправка в Telegram...")
+                : (language === "uk" ? "✈️ В Telegram Stories (через бота)" : language === "en" ? "✈️ To Telegram Stories" : "✈️ В Telegram Stories (через бота)")}
             </span>
           </Button>
 
-          {/* Row 2: Secondary Actions in 2-Column Grid */}
+          {/* Row 2: Secondary Actions in 2-Column Grid (Instagram + Challenge) */}
           <div className="grid grid-cols-2 gap-2">
             <Button
               variant="outline"
               size="sm"
-              className="h-9 border-white/10 text-slate-200 hover:text-white hover:bg-white/5 text-xs font-semibold flex items-center justify-center gap-1.5"
-              onClick={handleDownload}
+              className="h-9 border-pink-500/30 text-pink-200 hover:text-white hover:bg-pink-500/10 text-xs font-semibold flex items-center justify-center gap-1.5"
+              onClick={handleForInstagram}
               disabled={isGenerating || isSharing}
             >
-              <Download className="h-3.5 w-3.5 shrink-0 text-cyan-400" />
+              <Camera className="h-3.5 w-3.5 shrink-0 text-pink-400" />
               <span className="truncate">
-                {isGenerating ? t.story.generating : (language === "uk" ? "Зберегти PNG" : language === "en" ? "Save PNG" : "Сохранить PNG")}
+                {language === "uk" ? "📸 Для Instagram" : language === "en" ? "📸 For Instagram" : "📸 Для Instagram"}
               </span>
             </Button>
 
@@ -1494,7 +1503,7 @@ export function StoryShareModal({
         </div>
       </Dialog>
 
-      {/* Full-Screen Lightbox Preview for Mobile (Allows native long-press save) */}
+      {/* Full-Screen Lightbox Preview for Mobile (Allows native long-press save + instant Instagram launch) */}
       {showFullPreview && previewUrl && (
         <div
           className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-md flex flex-col items-center justify-between p-3 animate-in fade-in"
@@ -1522,14 +1531,32 @@ export function StoryShareModal({
           </div>
 
           <div
-            className="w-full max-w-sm bg-slate-900/90 border border-white/10 rounded-xl p-2.5 text-center shrink-0 mb-2"
+            className="w-full max-w-sm bg-slate-900/95 border border-white/10 rounded-xl p-3 flex flex-col gap-2 text-center shrink-0 mb-2 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <p className="text-xs text-amber-300 font-medium">
+            <p className="text-[11px] text-amber-300 font-medium leading-tight">
               {language === "uk"
-                ? "💡 Затисніть картинку пальцем, щоб зберегти у фотогалерею"
-                : "💡 Зажмите картинку пальцем, чтобы сохранить в фотогалерею"}
+                ? "💡 Затисніть картинку пальцем, щоб зберегти у галерею, або натисніть «Відкрити Instagram»:"
+                : "💡 Зажмите картинку пальцем, чтобы сохранить в галерею, или нажмите «Открыть Instagram»:"}
             </p>
+            <div className="flex items-center gap-2">
+              <Button
+                size="sm"
+                className="flex-1 h-8 text-xs font-bold bg-gradient-to-r from-pink-500 via-rose-500 to-amber-500 text-white shadow-md flex items-center justify-center gap-1.5"
+                onClick={openInstagramStoryCamera}
+              >
+                <Camera className="h-3.5 w-3.5 shrink-0" />
+                <span>{language === "uk" ? "Відкрити Instagram Stories ↗" : "Открыть Instagram Stories ↗"}</span>
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 text-xs border-white/20 text-slate-300"
+                onClick={() => setShowFullPreview(false)}
+              >
+                <span>{language === "uk" ? "Закрити" : "Закрыть"}</span>
+              </Button>
+            </div>
           </div>
         </div>
       )}
