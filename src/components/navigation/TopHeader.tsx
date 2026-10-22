@@ -48,8 +48,50 @@ export function TopHeader() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 w-full border-b border-white/10 bg-slate-950/90 backdrop-blur-xl ios-safe-top">
-        <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4 sm:px-6">
+      <header className="sticky top-0 z-40 w-full transition-colors select-none tma-header-root">
+        {/* 1. TMA Mode: Sits directly in the space between Telegram buttons */}
+        <div className="tma-header-tg w-full h-[44px] items-center justify-center pl-[84px] pr-[80px]">
+          <div className="flex items-center justify-center gap-2 max-w-full">
+            {/* Active Workout Timer (Dynamic Island style) */}
+            {activeWorkout && (
+              <Link
+                href="/workout"
+                className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 text-[11px] font-bold shadow-[0_0_12px_rgba(16,185,129,0.2)] hover:bg-emerald-500/25 transition-all animate-pulse shrink-0"
+                title="Активне тренування"
+              >
+                <Timer className="h-3 w-3 text-emerald-400" />
+                <span>{formatTime(workoutElapsedSeconds)}</span>
+              </Link>
+            )}
+
+            {/* Coach Verification Role Badge (or Athlete status) */}
+            {userRole === "coach" || isCoachAccount(linkedTelegramUser?.username, linkedTelegramUser?.id) ? (
+              <Link
+                href="/coach"
+                className="group inline-flex items-center gap-1.5 rounded-full px-3 py-1 bg-gradient-to-r from-amber-500/15 via-amber-400/20 to-amber-500/15 border border-amber-400/35 hover:border-amber-400/60 shadow-[0_0_14px_rgba(245,158,11,0.2)] transition-all active:scale-95 shrink-0"
+                title="Кабінет Головного Тренера"
+              >
+                <Crown className="h-3.5 w-3.5 text-amber-400 drop-shadow-[0_0_5px_rgba(245,158,11,0.7)] group-hover:rotate-6 transition-transform" />
+                <span className="text-[11px] font-black tracking-wider text-amber-300 uppercase">
+                  ТРЕНЕР
+                </span>
+              </Link>
+            ) : linkedTelegramUser ? (
+              <div className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-[11px] font-medium shrink-0">
+                <span className="truncate max-w-[90px]">
+                  @{linkedTelegramUser.username || linkedTelegramUser.firstName || "атлет"}
+                </span>
+              </div>
+            ) : (
+              <div className="inline-flex items-center gap-1 text-xs font-extrabold tracking-wider text-slate-300 shrink-0">
+                <span className="text-emerald-400">⚡</span> SMT-1
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* 2. Standard Web Browser Mode: Classic website header */}
+        <div className="tma-header-web mx-auto h-14 max-w-5xl items-center justify-between px-4 sm:px-6">
           <Link href="/" className="flex items-center gap-2.5 group">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-emerald-500 to-cyan-500 text-slate-950 font-black shadow-lg shadow-emerald-500/20 group-hover:scale-105 transition-transform">
               <Dumbbell className="h-5 w-5 text-slate-950" />
