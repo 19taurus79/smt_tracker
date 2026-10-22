@@ -25,6 +25,9 @@ import {
   Unlink,
   ShieldCheck,
   Send,
+  Copy,
+  ArrowRightLeft,
+  FileJson,
 } from "lucide-react";
 import { MASTER_COACH_USERNAME, isCoachAccount, generateTelegramLinkUrl } from "@/lib/auth/roles";
 import { useWorkoutStore } from "@/lib/store/useWorkoutStore";
@@ -36,6 +39,7 @@ import { triggerHaptic, isTelegramWebApp } from "@/lib/tma/telegram";
 import { shareToTelegramCoach } from "@/lib/coach/telegramCoach";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { HelpModal } from "@/components/help/HelpModal";
 import { useTranslation } from "@/lib/i18n";
 import { AppLanguage } from "@/types/body";
@@ -201,6 +205,63 @@ export default function SettingsPage() {
     };
     reader.readAsText(file);
     if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const [transferCodeModalOpen, setTransferCodeModalOpen] = useState(false);
+  const [transferCodeText, setTransferCodeText] = useState("");
+  const [copiedCode, setCopiedCode] = useState(false);
+
+  const handleCopyTransferCode = () => {
+    try {
+      const backupData = {
+        version: "1.0",
+        exportDate: new Date().toISOString(),
+        exercises,
+        workouts,
+        measurements,
+      };
+      const jsonStr = JSON.stringify(backupData);
+      const b64 = btoa(unescape(encodeURIComponent(jsonStr)));
+      navigator.clipboard.writeText(b64);
+      setCopiedCode(true);
+      setTimeout(() => setCopiedCode(false), 3000);
+      showToast(
+        language === "uk"
+          ? "📋 Код скопійовано! Відкрийте Telegram-трекер та натисніть «Вставити код»."
+          : "📋 Код скопирован! Откройте Telegram-трекер и нажмите «Вставить код»."
+      );
+      triggerHaptic("success");
+    } catch {
+      showToast(t.common.error);
+    }
+  };
+
+  const handleApplyTransferCode = () => {
+    if (!transferCodeText.trim()) return;
+    try {
+      const jsonStr = decodeURIComponent(escape(atob(transferCodeText.trim())));
+      const parsed = JSON.parse(jsonStr);
+      if (parsed.workouts && Array.isArray(parsed.workouts)) {
+        setWorkouts(parsed.workouts);
+      }
+      if (parsed.measurements && Array.isArray(parsed.measurements)) {
+        setMeasurements(parsed.measurements);
+      }
+      setTransferCodeModalOpen(false);
+      setTransferCodeText("");
+      showToast(
+        language === "uk"
+          ? "🎉 Всі тренування та замери успішно перенесені в Telegram!"
+          : "🎉 Все тренировки и замеры успешно перенесены в Telegram!"
+      );
+      triggerHaptic("success");
+    } catch {
+      showToast(
+        language === "uk"
+          ? "❌ Невірний код перенесення"
+          : "❌ Неверный код переноса"
+      );
+    }
   };
 
   const handleTestSound = () => {
@@ -837,7 +898,94 @@ export default function SettingsPage() {
         </div>
       </Card>
 
-      {/* 8. Demo & Reset */}
+      {/* 8. Резервна копія та перенесення в Telegram */}
+      <Card className="border-emerald-500/30 bg-slate-900/60 p-4 sm:p-5 space-y-3">
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleImportFile}
+          accept=".json"
+          className="hidden"
+        />
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm sm:text-base flex items-center gap-2 text-white">
+            <ArrowRightLeft className="h-4 w-4 text-emerald-400" />
+            <span>
+              {language === "uk"
+                ? "Резервна копія та перенесення в Telegram"
+                : "Резервная копия и перенос в Telegram"}
+            </span>
+          </CardTitle>
+          <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider bg-emerald-500/15 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+            Без втрати даних
+          </span>
+        </div>
+        <p className="text-xs text-slate-400 leading-relaxed">
+          {language === "uk"
+            ? "Перенесіть усі проведені тренування із Safari у Telegram Mini App або збережіть файл резервної копії:"
+            : "Перенесите все проведенные тренировки из Safari в Telegram Mini App или сохраните файл резервной копии:"}
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+          {/* Способ 1: Код переноса (мгновенно для iPhone) */}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleCopyTransferCode}
+            className="text-xs font-bold border-emerald-500/40 bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/25 flex items-center justify-center gap-1.5 py-2.5"
+          >
+            <Copy className="h-4 w-4 text-emerald-400" />
+            <span>
+              {copiedCode
+                ? language === "uk"
+                  ? "✓ Код скопійовано!"
+                  : "✓ Код скопирован!"
+                : language === "uk"
+                ? "Скопіювати код перенесення"
+                : "Скопировать код переноса"}
+            </span>
+          </Button>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setTransferCodeModalOpen(true)}
+            className="text-xs font-semibold border-white/15 bg-white/5 text-slate-200 hover:bg-white/10 flex items-center justify-center gap-1.5 py-2.5"
+          >
+            <ArrowRightLeft className="h-4 w-4 text-cyan-400" />
+            <span>
+              {language === "uk" ? "Вставити код у Telegram" : "Вставить код в Telegram"}
+            </span>
+          </Button>
+
+          {/* Способ 2: Файлы JSON */}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleExportJSON}
+            className="text-xs font-medium border-white/10 text-slate-300 hover:text-white flex items-center justify-center gap-1.5"
+          >
+            <Download className="h-3.5 w-3.5 text-slate-400" />
+            <span>{language === "uk" ? "Експорт файлу (.json)" : "Экспорт файла (.json)"}</span>
+          </Button>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => fileInputRef.current?.click()}
+            className="text-xs font-medium border-white/10 text-slate-300 hover:text-white flex items-center justify-center gap-1.5"
+          >
+            <Upload className="h-3.5 w-3.5 text-slate-400" />
+            <span>{language === "uk" ? "Імпорт із файлу (.json)" : "Импорт из файла (.json)"}</span>
+          </Button>
+        </div>
+      </Card>
+
+      {/* 9. Demo & Reset */}
       <Card className="border-white/10 bg-slate-900/60 p-4 sm:p-5 space-y-3">
         <CardTitle className="text-sm sm:text-base flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-purple-400" />
@@ -876,6 +1024,59 @@ export default function SettingsPage() {
           </Button>
         </div>
       </Card>
+
+      {/* Transfer Code Modal */}
+      <Dialog open={transferCodeModalOpen} onOpenChange={setTransferCodeModalOpen}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
+          <div className="w-full max-w-md rounded-2xl border border-white/15 bg-slate-900 p-5 space-y-4 shadow-2xl">
+            <DialogHeader>
+              <DialogTitle className="text-base font-bold text-white flex items-center gap-2">
+                <ArrowRightLeft className="h-5 w-5 text-emerald-400" />
+                <span>
+                  {language === "uk"
+                    ? "Вставити код перенесення даних"
+                    : "Вставить код переноса данных"}
+                </span>
+              </DialogTitle>
+              <DialogDescription className="text-xs text-slate-400 leading-relaxed">
+                {language === "uk"
+                  ? "Вставте код, скопійований у Safari-версії трекера. Всі ваші тренування, робочі ваги та замери будуть миттєво перенесені в цей Telegram Mini App."
+                  : "Вставьте код, скопированный в Safari-версии трекера. Все ваши тренировки, рабочие веса и замеры будут мгновенно перенесены в этот Telegram Mini App."}
+              </DialogDescription>
+            </DialogHeader>
+
+            <textarea
+              rows={4}
+              value={transferCodeText}
+              onChange={(e) => setTransferCodeText(e.target.value)}
+              placeholder={
+                language === "uk"
+                  ? "Вставте код перенесення тут..."
+                  : "Вставьте код переноса сюда..."
+              }
+              className="w-full rounded-xl border border-white/15 bg-slate-950 p-3 text-xs text-white placeholder:text-slate-500 font-mono focus:outline-none focus:border-emerald-500"
+            />
+
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setTransferCodeModalOpen(false)}
+                className="flex-1 text-xs border-white/10"
+              >
+                <span>{t.common.cancel}</span>
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleApplyTransferCode}
+                className="flex-1 text-xs font-bold bg-emerald-500 text-slate-950 hover:bg-emerald-400"
+              >
+                <span>{language === "uk" ? "Застосувати" : "Применить"}</span>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </Dialog>
 
       {/* Help Modal */}
       <HelpModal isOpen={isHelpModalOpen} onClose={() => setIsHelpModalOpen(false)} />
