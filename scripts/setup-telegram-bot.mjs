@@ -48,6 +48,7 @@ async function setup() {
   const commandsUk = [
     { command: "start", description: "Запустити SMT-1 Трекер та Челендж" },
     { command: "app", description: "Відкрити персональний щоденник тренувань" },
+    { command: "results", description: "🏆 Канал результатів та Челенджу" },
     { command: "rules", description: "Золоті правила та методика СМТ-1" },
     { command: "coach", description: "Написати Головному Тренеру" },
     { command: "help", description: "Довідка по системі та додатку" },
@@ -56,6 +57,7 @@ async function setup() {
   const commandsRu = [
     { command: "start", description: "Запустить SMT-1 Трекер и Челлендж" },
     { command: "app", description: "Открыть персональный дневник тренировок" },
+    { command: "results", description: "🏆 Канал результатов и Челленджа" },
     { command: "rules", description: "Золотые правила и методика СМТ-1" },
     { command: "coach", description: "Написать Главному Тренеру" },
     { command: "help", description: "Справка по системе и приложению" },

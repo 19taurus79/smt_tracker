@@ -27,6 +27,47 @@ export default async function (message, ctx) {
               },
             },
           ],
+          [
+            {
+              text: "🏆 Канал Результатів та Челенджу",
+              url: "https://t.me/athletic_league",
+            },
+          ],
+        ],
+      },
+    });
+    return;
+  }
+
+  if (text.startsWith("/results") || text.startsWith("/channel")) {
+    const lines = [
+      "🏆 <b>Офіційний Канал Результатів та Челенджу СМТ:</b>",
+      "",
+      "Тут публікуються щоденні звіти атлетів, рейтинг Індексу Атлетичності, спільний тоннаж ліги та поради Головного Тренера.",
+      "",
+      "👇 <i>Приєднуйтесь до каналу та слідкуйте за успіхами команди:</i>",
+    ];
+
+    await api.sendMessage({
+      chat_id: chatId,
+      text: lines.join("\n"),
+      parse_mode: "HTML",
+      reply_markup: {
+        inline_keyboard: [
+          [
+            {
+              text: "🏆 Перейти в Канал Результатів",
+              url: "https://t.me/athletic_league",
+            },
+          ],
+          [
+            {
+              text: "⚡️ Відкрити SMT-1 Трекер",
+              web_app: {
+                url: "https://smt-tracker.vercel.app",
+              },
+            },
+          ],
         ],
       },
     });

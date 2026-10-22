@@ -250,8 +250,41 @@ export async function POST(req: Request) {
         return NextResponse.json({ ok: true });
       }
 
+      // Handle /results or /channel command
+      if (text.startsWith("/results") || text.startsWith("/channel")) {
+        const channelName = CHANNEL_ID.replace("@", "");
+        await tgApi("sendMessage", {
+          chat_id: chat.id,
+          text:
+            lang === "uk"
+              ? `🏆 <b>Офіційний Канал Результатів та Челенджу СМТ:</b>\n\nТут публікуються щоденні звіти атлетів, рейтинг Індексу Атлетичності, спільний тоннаж ліги та методичні поради Головного Тренера.\n\n👇 <i>Приєднуйтесь до каналу та слідкуйте за успіхами команди:</i>`
+              : `🏆 <b>Официальный Канал Результатов и Челленджа СМТ:</b>\n\nЗдесь публикуются ежедневные отчеты атлетов, рейтинг Индекса Атлетичности, суммарный тоннаж лиги и советы Главного Тренера.\n\n👇 <i>Присоединяйтесь к каналу и следите за успехами команды:</i>`,
+          parse_mode: "HTML",
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: lang === "uk" ? "🏆 Перейти в Канал Результатів" : "🏆 Перейти в Канал Результатов",
+                  url: `https://t.me/${channelName}`,
+                },
+              ],
+              [
+                {
+                  text: lang === "uk" ? "⚡️ Відкрити SMT-1 Трекер" : "⚡️ Открыть SMT-1 Трекер",
+                  web_app: {
+                    url: APP_URL,
+                  },
+                },
+              ],
+            ],
+          },
+        });
+        return NextResponse.json({ ok: true });
+      }
+
       // Handle /app command
       if (text.startsWith("/app")) {
+        const channelName = CHANNEL_ID.replace("@", "");
         await tgApi("sendMessage", {
           chat_id: chat.id,
           text:
@@ -267,6 +300,12 @@ export async function POST(req: Request) {
                   web_app: {
                     url: APP_URL,
                   },
+                },
+              ],
+              [
+                {
+                  text: lang === "uk" ? "🏆 Канал Результатів" : "🏆 Канал Результатов",
+                  url: `https://t.me/${channelName}`,
                 },
               ],
             ],
