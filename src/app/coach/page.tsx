@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import {
   Crown,
@@ -26,6 +26,7 @@ import {
   BarChart3,
   Edit3,
   UserPlus,
+  RefreshCw,
 } from "lucide-react";
 import { useCoachStore, TraineeProfile, TraineeStatusFilter } from "@/lib/store/useCoachStore";
 import { useSettingsStore } from "@/lib/store/useSettingsStore";
@@ -87,6 +88,8 @@ export default function CoachDashboardPage() {
     deleteTrainee,
     clearAllTrainees,
     resetToDefaultTrainees,
+    fetchServerTrainees,
+    isLoadingServer,
   } = useCoachStore();
 
   const { userRole, linkedTelegramUser } = useSettingsStore();
@@ -98,6 +101,10 @@ export default function CoachDashboardPage() {
 
   // Link copy state
   const [copiedLink, setCopiedLink] = useState(false);
+
+  useEffect(() => {
+    fetchServerTrainees();
+  }, [fetchServerTrainees]);
 
   // Delete Trainee Modal
   const [traineeToDelete, setTraineeToDelete] = useState<TraineeProfile | null>(null);
@@ -411,23 +418,34 @@ export default function CoachDashboardPage() {
         <>
           {/* Toolbar: Search & Clean Filter Pills */}
           <div className="space-y-2.5">
-        <div className="relative">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Пошук підопічного за ім'ям або @telegram..."
-            className="w-full h-10 rounded-2xl border border-white/10 bg-slate-900/80 py-2 pl-10 pr-10 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-emerald-500 transition-colors"
-          />
-          {searchQuery && (
-            <button
-              onClick={() => setSearchQuery("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Пошук підопічного за ім'ям або @telegram..."
+              className="w-full h-10 rounded-2xl border border-white/10 bg-slate-900/80 py-2 pl-10 pr-10 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-emerald-500 transition-colors"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => fetchServerTrainees()}
+            disabled={isLoadingServer}
+            title="Оновити дані з сервера"
+            className="h-10 px-3 rounded-2xl border border-white/10 bg-slate-900/80 text-slate-300 hover:text-white hover:border-emerald-500/50 flex items-center justify-center transition-colors shrink-0"
+          >
+            <RefreshCw className={"h-4 w-4 " + (isLoadingServer ? "animate-spin text-emerald-400" : "")} />
+          </button>
         </div>
 
         {/* Filter Pills with Horizontal Scroll on Mobile - Strict h-8 */}

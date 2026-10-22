@@ -78,6 +78,8 @@ interface CoachStoreState {
     workout: Omit<TraineeWorkoutRecord, "id">
   ) => void;
   resetToDefaultTrainees: () => void;
+  isLoadingServer: boolean;
+  fetchServerTrainees: () => Promise<void>;
 }
 
 const initialTrainees: TraineeProfile[] = [
@@ -589,6 +591,23 @@ export const useCoachStore = create<CoachStoreState>()(
       selectedTraineeId: null,
       searchQuery: "",
       statusFilter: "all",
+      isLoadingServer: false,
+
+      fetchServerTrainees: async () => {
+        try {
+          set({ isLoadingServer: true });
+          const res = await fetch("/api/coach/trainees");
+          if (!res.ok) return;
+          const data = await res.json();
+          if (data.ok && Array.isArray(data.trainees) && data.trainees.length > 0) {
+            set({ trainees: data.trainees });
+          }
+        } catch (err) {
+          console.warn("[useCoachStore] fetchServerTrainees error:", err);
+        } finally {
+          set({ isLoadingServer: false });
+        }
+      },
 
       setSelectedTraineeId: (id) => set({ selectedTraineeId: id }),
       setSearchQuery: (query) => set({ searchQuery: query }),
@@ -605,12 +624,18 @@ export const useCoachStore = create<CoachStoreState>()(
           ],
         })),
 
-      updateTrainee: (id, updates) =>
-        set((state) => ({
+      updateTrainee: (id, updates) => {
+        fetch("/api/coach/trainees", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "update", id, updates }),
+        }).catch(() => {});
+        return set((state) => ({
           trainees: state.trainees.map((t) =>
             t.id === id ? { ...t, ...updates } : t
           ),
-        })),
+        }));
+      },
 
       updateCoachNotes: (id, notes) =>
         set((state) => ({

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { MASTER_COACH_CHAT_ID } from "@/lib/auth/roles";
+import { recordWorkoutForTrainee } from "@/lib/server/traineeStorage";
 
 // Next.js Serverless Route: Direct Coach Workout Report
 // Delivers workout reports directly to Coach's Telegram without opening any browser tabs!
@@ -78,6 +79,25 @@ export async function POST(req: Request) {
     } = body;
 
     const cleanUsername = (traineeUsername || "").replace(/^@/, "").trim();
+
+    // Record workout report to server trainee storage
+    try {
+      recordWorkoutForTrainee({
+        traineeName,
+        traineeUsername: cleanUsername,
+        workoutNumber,
+        microcycle,
+        durationSeconds,
+        tonnageKg,
+        powerKgPerMin,
+        athleticScore,
+        latestMeasurement,
+        exercises,
+        notes,
+      });
+    } catch (saveErr) {
+      console.error("[Coach Report API] Error saving trainee report:", saveErr);
+    }
     const athleteDisplay = traineeName || (cleanUsername ? `@${cleanUsername}` : "Підопічний атлет");
     const athleteKey = (cleanUsername || traineeName || "athlete").toLowerCase();
     const dedupeKey = `${athleteKey}_w${workoutNumber}_m${microcycle}`;

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { isCoachAccount, MASTER_COACH_CHAT_ID } from "@/lib/auth/roles";
+import { registerOrUpdateLead } from "@/lib/server/traineeStorage";
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const COACH_CHAT_ID = process.env.COACH_TELEGRAM_CHAT_ID || MASTER_COACH_CHAT_ID;
@@ -15,9 +16,16 @@ export async function POST(req: Request) {
 
     const cleanUsername = (username || "").replace(/^@/, "").trim();
 
-    // Skip notifying if the user is the coach himself
+    // 1. Always record/update trainee in persistent server storage!
+    const trainee = registerOrUpdateLead({
+      name,
+      username: cleanUsername,
+      telegramUserId,
+    });
+
+    // Skip Telegram notification if the user is the coach himself
     if (isCoachAccount(cleanUsername, telegramUserId)) {
-      return NextResponse.json({ ok: true, isCoach: true });
+      return NextResponse.json({ ok: true, isCoach: true, trainee });
     }
 
     const dedupeKey = (telegramUserId ? `id:${telegramUserId}` : `u:${cleanUsername.toLowerCase()}`) || `name:${name}`;
@@ -31,7 +39,7 @@ export async function POST(req: Request) {
     if (recentLeads.has(dedupeKey)) {
       const prevTime = recentLeads.get(dedupeKey) || 0;
       if (now - prevTime < LEAD_DEDUPE_TTL_MS) {
-        return NextResponse.json({ ok: true, duplicate: true, message: "Lead already notified" });
+        return NextResponse.json({ ok: true, duplicate: true, message: "Lead already notified", trainee });
       }
     }
     recentLeads.set(dedupeKey, now);
@@ -63,14 +71,13 @@ export async function POST(req: Request) {
 
     if (!BOT_TOKEN) {
       console.log("[Lead Register Mock (no BOT_TOKEN)]:\n", messageText);
-      return NextResponse.json({ ok: true, mock: true });
+      return NextResponse.json({ ok: true, mock: true, trainee });
     }
 
-    // Lead alerts MUST be sent strictly to Coach's personal chat
     const targetChatId = COACH_CHAT_ID;
     if (!targetChatId) {
       console.warn("[Lead Register] No COACH_CHAT_ID available, skipping send to avoid spamming public channels.");
-      return NextResponse.json({ ok: false, error: "Coach Chat ID not configured" }, { status: 400 });
+      return NextResponse.json({ ok: true, error: "Coach Chat ID not configured", trainee });
     }
 
     const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
@@ -85,7 +92,7 @@ export async function POST(req: Request) {
     });
 
     const data = await res.json();
-    return NextResponse.json({ ok: Boolean(data?.ok), deliveredTo: targetChatId });
+    return NextResponse.json({ ok: Boolean(data?.ok), deliveredTo: targetChatId, trainee });
   } catch (error) {
     console.error("[Lead Register API] Error:", error);
     return NextResponse.json({ ok: false, error: "Internal Server Error" }, { status: 500 });

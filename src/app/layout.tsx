@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { TopHeader } from "@/components/navigation/TopHeader";
 import { BottomNav } from "@/components/navigation/BottomNav";
+import { TelegramBackButton } from "@/components/navigation/TelegramBackButton";
 import { RestTimerOverlay } from "@/components/workout/RestTimerOverlay";
 import { PwaInstallBanner } from "@/components/pwa/PwaInstallBanner";
 import Script from "next/script";
@@ -9,7 +10,7 @@ import Script from "next/script";
 export const metadata: Metadata = {
   title: "СМТ-1 Трекер | Сверхмощный тренинг",
   description:
-    "Персональный PWA / Telegram Mini App трекер для программы СМТ-1 (Сверхмощный тренинг), отслеживания тоннажа, мощности и рекомпозиции тела.",
+    "Персональный Telegram Mini App трекер для программы СМТ-1 (Сверхмощный тренинг), отслеживания тоннажа, мощности и рекомпозиции тела.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -43,10 +44,11 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <Script
           src="https://telegram.org/js/telegram-web-app.js"
-          strategy="afterInteractive"
+          strategy="beforeInteractive"
         />
       </head>
       <body className="min-h-screen min-h-[100dvh] flex flex-col bg-slate-950 text-slate-100 selection:bg-emerald-500/30 selection:text-emerald-300">
+        <TelegramBackButton />
         <TopHeader />
         <main className="flex-1 pb-20 sm:pb-24 max-w-5xl w-full mx-auto px-4 sm:px-6 pt-3 sm:pt-4">
           {children}

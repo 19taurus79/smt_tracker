@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { Download, X, Smartphone, Share, PlusSquare } from "lucide-react";
+import { Download, X, Smartphone, Share } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { isTelegramWebApp } from "@/lib/tma/telegram";
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -15,37 +16,39 @@ export function PwaInstallBanner() {
   const [isStandalone, setIsStandalone] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [showIOSGuide, setShowIOSGuide] = useState(false);
+  const [inTelegram, setInTelegram] = useState(true);
 
   useEffect(() => {
+    // Never show in Telegram Mini App
+    if (isTelegramWebApp()) {
+      setInTelegram(true);
+      return;
+    }
+    setInTelegram(false);
+
     try {
       if (localStorage.getItem("smt_pwa_dismissed") === "true") {
         setDismissed(true);
       }
     } catch {}
 
-    // Check if running in standalone mode (already installed as PWA)
     const isStandaloneMode =
       window.matchMedia("(display-mode: standalone)").matches ||
       (window.navigator as any).standalone === true;
 
     setIsStandalone(isStandaloneMode);
 
-    // Register Service Worker & check for updates
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker
         .register("/sw.js")
-        .then((reg) => {
-          reg.update().catch(() => {});
-        })
-        .catch((err) => console.log("SW registration error", err));
+        .then((reg) => reg.update().catch(() => {}))
+        .catch(() => {});
     }
 
-    // Detect iOS
     const ua = window.navigator.userAgent.toLowerCase();
     const isIosDevice = /iphone|ipad|ipod/.test(ua);
     setIsIOS(isIosDevice);
 
-    // Listen for beforeinstallprompt (Android / Chrome / Edge)
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
@@ -58,6 +61,9 @@ export function PwaInstallBanner() {
     };
   }, []);
 
+  // In Telegram or already installed or dismissed: do NOT render anything
+  if (inTelegram || isStandalone || dismissed) return null;
+
   const handleDismiss = () => {
     setDismissed(true);
     try {
@@ -65,10 +71,6 @@ export function PwaInstallBanner() {
     } catch {}
   };
 
-  // If already installed or user dismissed it
-  if (isStandalone || dismissed) return null;
-
-  // If Android/Chrome/Desktop prompt is ready
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;
     deferredPrompt.prompt();
@@ -90,10 +92,10 @@ export function PwaInstallBanner() {
             </div>
             <div>
               <h4 className="text-xs sm:text-sm font-bold text-white">
-                Установить СМТ-1 на телефон
+                Запустити в Telegram
               </h4>
               <p className="text-[11px] text-slate-300">
-                Работает без браузерных рамок, оффлайн и во весь экран
+                Використовуйте трекер у Telegram для нативної вібрації та повноекранного режиму
               </p>
             </div>
           </div>
@@ -113,7 +115,7 @@ export function PwaInstallBanner() {
               className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs h-8"
             >
               <Download className="h-3.5 w-3.5 mr-1.5" />
-              <span>Установить приложение</span>
+              <span>Встановити додаток</span>
             </Button>
           ) : isIOS ? (
             <Button
@@ -122,13 +124,12 @@ export function PwaInstallBanner() {
               className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs h-8"
             >
               <Share className="h-3.5 w-3.5 mr-1.5" />
-              <span>Инструкция для iPhone (iOS)</span>
+              <span>Інструкція для Safari iOS</span>
             </Button>
           ) : null}
         </div>
       </div>
 
-      {/* iOS Modal Guide */}
       {showIOSGuide && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
@@ -141,7 +142,7 @@ export function PwaInstallBanner() {
             <div className="flex items-center justify-between">
               <h3 className="text-base font-bold text-white flex items-center gap-2">
                 <Smartphone className="h-5 w-5 text-emerald-400" />
-                <span>Установка на iPhone</span>
+                <span>Запуск у Telegram</span>
               </h3>
               <button
                 onClick={() => setShowIOSGuide(false)}
@@ -152,39 +153,25 @@ export function PwaInstallBanner() {
             </div>
 
             <div className="space-y-3 text-xs text-slate-300">
-              <div className="flex items-center gap-3 p-2.5 rounded-xl bg-white/5 border border-white/5">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-slate-950 font-bold text-xs">
-                  1
-                </span>
-                <span>
-                  В браузере Safari нажмите иконку <strong>«Поделиться»</strong> (квадрат со стрелкой вверх внизу экрана).
-                </span>
-              </div>
-
-              <div className="flex items-center gap-3 p-2.5 rounded-xl bg-white/5 border border-white/5">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-slate-950 font-bold text-xs">
-                  2
-                </span>
-                <span>
-                  Прокрутите меню вниз и выберите пункт <strong>«На экран "Домой"»</strong> (Add to Home Screen).
-                </span>
-              </div>
-
-              <div className="flex items-center gap-3 p-2.5 rounded-xl bg-white/5 border border-white/5">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-500 text-slate-950 font-bold text-xs">
-                  3
-                </span>
-                <span>
-                  Нажмите <strong>«Добавить»</strong>. Иконка СМТ-1 появится среди ваших приложений на рабочем столе!
-                </span>
-              </div>
+              <p>
+                Найкращий досвід роботи з трекером — відкрити його прямо в боті <strong>@athletic_smt_bot</strong> у Telegram:
+              </p>
+              <ul className="list-disc pl-4 space-y-1 text-slate-300">
+                <li>Працює тактильна вібрація Taptic Engine</li>
+                <li>Повноекранний режим без рамок Safari</li>
+                <li>Захист від випадкового закриття свайпом</li>
+                <li>Миттєва синхронізація тренувань</li>
+              </ul>
             </div>
 
             <Button
               className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs"
-              onClick={() => setShowIOSGuide(false)}
+              onClick={() => {
+                setShowIOSGuide(false);
+                window.location.href = "https://t.me/athletic_smt_bot";
+              }}
             >
-              Понятно
+              Відкрити бота в Telegram
             </Button>
           </div>
         </div>

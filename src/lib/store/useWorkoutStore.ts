@@ -17,7 +17,7 @@ import {
 } from "../smt/calculator";
 import { getDemoProgram } from "../mock/demoData";
 import { soundPlayer } from "../audio/sound";
-import { triggerHaptic } from "../tma/telegram";
+import { triggerHaptic, setWorkoutActiveMode } from "../tma/telegram";
 
 interface WorkoutState {
   exercises: ExerciseDefinition[];
@@ -165,6 +165,9 @@ export const useWorkoutStore = create<WorkoutState>()(
           viewingWorkoutId: workoutId,
           workoutElapsedSeconds: workout.durationSeconds || 0,
           isStopwatchRunning: true,
+        });
+        setWorkoutActiveMode(true);
+        set({
           workouts: workouts.map((w) =>
             w.id === workoutId
               ? {
@@ -183,6 +186,7 @@ export const useWorkoutStore = create<WorkoutState>()(
         if (!workout) return;
 
         const isActive = activeWorkoutId === workoutId;
+        if (isActive) setWorkoutActiveMode(false);
 
         set({
           activeWorkoutId: isActive ? null : activeWorkoutId,
@@ -289,11 +293,12 @@ export const useWorkoutStore = create<WorkoutState>()(
           // Таймер окончен!
           set({ isRestTimerActive: false, restTimerSeconds: 0 });
           soundPlayer.playRestComplete();
-          triggerHaptic("success");
+          triggerHaptic("heavy");
         } else {
           // Звук тика на последних 3 секундах
           if (restTimerSeconds <= 4) {
             soundPlayer.playTick();
+            triggerHaptic("selection");
           }
           set({ restTimerSeconds: restTimerSeconds - 1 });
         }

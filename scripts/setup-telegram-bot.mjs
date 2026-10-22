@@ -34,7 +34,7 @@ async function callTg(method, body = {}) {
 }
 
 async function setup() {
-  console.log("🚀 Starting Programmatic Telegram Bot Setup...\n");
+  console.log("🚀 Starting Programmatic Telegram Bot Setup for 100% TMA...\n");
 
   // 1. Verify Bot
   const me = await callTg("getMe");
@@ -102,15 +102,19 @@ async function setup() {
   const shortResRu = await callTg("setMyShortDescription", { short_description: shortRu, language_code: "ru" });
   console.log("✅ Short Description (RU):", shortResRu.ok ? "Success" : shortResRu);
 
-  // 5. Set Persistent Chat Menu Button to Commands List (restores [/] menu with all commands)
+  // 5. Set Persistent Chat Menu Button to direct WebApp (100% Pure TMA!)
   const menuRes = await callTg("setChatMenuButton", {
     menu_button: {
-      type: "commands",
+      type: "web_app",
+      text: "⚡️ СМТ-1 Трекер",
+      web_app: {
+        url: APP_URL,
+      },
     },
   });
-  console.log("✅ Menu Button set to Commands List ([/] menu):", menuRes.ok ? "Success" : menuRes);
+  console.log("✅ Menu Button set to WebApp:", menuRes.ok ? "Success" : menuRes);
 
-  console.log("\n🎉 Telegram Bot successfully configured programmatically!");
+  console.log("\n🎉 Telegram Bot successfully configured for 100% TMA!");
 }
 
 setup().catch(console.error);
