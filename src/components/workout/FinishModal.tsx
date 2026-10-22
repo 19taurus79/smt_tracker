@@ -15,6 +15,9 @@ import {
   Send,
   Camera,
   Flame,
+  Share2,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { useWorkoutStore } from "@/lib/store/useWorkoutStore";
 import { useSettingsStore } from "@/lib/store/useSettingsStore";
@@ -29,6 +32,7 @@ import { isCoachAccount } from "@/lib/auth/roles";
 import { useTranslation } from "@/lib/i18n";
 import { getLocalizedExerciseName } from "@/lib/i18n/exercises";
 import { calculateAthleticScore, getTierLabel, getTierColor } from "@/lib/scoring/athleticScore";
+import { triggerHaptic } from "@/lib/tma/telegram";
 
 interface FinishModalProps {
   open: boolean;
@@ -60,7 +64,12 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
 
   const isCoach = userRole === "coach" || isCoachAccount(linkedTelegramUser?.username, linkedTelegramUser?.id);
 
-  const [notes, setNotes] = useState("");
+  // Fatigue & Condition (RPE & Tags)
+  const [fatigueLevel, setFatigueLevel] = useState<number>(3); // 1-5 (default 3 = Важко/RPE 8)
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [customNote, setCustomNote] = useState("");
+  const [showCustomNote, setShowCustomNote] = useState(false);
+
   // Proposed increments per exercise ID: { [exerciseId]: incrementKg }
   const [exerciseIncrements, setExerciseIncrements] = useState<Record<string, number>>({});
   const [frozenDuration, setFrozenDuration] = useState<number>(0);
@@ -68,6 +77,39 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
   const [isStoryModalOpen, setIsStoryModalOpen] = useState(false);
   const [isPublishingChallenge, setIsPublishingChallenge] = useState(false);
   const [publishedChallenge, setPublishedChallenge] = useState(false);
+
+  const fatigueOptions = [
+    { level: 1, emoji: "🟢", label: language === "uk" ? "Легко" : "Легко", rpe: "RPE 6" },
+    { level: 2, emoji: "🔵", label: language === "uk" ? "Норм" : "Норм", rpe: "RPE 7" },
+    { level: 3, emoji: "🟡", label: language === "uk" ? "Важко" : "Тяжело", rpe: "RPE 8" },
+    { level: 4, emoji: "🟠", label: language === "uk" ? "На межі" : "На пределе", rpe: "RPE 9" },
+    { level: 5, emoji: "🔴", label: language === "uk" ? "Відмова" : "Отказ", rpe: "RPE 10" },
+  ];
+
+  const conditionTags = [
+    { id: "sleep", label: language === "uk" ? "😴 Мало спав" : "😴 Мало спал" },
+    { id: "fresh", label: language === "uk" ? "⚡️ Повен сил" : "⚡️ Полон сил" },
+    { id: "sick", label: language === "uk" ? "🤧 Прихворів" : "🤧 Приболел" },
+    { id: "alcohol", label: language === "uk" ? "🍺 Алкоголь напередодні" : "🍺 Алкоголь накануне" },
+    { id: "stress", label: language === "uk" ? "🤯 Стрес на роботі" : "🤯 Стресс на работе" },
+    { id: "no_preworkout", label: language === "uk" ? "☕️ Без передтрену" : "☕️ Без предтрена" },
+    { id: "rest_kept", label: language === "uk" ? "⏱ 30с витримано" : "⏱ 30с выдержано" },
+    { id: "food", label: language === "uk" ? "🍕 Збив режим їжі" : "🍕 Сбил режим еды" },
+  ];
+
+  const toggleTag = (tagLabel: string) => {
+    triggerHaptic("selection");
+    setSelectedTags((prev) =>
+      prev.includes(tagLabel) ? prev.filter((t) => t !== tagLabel) : [...prev, tagLabel]
+    );
+  };
+
+  const buildFullNotes = () => {
+    const fatigueObj = fatigueOptions.find((f) => f.level === fatigueLevel);
+    const fatigueText = fatigueObj ? `Втома: ${fatigueObj.level}/5 (${fatigueObj.label}, ${fatigueObj.rpe})` : "";
+    const tagsText = selectedTags.length > 0 ? selectedTags.join(" ") : "";
+    return [fatigueText, tagsText, customNote.trim()].filter(Boolean).join(" • ");
+  };
 
   useEffect(() => {
     if (open) {
@@ -110,7 +152,9 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
   const handlePublishChallenge = async () => {
     if (isPublishingChallenge || publishedChallenge) return;
     setIsPublishingChallenge(true);
+    triggerHaptic("selection");
     try {
+      const fullNotes = buildFullNotes();
       const res = await fetch("/api/challenge/publish", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -126,12 +170,13 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
           },
           athleteName: traineeName || window.Telegram?.WebApp?.initDataUnsafe?.user?.first_name || "",
           athleteUsername: window.Telegram?.WebApp?.initDataUnsafe?.user?.username || "",
-          notes,
+          notes: fullNotes,
         }),
       });
       const data = await res.json();
       if (data.ok) {
         setPublishedChallenge(true);
+        triggerHaptic("success");
       }
     } catch (e) {
       console.error("Failed to publish to challenge:", e);
@@ -189,7 +234,25 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
 
   const [isFinishing, setIsFinishing] = useState(false);
 
+  const allIncrementsActive =
+    uniqueExercises.length > 0 &&
+    uniqueExercises.every((ex) => (exerciseIncrements[ex.id] ?? 0) > 0);
+
+  const toggleAllIncrements = () => {
+    triggerHaptic("selection");
+    if (allIncrementsActive) {
+      const reset: Record<string, number> = {};
+      for (const ex of uniqueExercises) reset[ex.id] = 0;
+      setExerciseIncrements(reset);
+    } else {
+      const applied: Record<string, number> = {};
+      for (const ex of uniqueExercises) applied[ex.id] = weightIncrementKg;
+      setExerciseIncrements(applied);
+    }
+  };
+
   const toggleExerciseIncrement = (exerciseId: string, currentVal: number) => {
+    triggerHaptic("selection");
     setExerciseIncrements((prev) => ({
       ...prev,
       [exerciseId]: prev[exerciseId] > 0 ? 0 : weightIncrementKg,
@@ -199,10 +262,12 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
   const handleComplete = async () => {
     if (!currentWorkout || isFinishing) return;
     setIsFinishing(true);
+    triggerHaptic("medium");
 
     try {
+      const fullNotes = buildFullNotes();
       finishWorkout(
-        notes,
+        fullNotes,
         exerciseIncrements,
         weightIncrementKg,
         soundEnabled,
@@ -243,7 +308,7 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
             bicepsCm: measurements[0].bicepsCm,
           } : undefined,
           exercises: exercisesSummary,
-          notes,
+          notes: fullNotes,
         }).catch((err) => console.error("Direct coach send failed:", err));
       }
 
@@ -258,7 +323,7 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogHeader>
+      <DialogHeader className="shrink-0 mb-2">
         <DialogTitle onClose={() => onOpenChange(false)}>
           <div className="flex items-center gap-2">
             <Trophy className="h-6 w-6 text-amber-400" />
@@ -276,10 +341,11 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
         </DialogDescription>
       </DialogHeader>
 
-      <div className="space-y-4 my-2 max-h-[72vh] overflow-y-auto pr-1">
+      {/* Scrollable Body with flex-1 min-h-0 so footer NEVER gets cut off */}
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain space-y-3.5 pr-1 py-1">
         {/* Athletic Score Hero Banner */}
         <div
-          className={`p-3.5 sm:p-4 rounded-2xl border ${tierColor.border} ${tierColor.bg} flex items-center justify-between gap-3 shadow-lg ${tierColor.glow} transition-all`}
+          className={`p-3 sm:p-4 rounded-2xl border ${tierColor.border} ${tierColor.bg} flex items-center justify-between gap-3 shadow-lg ${tierColor.glow} transition-all`}
         >
           <div className="flex items-center gap-3">
             <div
@@ -307,49 +373,63 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
         </div>
 
         {/* Metric Cards Grid */}
-        <div className="grid grid-cols-3 gap-2.5">
-          <div className="flex flex-col items-center justify-center p-3 rounded-2xl bg-white/5 border border-white/10 text-center">
-            <Dumbbell className="h-5 w-5 text-emerald-400 mb-1" />
-            <span className="text-[11px] text-slate-400 font-medium">{t.common.tonnage}</span>
-            <span className="text-base font-black text-white">{tonnage} {t.common.kg}</span>
+        <div className="grid grid-cols-3 gap-2">
+          <div className="flex flex-col items-center justify-center p-2.5 sm:p-3 rounded-2xl bg-white/5 border border-white/10 text-center">
+            <Dumbbell className="h-4 w-4 text-emerald-400 mb-1" />
+            <span className="text-[10px] sm:text-[11px] text-slate-400 font-medium">{t.common.tonnage}</span>
+            <span className="text-xs sm:text-sm font-black text-white">{tonnage} {t.common.kg}</span>
           </div>
 
-          <div className="flex flex-col items-center justify-center p-3 rounded-2xl bg-white/5 border border-white/10 text-center">
-            <Clock className="h-5 w-5 text-cyan-400 mb-1" />
-            <span className="text-[11px] text-slate-400 font-medium">{t.common.time}</span>
-            <span className="text-base font-black text-white">
+          <div className="flex flex-col items-center justify-center p-2.5 sm:p-3 rounded-2xl bg-white/5 border border-white/10 text-center">
+            <Clock className="h-4 w-4 text-cyan-400 mb-1" />
+            <span className="text-[10px] sm:text-[11px] text-slate-400 font-medium">{t.common.time}</span>
+            <span className="text-xs sm:text-sm font-black text-white">
               {formatTime(effectiveDuration)}
             </span>
           </div>
 
-          <div className="flex flex-col items-center justify-center p-3 rounded-2xl bg-white/5 border border-white/10 text-center">
-            <Zap className="h-5 w-5 text-amber-400 mb-1" />
-            <span className="text-[11px] text-slate-400 font-medium">{t.common.density}</span>
-            <span className="text-base font-black text-white">
-              {power} <span className="text-[10px] text-slate-400 font-normal">{t.common.kg}/{t.common.min}</span>
+          <div className="flex flex-col items-center justify-center p-2.5 sm:p-3 rounded-2xl bg-white/5 border border-white/10 text-center">
+            <Zap className="h-4 w-4 text-amber-400 mb-1" />
+            <span className="text-[10px] sm:text-[11px] text-slate-400 font-medium">{t.common.density}</span>
+            <span className="text-xs sm:text-sm font-black text-white">
+              {power} <span className="text-[9px] text-slate-400 font-normal">{t.common.kg}/{t.common.min}</span>
             </span>
           </div>
         </div>
 
-        {/* Progression Proposal Section */}
-        <div className="rounded-2xl border border-emerald-500/30 bg-emerald-950/20 p-3.5 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-emerald-400" />
-              <span className="font-bold text-xs sm:text-sm text-white">
+        {/* Progression Proposal Section (Clean & Smart Toggle) */}
+        <div className="rounded-2xl border border-emerald-500/30 bg-emerald-950/20 p-3 sm:p-3.5 space-y-2.5">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <TrendingUp className="h-4 w-4 text-emerald-400 shrink-0" />
+              <span className="font-bold text-xs sm:text-sm text-white truncate">
                 {language === "uk"
-                  ? "Пропозиція збільшення робочих ваг"
+                  ? "Прогресія робочих ваг"
                   : language === "en"
-                  ? "Weight Progression Proposal"
-                  : "Предложение прибавки к весам"}
+                  ? "Weight Progression"
+                  : "Прогрессия рабочих весов"}
               </span>
             </div>
-            <span className="text-[10px] text-emerald-400 font-semibold bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-              +{weightIncrementKg} {t.common.kg}
-            </span>
+
+            {/* Quick 1-tap toggle for all */}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={toggleAllIncrements}
+              className={`h-7 px-2.5 text-[11px] font-bold rounded-lg transition-all ${
+                allIncrementsActive
+                  ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/30"
+                  : "bg-slate-900/80 text-slate-400 border-white/10 hover:text-white"
+              }`}
+            >
+              {allIncrementsActive
+                ? (language === "uk" ? `✓ Додати +${weightIncrementKg} кг на всі` : `✓ Добавить +${weightIncrementKg} кг на все`)
+                : (language === "uk" ? "Залишити поточні" : "Оставить текущие")}
+            </Button>
           </div>
 
-          <div className="space-y-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
             {uniqueExercises.map((ex) => {
               const currentInc = exerciseIncrements[ex.id] ?? 0;
               const willIncrease = currentInc > 0;
@@ -359,37 +439,29 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
                 <div
                   key={ex.id}
                   onClick={() => toggleExerciseIncrement(ex.id, currentInc)}
-                  className={`flex items-center justify-between p-2.5 rounded-xl border transition-all cursor-pointer select-none ${
+                  className={`flex items-center justify-between p-2 rounded-xl border transition-all cursor-pointer select-none ${
                     willIncrease
-                      ? "bg-emerald-950/40 border-emerald-500/40 text-white"
+                      ? "bg-emerald-950/35 border-emerald-500/40 text-white"
                       : "bg-slate-900/60 border-white/5 text-slate-400 hover:border-white/15"
                   }`}
                 >
-                  <div className="flex items-center gap-2.5">
-                    <input
-                      type="checkbox"
-                      checked={willIncrease}
-                      onChange={() => {}}
-                      className="h-4 w-4 rounded border-white/20 bg-slate-900 text-emerald-500 focus:ring-0 cursor-pointer"
-                    />
-                    <div>
-                      <span className="font-bold text-xs block text-white">
-                        {getLocalizedExerciseName(ex.name, language, false)}
-                      </span>
-                      <span className="text-[10px] text-slate-400">
-                        {ex.currentWeight} {t.common.kg} →{" "}
-                        <strong className={willIncrease ? "text-emerald-400 font-bold" : "text-slate-300"}>
-                          {nextWeight} {t.common.kg}
-                        </strong>
-                      </span>
-                    </div>
+                  <div className="min-w-0 flex-1 pr-2">
+                    <span className="font-bold text-[11px] sm:text-xs block text-white truncate">
+                      {getLocalizedExerciseName(ex.name, language, false)}
+                    </span>
+                    <span className="text-[10px] text-slate-400">
+                      {ex.currentWeight} {t.common.kg} →{" "}
+                      <strong className={willIncrease ? "text-emerald-400 font-bold" : "text-slate-300"}>
+                        {nextWeight} {t.common.kg}
+                      </strong>
+                    </span>
                   </div>
 
                   <span
-                    className={`text-xs font-bold px-2 py-0.5 rounded-lg ${
+                    className={`text-[11px] font-bold px-2 py-0.5 rounded-lg shrink-0 transition-colors ${
                       willIncrease
-                        ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
-                        : "text-slate-500"
+                        ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                        : "bg-white/5 text-slate-500 border border-white/5"
                     }`}
                   >
                     {willIncrease ? `+${currentInc} ${t.common.kg}` : `0 ${t.common.kg}`}
@@ -400,66 +472,146 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
           </div>
         </div>
 
-        {/* Notes */}
-        <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-slate-300">
-            {t.body.notes}
-          </label>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={2}
-            placeholder={t.workout.notesPlaceholder}
-            className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-emerald-500"
-          />
+        {/* Fatigue & Condition (RPE scale + smart pills) */}
+        <div className="rounded-2xl border border-white/10 bg-slate-950/70 p-3 sm:p-3.5 space-y-3">
+          {/* RPE 1-5 Scale */}
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                <span>🔋 {language === "uk" ? "Рівень втоми (RPE):" : "Уровень усталости (RPE):"}</span>
+              </span>
+              <span className="text-[11px] font-semibold text-slate-400">
+                {fatigueOptions.find((f) => f.level === fatigueLevel)?.rpe} • {fatigueOptions.find((f) => f.level === fatigueLevel)?.label}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-5 gap-1.5">
+              {fatigueOptions.map((item) => {
+                const isSelected = fatigueLevel === item.level;
+                return (
+                  <button
+                    key={item.level}
+                    type="button"
+                    onClick={() => {
+                      triggerHaptic("selection");
+                      setFatigueLevel(item.level);
+                    }}
+                    className={`py-1.5 px-1 rounded-xl border text-center transition-all ${
+                      isSelected
+                        ? "bg-emerald-500/20 border-emerald-500 text-white shadow-md shadow-emerald-500/20 scale-[1.02]"
+                        : "bg-slate-900 border-white/5 text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    <span className="text-sm sm:text-base block">{item.emoji}</span>
+                    <span className="text-[10px] font-bold block mt-0.5">{item.level}</span>
+                    <span className="text-[9px] text-slate-400 block truncate">{item.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Condition Tags Pills */}
+          <div className="space-y-1.5 pt-1 border-t border-white/5">
+            <span className="text-[11px] font-semibold text-slate-400 block">
+              🏷 {language === "uk" ? "Що вплинуло на тренування? (оберіть якщо є):" : "Что повлияло на тренировку? (выберите если есть):"}
+            </span>
+
+            <div className="flex flex-wrap gap-1.5">
+              {conditionTags.map((tag) => {
+                const isSelected = selectedTags.includes(tag.label);
+                return (
+                  <button
+                    key={tag.id}
+                    type="button"
+                    onClick={() => toggleTag(tag.label)}
+                    className={`px-2.5 py-1 rounded-lg border text-[11px] font-medium transition-all ${
+                      isSelected
+                        ? "bg-cyan-500/20 border-cyan-500/50 text-cyan-200 shadow-sm"
+                        : "bg-slate-900/80 border-white/10 text-slate-400 hover:text-white"
+                    }`}
+                  >
+                    {tag.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Optional Text Note Toggle */}
+          <div className="pt-1">
+            {!showCustomNote ? (
+              <button
+                type="button"
+                onClick={() => setShowCustomNote(true)}
+                className="text-[11px] text-slate-400 hover:text-white flex items-center gap-1 transition-colors"
+              >
+                <span>✍️ {language === "uk" ? "+ Додати коментар текстом" : "+ Добавить комментарий текстом"}</span>
+              </button>
+            ) : (
+              <div className="space-y-1 mt-1 animate-in fade-in">
+                <textarea
+                  value={customNote}
+                  onChange={(e) => setCustomNote(e.target.value)}
+                  rows={2}
+                  placeholder={language === "uk" ? "Введіть замітку до тренування..." : "Введите заметку к тренировке..."}
+                  className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Coach Sharing & Instagram Stories */}
-        <div className={`p-3 rounded-2xl bg-slate-950/80 border border-white/10 flex flex-col sm:flex-row sm:items-center ${isCoach ? "justify-end" : "justify-between"} gap-3`}>
-          {!isCoach && (
-            <label className="flex items-center gap-2.5 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={sendToCoach}
-                onChange={(e) => setSendToCoach(e.target.checked)}
-                className="h-4 w-4 rounded border-white/20 bg-slate-900 text-cyan-500 focus:ring-0"
-              />
-              <div>
-                <span className="text-xs font-bold text-white flex items-center gap-1.5">
-                  <Send className="h-3.5 w-3.5 text-cyan-400" />
-                  <span>{t.workout.sendCoachButton}</span>
-                </span>
-                <span className="text-[10px] text-slate-400 block mt-0.5">
-                  {language === "uk"
-                    ? `Прямий звіт тренеру @${(coachTelegramUsername || "OnyshchenkoSergey").replace("@", "")}`
-                    : language === "en"
-                    ? `Direct report to Coach @${(coachTelegramUsername || "OnyshchenkoSergey").replace("@", "")}`
-                    : `Прямой отчет тренеру @${(coachTelegramUsername || "OnyshchenkoSergey").replace("@", "")}`}
-                </span>
-              </div>
-            </label>
-          )}
+        {/* Coach Direct Report */}
+        {!isCoach && (
+          <label className="flex items-center gap-2.5 p-3 rounded-2xl bg-slate-950/60 border border-white/10 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={sendToCoach}
+              onChange={(e) => setSendToCoach(e.target.checked)}
+              className="h-4 w-4 rounded border-white/20 bg-slate-900 text-cyan-500 focus:ring-0"
+            />
+            <div className="min-w-0 flex-1">
+              <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                <Send className="h-3.5 w-3.5 text-cyan-400" />
+                <span>{t.workout.sendCoachButton}</span>
+              </span>
+              <span className="text-[10px] text-slate-400 block mt-0.5 truncate">
+                {language === "uk"
+                  ? `Прямий звіт тренеру @${(coachTelegramUsername || "OnyshchenkoSergey").replace("@", "")}`
+                  : `Прямой отчет тренеру @${(coachTelegramUsername || "OnyshchenkoSergey").replace("@", "")}`}
+              </span>
+            </div>
+          </label>
+        )}
 
-          <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
+        {/* Social Sharing & Community Challenge */}
+        <div className="rounded-2xl bg-slate-950/80 border border-white/10 p-3 flex flex-col gap-2">
+          <span className="text-xs font-bold text-white flex items-center gap-1.5">
+            <Share2 className="h-3.5 w-3.5 text-cyan-400" />
+            <span>{language === "uk" ? "Поділитися успіхом" : "Поделиться успехом"}</span>
+          </span>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <Button
               type="button"
               variant="outline"
               size="sm"
               disabled={isPublishingChallenge || publishedChallenge}
-              className={`text-xs font-semibold transition-all ${
+              className={`h-9 text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
                 publishedChallenge
                   ? "border-emerald-500/40 text-emerald-300 bg-emerald-500/10"
                   : "border-amber-500/30 text-amber-300 hover:bg-amber-500/10"
               }`}
               onClick={handlePublishChallenge}
             >
-              <Flame className="h-3.5 w-3.5 mr-1 text-amber-400" />
-              <span>
+              <Flame className="h-3.5 w-3.5 text-amber-400 shrink-0" />
+              <span className="truncate">
                 {publishedChallenge
-                  ? (language === "uk" ? "В каналі!" : language === "en" ? "In Channel!" : "В канале!")
+                  ? (language === "uk" ? "✓ Опубліковано в канал!" : "✓ Опубликовано в канал!")
                   : isPublishingChallenge
-                  ? (language === "uk" ? "Публікація..." : language === "en" ? "Publishing..." : "Публикация...")
-                  : (language === "uk" ? "Челендж" : language === "en" ? "Challenge" : "Челлендж")}
+                  ? (language === "uk" ? "Публікація..." : "Публикация...")
+                  : (language === "uk" ? "📢 В канал @athletic_league" : "📢 В канал @athletic_league")}
               </span>
             </Button>
 
@@ -467,26 +619,33 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
               type="button"
               variant="outline"
               size="sm"
-              className="text-xs font-semibold border-pink-500/30 text-pink-300 hover:bg-pink-500/10"
+              className="h-9 text-xs font-semibold border-pink-500/30 text-pink-300 hover:bg-pink-500/10 flex items-center justify-center gap-1.5"
               onClick={() => setIsStoryModalOpen(true)}
             >
-              <Camera className="h-3.5 w-3.5 mr-1 text-pink-400" />
-              <span>{t.workout.shareStoryButton}</span>
+              <Camera className="h-3.5 w-3.5 text-pink-400 shrink-0" />
+              <span className="truncate">
+                {language === "uk" ? "📸 Створити Stories" : "📸 Создать Stories"}
+              </span>
             </Button>
           </div>
         </div>
       </div>
 
-      <div className="pt-2 flex flex-col gap-2 shrink-0">
+      {/* Main Finish Action: Big, prominent, always visible at bottom */}
+      <div className="pt-2 border-t border-white/10 flex flex-col gap-2 shrink-0">
         <Button
           variant="accent"
           size="lg"
           disabled={isFinishing}
-          className="w-full font-bold text-xs sm:text-sm px-3 py-3 flex items-center justify-center gap-2 text-center leading-snug"
+          className="w-full h-12 font-black text-sm bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 text-slate-950 hover:opacity-95 flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/25 active:scale-[0.99] transition-transform"
           onClick={handleComplete}
         >
-          <CheckCircle className="h-4 w-4 shrink-0" />
-          <span>{isFinishing ? (language === "uk" ? "Збереження..." : language === "en" ? "Saving..." : "Сохранение...") : t.workout.applyWeightsAndSave}</span>
+          <CheckCircle className="h-5 w-5 shrink-0" />
+          <span>
+            {isFinishing
+              ? (language === "uk" ? "Збереження тренування..." : "Сохранение тренировки...")
+              : (language === "uk" ? "✔ ЗАВЕРШИТИ ТРЕНУВАННЯ" : "✔ ЗАВЕРШИТЬ ТРЕНИРОВКУ")}
+          </span>
         </Button>
       </div>
 
@@ -498,7 +657,7 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
           durationSeconds: effectiveDuration,
           tonnageKg: tonnage,
           powerKgPerMin: power,
-          notes,
+          notes: buildFullNotes(),
         }}
         latestMeasurement={measurements[0]}
       />

@@ -52,11 +52,11 @@ export function TopHeader() {
         {/* 1. TMA Mode: Sits directly in the space between Telegram buttons */}
         <div className="tma-header-tg w-full h-[44px] items-center justify-center pl-[84px] pr-[80px]">
           <div className="flex items-center justify-center gap-2 max-w-full">
-            {/* Active Workout Timer (Dynamic Island style) */}
+            {/* Active Workout Timer (Dynamic Island style - 100% solid opaque background) */}
             {activeWorkout && (
               <Link
                 href="/workout"
-                className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 bg-emerald-500/15 border border-emerald-500/40 text-emerald-400 text-[11px] font-bold shadow-[0_0_12px_rgba(16,185,129,0.2)] hover:bg-emerald-500/25 transition-all animate-pulse shrink-0"
+                className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 bg-slate-950 border border-emerald-500/50 text-emerald-400 text-[11px] font-bold shadow-[0_2px_12px_rgba(0,0,0,0.8)] hover:bg-slate-900 transition-all animate-pulse shrink-0"
                 title="Активне тренування"
               >
                 <Timer className="h-3 w-3 text-emerald-400" />
@@ -64,11 +64,11 @@ export function TopHeader() {
               </Link>
             )}
 
-            {/* Coach Verification Role Badge (or Athlete status) */}
+            {/* Coach Verification Role Badge (100% Solid opaque Dynamic Island) */}
             {userRole === "coach" || isCoachAccount(linkedTelegramUser?.username, linkedTelegramUser?.id) ? (
               <Link
                 href="/coach"
-                className="group inline-flex items-center gap-1.5 rounded-full px-3 py-1 bg-gradient-to-r from-amber-500/15 via-amber-400/20 to-amber-500/15 border border-amber-400/35 hover:border-amber-400/60 shadow-[0_0_14px_rgba(245,158,11,0.2)] transition-all active:scale-95 shrink-0"
+                className="group inline-flex items-center gap-1.5 rounded-full px-3 py-1 bg-slate-950 border border-amber-400/50 hover:border-amber-400/80 shadow-[0_2px_12px_rgba(0,0,0,0.8)] transition-all active:scale-95 shrink-0"
                 title="Кабінет Головного Тренера"
               >
                 <Crown className="h-3.5 w-3.5 text-amber-400 drop-shadow-[0_0_5px_rgba(245,158,11,0.7)] group-hover:rotate-6 transition-transform" />
@@ -77,13 +77,13 @@ export function TopHeader() {
                 </span>
               </Link>
             ) : linkedTelegramUser ? (
-              <div className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-[11px] font-medium shrink-0">
+              <div className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 bg-slate-950 border border-emerald-500/40 text-emerald-400 text-[11px] font-medium shadow-[0_2px_10px_rgba(0,0,0,0.7)] shrink-0">
                 <span className="truncate max-w-[90px]">
                   @{linkedTelegramUser.username || linkedTelegramUser.firstName || "атлет"}
                 </span>
               </div>
             ) : (
-              <div className="inline-flex items-center gap-1 text-xs font-extrabold tracking-wider text-slate-300 shrink-0">
+              <div className="inline-flex items-center gap-1 text-xs font-extrabold tracking-wider text-slate-300 shrink-0 bg-slate-950 px-2.5 py-0.5 rounded-full border border-white/15 shadow-[0_2px_10px_rgba(0,0,0,0.7)]">
                 <span className="text-emerald-400">⚡</span> SMT-1
               </div>
             )}
