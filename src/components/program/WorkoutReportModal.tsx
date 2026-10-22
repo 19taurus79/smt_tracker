@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Trophy,
   Clock,
@@ -39,6 +39,7 @@ interface WorkoutReportModalProps {
   onOpenChange: (open: boolean) => void;
   workout: WorkoutSession | null;
   onRestart?: (workoutId: string) => void;
+  initialSentToCoach?: boolean;
 }
 
 export function WorkoutReportModal({
@@ -46,13 +47,20 @@ export function WorkoutReportModal({
   onOpenChange,
   workout,
   onRestart,
+  initialSentToCoach = false,
 }: WorkoutReportModalProps) {
   const [isConfirmResetOpen, setIsConfirmResetOpen] = useState(false);
   const [isStoryModalOpen, setIsStoryModalOpen] = useState(false);
   const [isPublishingChallenge, setIsPublishingChallenge] = useState(false);
   const [publishedChallenge, setPublishedChallenge] = useState(false);
   const [isSendingToCoach, setIsSendingToCoach] = useState(false);
-  const [sentToCoach, setSentToCoach] = useState(false);
+  const [sentToCoach, setSentToCoach] = useState(Boolean(initialSentToCoach));
+
+  useEffect(() => {
+    if (initialSentToCoach) {
+      setSentToCoach(true);
+    }
+  }, [initialSentToCoach]);
 
   const { coachTelegramUsername, traineeName, gender, userAge, userRole, linkedTelegramUser } = useSettingsStore();
   const { measurements } = useBodyStore();

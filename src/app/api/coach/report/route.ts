@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { MASTER_COACH_CHAT_ID } from "@/lib/auth/roles";
 
 // Next.js Serverless Route: Direct Coach Workout Report
 // Delivers workout reports directly to Coach's Telegram without opening any browser tabs!
@@ -33,10 +34,11 @@ interface CoachReportBody {
 }
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const rawChannel = process.env.TELEGRAM_CHALLENGE_CHANNEL_ID || "@smt_challenge";
-const CHANNEL_ID = rawChannel.startsWith("@") || rawChannel.startsWith("-") ? rawChannel : `@${rawChannel}`;
-const COACH_CHAT_ID = process.env.COACH_TELEGRAM_CHAT_ID;
-const COACH_USERNAME = (process.env.NEXT_PUBLIC_COACH_USERNAME || "OnyshchenkoSergey").replace(/^@/, "");
+const COACH_CHAT_ID = process.env.COACH_TELEGRAM_CHAT_ID || MASTER_COACH_CHAT_ID;
+
+// Deduplication cache to prevent multiple notifications if trainee double-taps or triggers report twice
+const recentReports = new Map<string, number>();
+const REPORT_DEDUPE_TTL_MS = 3 * 60 * 1000; // 3 minutes
 
 function resolveTierTitle(scoreObj?: CoachReportBody["athleticScore"]): string {
   if (!scoreObj) return "Активний Атлет";
@@ -75,7 +77,29 @@ export async function POST(req: Request) {
       notes,
     } = body;
 
-    const athleteDisplay = traineeName || (traineeUsername ? `@${traineeUsername.replace(/^@/, "")}` : "Підопічний атлет");
+    const cleanUsername = (traineeUsername || "").replace(/^@/, "").trim();
+    const athleteDisplay = traineeName || (cleanUsername ? `@${cleanUsername}` : "Підопічний атлет");
+    const athleteKey = (cleanUsername || traineeName || "athlete").toLowerCase();
+    const dedupeKey = `${athleteKey}_w${workoutNumber}_m${microcycle}`;
+    const now = Date.now();
+
+    // Clean up cache if map grows large
+    if (recentReports.size > 2000) {
+      recentReports.clear();
+    }
+
+    if (recentReports.has(dedupeKey)) {
+      const prevTime = recentReports.get(dedupeKey) || 0;
+      if (now - prevTime < REPORT_DEDUPE_TTL_MS) {
+        return NextResponse.json({
+          ok: true,
+          duplicate: true,
+          message: "Workout report already delivered to coach recently",
+        });
+      }
+    }
+    recentReports.set(dedupeKey, now);
+
     const minutes = Math.floor(durationSeconds / 60);
     const seconds = durationSeconds % 60;
     const timeFormatted = `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
@@ -84,7 +108,7 @@ export async function POST(req: Request) {
     const lines = [
       `👑 <b>НОВИЙ ЗВІТ ДЛЯ ТРЕНЕРА!</b>`,
       ``,
-      `👤 <b>Підопічний:</b> ${athleteDisplay} ${traineeUsername ? `(@${traineeUsername.replace(/^@/, "")})` : ""}`,
+      `👤 <b>Підопічний:</b> ${athleteDisplay} ${cleanUsername ? `(@${cleanUsername})` : ""}`,
       `📅 <b>Тренування:</b> #${workoutNumber} (МКЦ-${microcycle})`,
       `⏱ <b>Час:</b> ${timeFormatted} (паузи суворо 30с)`,
       `📦 <b>Тоннаж:</b> ${tonnageKg.toLocaleString()} кг`,
@@ -112,7 +136,7 @@ export async function POST(req: Request) {
 
     lines.push(``);
     lines.push(`━━━━━━━━━━━━━━━━━━`);
-    lines.push(`💬 <i>Відповісти атлету:</i> ${traineeUsername ? `https://t.me/${traineeUsername.replace(/^@/, "")}` : "в особисті повідомлення"}`);
+    lines.push(`💬 <i>Відповісти атлету:</i> ${cleanUsername ? `https://t.me/${cleanUsername}` : "в особисті повідомлення"}`);
 
     const messageText = lines.filter(Boolean).join("\n");
 
@@ -125,10 +149,12 @@ export async function POST(req: Request) {
       });
     }
 
-    // Determine target recipient chat_id:
-    // If COACH_CHAT_ID is explicitly set, send to Coach's personal Telegram chat
-    // Otherwise fallback to CHANNEL_ID so reports are never lost
-    const targetChatId = COACH_CHAT_ID || CHANNEL_ID;
+    // Reports MUST go strictly to the Coach's private Telegram chat
+    const targetChatId = COACH_CHAT_ID;
+    if (!targetChatId) {
+      console.error("[Coach Report API] No COACH_CHAT_ID defined!");
+      return NextResponse.json({ ok: false, error: "Coach chat ID not configured" }, { status: 400 });
+    }
 
     const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
       method: "POST",

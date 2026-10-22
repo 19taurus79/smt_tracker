@@ -33,7 +33,7 @@ import { calculateAthleticScore, getTierLabel, getTierColor } from "@/lib/scorin
 interface FinishModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onFinished: () => void;
+  onFinished: (reportSentToCoach?: boolean) => void;
 }
 
 export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps) {
@@ -187,6 +187,8 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
     }
   }, [open, uniqueExercises, weightIncrementKg]);
 
+  const [isFinishing, setIsFinishing] = useState(false);
+
   const toggleExerciseIncrement = (exerciseId: string, currentVal: number) => {
     setExerciseIncrements((prev) => ({
       ...prev,
@@ -194,55 +196,62 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
     }));
   };
 
-  const handleComplete = () => {
-    if (!currentWorkout) return;
+  const handleComplete = async () => {
+    if (!currentWorkout || isFinishing) return;
+    setIsFinishing(true);
 
-    finishWorkout(
-      notes,
-      exerciseIncrements,
-      weightIncrementKg,
-      soundEnabled,
-      hapticsEnabled,
-      effectiveDuration,
-      currentWorkout.id
-    );
-
-    if (sendToCoach && !isCoach) {
-      const exercisesSummary = currentWorkout.supersets.flatMap((ss) =>
-        ss.exercises.map((ex) => ({
-          name: getLocalizedExerciseName(ex.exerciseId || ex.name, language, false),
-          weight: ex.sets[0]?.actualWeight ?? ex.sets[0]?.targetWeight ?? 0,
-          reps: ex.sets[0]?.actualReps ?? ex.sets[0]?.targetReps ?? 10,
-          setsCount: ex.sets.filter((s) => s.completed).length || ex.sets.length,
-          supersetLabel: ss.label,
-        }))
+    try {
+      finishWorkout(
+        notes,
+        exerciseIncrements,
+        weightIncrementKg,
+        soundEnabled,
+        hapticsEnabled,
+        effectiveDuration,
+        currentWorkout.id
       );
 
-      sendDirectCoachReport({
-        traineeName: traineeName || linkedTelegramUser?.firstName || (typeof window !== "undefined" && window.Telegram?.WebApp?.initDataUnsafe?.user?.first_name) || "Атлет",
-        traineeUsername: linkedTelegramUser?.username || (typeof window !== "undefined" && window.Telegram?.WebApp?.initDataUnsafe?.user?.username) || "",
-        workoutNumber: currentWorkout.workoutNumber || 1,
-        microcycle: currentWorkout.microcycle || 1,
-        durationSeconds: effectiveDuration,
-        tonnageKg: tonnage,
-        powerKgPerMin: power,
-        athleticScore: {
-          score: athleticScore.score,
-          tierKey: athleticScore.tierKey,
-          tierLabel,
-        },
-        latestMeasurement: measurements[0] ? {
-          weightKg: measurements[0].weightKg,
-          waistCm: measurements[0].waistCm,
-          bicepsCm: measurements[0].bicepsCm,
-        } : undefined,
-        exercises: exercisesSummary,
-        notes,
-      }).catch((err) => console.error("Direct coach send failed:", err));
-    }
+      let didSendToCoach = false;
+      if (sendToCoach && !isCoach) {
+        didSendToCoach = true;
+        const exercisesSummary = currentWorkout.supersets.flatMap((ss) =>
+          ss.exercises.map((ex) => ({
+            name: getLocalizedExerciseName(ex.exerciseId || ex.name, language, false),
+            weight: ex.sets[0]?.actualWeight ?? ex.sets[0]?.targetWeight ?? 0,
+            reps: ex.sets[0]?.actualReps ?? ex.sets[0]?.targetReps ?? 10,
+            setsCount: ex.sets.filter((s) => s.completed).length || ex.sets.length,
+            supersetLabel: ss.label,
+          }))
+        );
 
-    onOpenChange(false);
-    onFinished();
+        sendDirectCoachReport({
+          traineeName: traineeName || linkedTelegramUser?.firstName || (typeof window !== "undefined" && window.Telegram?.WebApp?.initDataUnsafe?.user?.first_name) || "Атлет",
+          traineeUsername: linkedTelegramUser?.username || (typeof window !== "undefined" && window.Telegram?.WebApp?.initDataUnsafe?.user?.username) || "",
+          workoutNumber: currentWorkout.workoutNumber || 1,
+          microcycle: currentWorkout.microcycle || 1,
+          durationSeconds: effectiveDuration,
+          tonnageKg: tonnage,
+          powerKgPerMin: power,
+          athleticScore: {
+            score: athleticScore.score,
+            tierKey: athleticScore.tierKey,
+            tierLabel,
+          },
+          latestMeasurement: measurements[0] ? {
+            weightKg: measurements[0].weightKg,
+            waistCm: measurements[0].waistCm,
+            bicepsCm: measurements[0].bicepsCm,
+          } : undefined,
+          exercises: exercisesSummary,
+          notes,
+        }).catch((err) => console.error("Direct coach send failed:", err));
+      }
+
+      onOpenChange(false);
+      onFinished(didSendToCoach);
+    } finally {
+      setIsFinishing(false);
+    }
   };
 
   if (!currentWorkout) return null;
@@ -472,11 +481,12 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
         <Button
           variant="accent"
           size="lg"
+          disabled={isFinishing}
           className="w-full font-bold text-xs sm:text-sm px-3 py-3 flex items-center justify-center gap-2 text-center leading-snug"
           onClick={handleComplete}
         >
           <CheckCircle className="h-4 w-4 shrink-0" />
-          <span>{t.workout.applyWeightsAndSave}</span>
+          <span>{isFinishing ? (language === "uk" ? "Збереження..." : language === "en" ? "Saving..." : "Сохранение...") : t.workout.applyWeightsAndSave}</span>
         </Button>
       </div>
 

@@ -56,6 +56,7 @@ function WorkoutContent() {
 
   const [isFinishModalOpen, setIsFinishModalOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
+  const [wasReportSentToCoach, setWasReportSentToCoach] = useState(false);
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -483,15 +484,20 @@ function WorkoutContent() {
       <FinishModal
         open={isFinishModalOpen}
         onOpenChange={setIsFinishModalOpen}
-        onFinished={() => {
+        onFinished={(sent) => {
+          setWasReportSentToCoach(Boolean(sent));
           setIsFinishModalOpen(false);
           setIsReportOpen(true);
         }}
       />
       <WorkoutReportModal
         open={isReportOpen}
-        onOpenChange={setIsReportOpen}
+        onOpenChange={(isOpen) => {
+          setIsReportOpen(isOpen);
+          if (!isOpen) setWasReportSentToCoach(false);
+        }}
         workout={currentWorkout}
+        initialSentToCoach={wasReportSentToCoach}
         onRestart={(workoutId) => {
           setIsReportOpen(false);
           startWorkout(workoutId);

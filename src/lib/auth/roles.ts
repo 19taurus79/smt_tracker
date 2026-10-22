@@ -5,6 +5,10 @@ export const MASTER_COACH_USERNAME = (
   process.env.NEXT_PUBLIC_COACH_USERNAME || "OnyshchenkoSergey"
 ).replace(/^@/, "");
 
+export const MASTER_COACH_CHAT_ID = (
+  process.env.COACH_TELEGRAM_CHAT_ID || "548019148"
+).trim();
+
 export const BOT_USERNAME = (
   process.env.NEXT_PUBLIC_BOT_USERNAME || "athletic_smt_bot"
 ).replace(/^@/, "");
@@ -12,10 +16,13 @@ export const BOT_USERNAME = (
 /**
  * Checks if a user is the Master Coach
  */
-export function isCoachAccount(username?: string, id?: number): boolean {
+export function isCoachAccount(username?: string, id?: number | string): boolean {
   if (!username && !id) return false;
   const cleanMaster = MASTER_COACH_USERNAME.toLowerCase();
   if (username && username.toLowerCase().replace(/^@/, "") === cleanMaster) {
+    return true;
+  }
+  if (id && String(id).trim() === MASTER_COACH_CHAT_ID) {
     return true;
   }
   return false;

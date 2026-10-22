@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isCoachAccount, MASTER_COACH_CHAT_ID, MASTER_COACH_USERNAME } from "@/lib/auth/roles";
 
 // Next.js Serverless Route Handler for Telegram Bot Webhook
 // Fully stateless — ZERO external database required!
@@ -41,6 +42,11 @@ const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const rawChannel = process.env.TELEGRAM_CHALLENGE_CHANNEL_ID || "@smt_challenge";
 const CHANNEL_ID = rawChannel.startsWith("@") || rawChannel.startsWith("-") ? rawChannel : `@${rawChannel}`;
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://smt-tracker.vercel.app";
+const COACH_CHAT_ID = process.env.COACH_TELEGRAM_CHAT_ID || MASTER_COACH_CHAT_ID;
+
+// In-memory cache to deduplicate bot lead alerts (e.g. repeated clicks on check_sub)
+const recentBotLeads = new Map<number, number>();
+const BOT_LEAD_DEDUPE_MS = 24 * 60 * 60 * 1000; // 24h
 
 async function tgApi(method: string, body: Record<string, unknown>) {
   if (!BOT_TOKEN) {
@@ -121,10 +127,14 @@ export async function POST(req: Request) {
 
       if (isStart) {
         const isSubscribed = await isUserSubscribed(from.id);
+        const startParam = text.replace("/start", "").trim();
+        const coachParam = startParam.startsWith("coach_")
+          ? `&coach=${encodeURIComponent(startParam.replace("coach_", ""))}`
+          : "";
 
         if (isSubscribed) {
           // User is subscribed -> provide direct WebApp access
-          const pwaLaunchUrl = `${APP_URL}/?tg_auth=1&id=${from.id}&first_name=${encodeURIComponent(from.first_name)}&username=${encodeURIComponent(from.username || "")}`;
+          const pwaLaunchUrl = `${APP_URL}/?tg_auth=1&id=${from.id}&first_name=${encodeURIComponent(from.first_name)}&username=${encodeURIComponent(from.username || "")}${coachParam}`;
 
           const welcomeMsg =
             lang === "uk"
@@ -174,7 +184,9 @@ export async function POST(req: Request) {
                 [
                   {
                     text: lang === "uk" ? "✅ Я підписався (Перевірити)" : "✅ Я подписался (Проверить)",
-                    callback_data: "check_sub",
+                    callback_data: startParam.startsWith("coach_")
+                      ? `check_sub:${startParam.replace("coach_", "")}`
+                      : "check_sub",
                   },
                 ],
               ],
@@ -210,7 +222,7 @@ export async function POST(req: Request) {
 
       // Handle /coach command
       if (text.startsWith("/coach")) {
-        const coachUser = (process.env.NEXT_PUBLIC_COACH_USERNAME || "coach_alex").replace(/^@/, "");
+        const coachUser = (process.env.NEXT_PUBLIC_COACH_USERNAME || MASTER_COACH_USERNAME).replace(/^@/, "");
         await tgApi("sendMessage", {
           chat_id: chat.id,
           text:
@@ -260,7 +272,7 @@ export async function POST(req: Request) {
     if (update.callback_query) {
       const { id, from, message, data } = update.callback_query;
 
-      if (data === "check_sub") {
+      if (data && data.startsWith("check_sub")) {
         const isSubscribed = await isUserSubscribed(from.id);
         const lang = from.language_code === "uk" ? "uk" : "ru";
 
@@ -272,7 +284,10 @@ export async function POST(req: Request) {
           });
 
           if (message?.chat?.id) {
-            const pwaLaunchUrl = `${APP_URL}/?tg_auth=1&id=${from.id}&first_name=${encodeURIComponent(from.first_name)}&username=${encodeURIComponent(from.username || "")}`;
+            const parts = data.split(":");
+            const coachParam = parts[1] ? `&coach=${encodeURIComponent(parts[1])}` : "";
+            const pwaLaunchUrl = `${APP_URL}/?tg_auth=1&id=${from.id}&first_name=${encodeURIComponent(from.first_name)}&username=${encodeURIComponent(from.username || "")}${coachParam}`;
+
             await tgApi("sendMessage", {
               chat_id: message.chat.id,
               text:
@@ -292,22 +307,30 @@ export async function POST(req: Request) {
               },
             });
 
-            // Notify Coach about the new lead
-            const coachRecipient = process.env.COACH_TELEGRAM_CHAT_ID || CHANNEL_ID;
-            const athleteTag = from.username ? `@${from.username}` : "";
-            const leadAlert = [
-              `🎯 <b>НОВИЙ ПІДОПІЧНИЙ (ЛІД)!</b>`,
-              ``,
-              `👤 <b>Атлет:</b> ${from.first_name} ${athleteTag}`,
-              `📅 <b>Статус:</b> Підтвердив підписку на канал та перейшов до трекера!`,
-              from.username ? `💬 <i>Написати:</i> https://t.me/${from.username}` : "",
-            ].filter(Boolean).join("\n");
+            // Notify Coach strictly in personal PM (with deduplication)
+            const isCoach = isCoachAccount(from.username, from.id);
+            const lastAlertTime = recentBotLeads.get(from.id) || 0;
+            const nowTime = Date.now();
 
-            tgApi("sendMessage", {
-              chat_id: coachRecipient,
-              text: leadAlert,
-              parse_mode: "HTML",
-            }).catch(() => {});
+            if (!isCoach && nowTime - lastAlertTime > BOT_LEAD_DEDUPE_MS) {
+              recentBotLeads.set(from.id, nowTime);
+              if (COACH_CHAT_ID) {
+                const athleteTag = from.username ? `@${from.username}` : "";
+                const leadAlert = [
+                  `🎯 <b>НОВИЙ ПІДОПІЧНИЙ (ЛІД)!</b>`,
+                  ``,
+                  `👤 <b>Атлет:</b> ${from.first_name} ${athleteTag}`,
+                  `📅 <b>Статус:</b> Підтвердив підписку на канал та перейшов до трекера!`,
+                  from.username ? `💬 <i>Написати:</i> https://t.me/${from.username}` : "",
+                ].filter(Boolean).join("\n");
+
+                tgApi("sendMessage", {
+                  chat_id: COACH_CHAT_ID,
+                  text: leadAlert,
+                  parse_mode: "HTML",
+                }).catch(() => {});
+              }
+            }
           }
         } else {
           await tgApi("answerCallbackQuery", {
@@ -334,6 +357,7 @@ export async function GET() {
     status: "ok",
     service: "SMT Tracker Telegram Serverless Webhook",
     botConfigured: Boolean(BOT_TOKEN),
+    coachChatIdConfigured: Boolean(COACH_CHAT_ID),
     channel: CHANNEL_ID,
   });
 }

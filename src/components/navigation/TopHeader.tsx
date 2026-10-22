@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { Dumbbell, Activity, Timer, HelpCircle, Crown } from "lucide-react";
+import { Dumbbell, Timer, HelpCircle, Crown } from "lucide-react";
 import { useWorkoutStore } from "@/lib/store/useWorkoutStore";
 import { useSettingsStore } from "@/lib/store/useSettingsStore";
 import { formatTime } from "@/lib/utils";
@@ -28,9 +28,10 @@ export function TopHeader() {
       const tgUser = (window.Telegram?.WebApp as any)?.initDataUnsafe?.user;
       const effectiveUser = linkedTelegramUser || tgUser;
       if (effectiveUser && userRole !== "coach" && !isCoachAccount(effectiveUser.username, effectiveUser.id)) {
-        const leadKey = `smt_lead_notified_${effectiveUser.id || effectiveUser.username}`;
-        if (!sessionStorage.getItem(leadKey)) {
-          sessionStorage.setItem(leadKey, "1");
+        const leadKey = `smt_lead_registered_${effectiveUser.id || effectiveUser.username}`;
+        // Use localStorage so the user is only registered once permanently per device
+        if (!localStorage.getItem(leadKey)) {
+          localStorage.setItem(leadKey, "1");
           fetch("/api/lead/register", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
