@@ -68,7 +68,14 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
   const [fatigueLevel, setFatigueLevel] = useState<number>(3); // 1-5 (default 3 = Важко/RPE 8)
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [customNote, setCustomNote] = useState("");
-  const [showCustomNote, setShowCustomNote] = useState(false);
+  const [isNoteSheetOpen, setIsNoteSheetOpen] = useState(false);
+  const [tempNote, setTempNote] = useState("");
+
+  const handleOpenNoteSheet = () => {
+    setTempNote(customNote);
+    setIsNoteSheetOpen(true);
+    triggerHaptic("selection");
+  };
 
   // Proposed increments per exercise ID: { [exerciseId]: incrementKg }
   const [exerciseIncrements, setExerciseIncrements] = useState<Record<string, number>>({});
@@ -538,25 +545,44 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
             </div>
           </div>
 
-          {/* Optional Text Note Toggle */}
+          {/* Dedicated Note Trigger / Preview Card */}
           <div className="pt-1">
-            {!showCustomNote ? (
+            {!customNote.trim() ? (
               <button
                 type="button"
-                onClick={() => setShowCustomNote(true)}
-                className="text-[11px] text-slate-400 hover:text-white flex items-center gap-1 transition-colors"
+                onClick={handleOpenNoteSheet}
+                className="w-full flex items-center justify-between p-2.5 rounded-xl border border-dashed border-white/20 bg-slate-900/40 hover:bg-slate-900/80 hover:border-cyan-500/40 transition-all text-left group active:scale-[0.99]"
               >
-                <span>✍️ {language === "uk" ? "+ Додати коментар текстом" : "+ Добавить комментарий текстом"}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-base">✍️</span>
+                  <div>
+                    <div className="text-xs font-semibold text-slate-300 group-hover:text-white transition-colors">
+                      {language === "uk" ? "+ Додати замітку текстом" : "+ Добавить заметку текстом"}
+                    </div>
+                    <div className="text-[10px] text-slate-400">
+                      {language === "uk" ? "Зручне вікно для введення на весь екран" : "Удобное окно для ввода на весь экран"}
+                    </div>
+                  </div>
+                </div>
+                <ChevronRight className="h-4 w-4 text-slate-400 group-hover:text-cyan-400 transition-colors" />
               </button>
             ) : (
-              <div className="space-y-1 mt-1 animate-in fade-in">
-                <textarea
-                  value={customNote}
-                  onChange={(e) => setCustomNote(e.target.value)}
-                  rows={2}
-                  placeholder={language === "uk" ? "Введіть замітку до тренування..." : "Введите заметку к тренировке..."}
-                  className="w-full rounded-xl border border-white/10 bg-slate-950 px-3 py-2 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-emerald-500"
-                />
+              <div
+                onClick={handleOpenNoteSheet}
+                className="w-full p-2.5 rounded-xl border border-cyan-500/30 bg-cyan-950/20 hover:bg-cyan-950/30 transition-all cursor-pointer group active:scale-[0.99]"
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] font-bold text-cyan-400 flex items-center gap-1">
+                    <span>✍️</span> {language === "uk" ? "Ваша замітка" : "Ваша заметка"}
+                  </span>
+                  <span className="text-[10px] text-slate-400 group-hover:text-white flex items-center gap-0.5">
+                    {language === "uk" ? "Змінити" : "Изменить"}
+                    <ChevronRight className="h-3 w-3" />
+                  </span>
+                </div>
+                <p className="text-xs text-slate-200 line-clamp-2 italic">
+                  &ldquo;{customNote}&rdquo;
+                </p>
               </div>
             )}
           </div>
@@ -661,6 +687,108 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
         }}
         latestMeasurement={measurements[0]}
       />
+
+      {/* Dedicated Note Bottom Sheet / Modal (High Z-Index, Full Ergonomics) */}
+      {isNoteSheetOpen && (
+        <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in">
+          {/* Backdrop click to dismiss */}
+          <div
+            className="absolute inset-0"
+            onClick={() => {
+              setIsNoteSheetOpen(false);
+              triggerHaptic("light");
+            }}
+          />
+
+          <div
+            className="relative z-10 w-full sm:max-w-lg bg-slate-900 border border-white/15 rounded-t-3xl sm:rounded-2xl p-4 sm:p-5 shadow-2xl flex flex-col gap-3 animate-in slide-in-from-bottom-6 max-h-[90vh] overflow-y-auto"
+            style={{
+              paddingBottom: "max(16px, env(safe-area-inset-bottom, 16px))",
+            }}
+          >
+            {/* Grab handle for bottom sheet on mobile */}
+            <div className="w-12 h-1.5 bg-white/25 rounded-full mx-auto sm:hidden -mt-1 mb-1" />
+
+            <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
+              <div>
+                <h3 className="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+                  <span className="text-lg">✍️</span>
+                  <span>{language === "uk" ? "Замітка до тренування" : "Заметка к тренировке"}</span>
+                </h3>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  {language === "uk"
+                    ? "Опишіть відчуття, самопочуття або важливі нюанси підходів"
+                    : "Опишите ощущения, самочувствие или важные нюансы подходов"}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsNoteSheetOpen(false);
+                  triggerHaptic("light");
+                }}
+                className="text-slate-400 hover:text-white p-1.5 rounded-lg border border-white/10 hover:bg-white/5 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            <textarea
+              autoFocus
+              value={tempNote}
+              onChange={(e) => setTempNote(e.target.value)}
+              rows={6}
+              placeholder={
+                language === "uk"
+                  ? "Наприклад: трохи тягнуло ліве плече на 3 сеті, жим гантелей пішов дуже впевнено..."
+                  : "Например: немного тянуло левое плечо на 3 сете, жим гантелей пошел очень уверенно..."
+              }
+              className="w-full rounded-xl border border-white/15 bg-slate-950 p-3.5 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 resize-none leading-relaxed"
+            />
+
+            <div className="flex items-center gap-2 pt-1">
+              {tempNote.trim() && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setTempNote("");
+                    triggerHaptic("light");
+                  }}
+                  className="text-xs text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 px-2.5"
+                >
+                  {language === "uk" ? "Очистити" : "Очистить"}
+                </Button>
+              )}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setIsNoteSheetOpen(false);
+                  triggerHaptic("light");
+                }}
+                className="text-xs border-white/15 text-slate-300 hover:text-white"
+              >
+                {language === "uk" ? "Скасувати" : "Отмена"}
+              </Button>
+              <Button
+                type="button"
+                variant="accent"
+                className="flex-1 font-bold text-xs sm:text-sm h-10 bg-cyan-500 hover:bg-cyan-400 text-slate-950 shadow-md shadow-cyan-500/20"
+                onClick={() => {
+                  setCustomNote(tempNote.trim());
+                  setIsNoteSheetOpen(false);
+                  triggerHaptic("success");
+                }}
+              >
+                {language === "uk" ? "✓ Зберегти замітку" : "✓ Сохранить заметку"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </Dialog>
   );
 }

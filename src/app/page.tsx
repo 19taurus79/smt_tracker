@@ -234,7 +234,7 @@ export default function HomePage() {
                 <Link
                   href={`/workout?id=${activeWorkoutId}`}
                   onClick={() => setViewingWorkoutId(activeWorkoutId)}
-                  className="flex-1"
+                  className="w-full flex-1"
                 >
                   <Button variant="accent" size="lg" className="w-full font-bold shadow-lg shadow-emerald-500/20 h-11 sm:h-13 text-sm animate-pulse">
                     <Play className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 fill-current" />
@@ -242,31 +242,33 @@ export default function HomePage() {
                   </Button>
                 </Link>
               ) : (
-                <Link
-                  href={`/workout?id=${currentOrNextWorkout.id}`}
-                  onClick={() => setViewingWorkoutId(currentOrNextWorkout.id)}
-                  className="flex-1"
-                >
-                  <Button
-                    variant="accent"
-                    size="lg"
-                    className="w-full font-bold shadow-lg shadow-emerald-500/20 h-11 sm:h-13 text-sm"
+                <>
+                  <Link
+                    href={`/workout?id=${currentOrNextWorkout.id}`}
+                    onClick={() => setViewingWorkoutId(currentOrNextWorkout.id)}
+                    className="flex-1"
                   >
-                    <Eye className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5" />
-                    <span>{t.dashboard.viewPlan}</span>
-                  </Button>
-                </Link>
-              )}
+                    <Button
+                      variant="accent"
+                      size="lg"
+                      className="w-full font-bold shadow-lg shadow-emerald-500/20 h-11 sm:h-13 text-sm"
+                    >
+                      <Eye className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5" />
+                      <span>{t.dashboard.viewPlan}</span>
+                    </Button>
+                  </Link>
 
-              <Button
-                variant="outline"
-                size="lg"
-                onClick={openWarmupModal}
-                className="sm:w-auto font-semibold border-amber-500/30 text-amber-300 hover:bg-amber-500/10 h-11 sm:h-13 text-sm"
-              >
-                <Flame className="h-4 w-4 mr-1.5 text-amber-400" />
-                <span>{t.dashboard.warmupBtn}</span>
-              </Button>
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    onClick={openWarmupModal}
+                    className="sm:w-auto font-semibold border-amber-500/30 text-amber-300 hover:bg-amber-500/10 h-11 sm:h-13 text-sm"
+                  >
+                    <Flame className="h-4 w-4 mr-1.5 text-amber-400" />
+                    <span>{t.dashboard.warmupBtn}</span>
+                  </Button>
+                </>
+              )}
             </div>
           </CardContent>
         </Card>
