@@ -254,15 +254,27 @@ function WorkoutContent() {
             )}
 
             {isUpcoming && (
-              <Button
-                variant="accent"
-                size="sm"
-                className="h-8 px-3 text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-md shadow-emerald-500/25"
-                onClick={handleStartThisWorkout}
-              >
-                <Play className="h-3.5 w-3.5 mr-1 fill-current text-slate-950" />
-                <span>{t.workout.start}</span>
-              </Button>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={openWarmupModal}
+                  className="h-8 px-2.5 text-xs font-semibold border-amber-500/30 text-amber-300 hover:bg-amber-500/10"
+                >
+                  <Flame className="h-3.5 w-3.5 mr-1 text-amber-400 shrink-0" />
+                  <span>{t.workout.warmup}</span>
+                </Button>
+
+                <Button
+                  variant="accent"
+                  size="sm"
+                  className="h-8 px-3 text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-md shadow-emerald-500/25"
+                  onClick={handleStartThisWorkout}
+                >
+                  <Play className="h-3.5 w-3.5 mr-1 fill-current text-slate-950" />
+                  <span>{t.workout.start}</span>
+                </Button>
+              </div>
             )}
 
             {isCompleted && (
@@ -279,32 +291,20 @@ function WorkoutContent() {
           </div>
         </div>
 
-        {/* ROW 2: Progress Bar of sets + Warmup trigger */}
-        <div className="mt-2 pt-1.5 border-t border-white/5 flex items-center justify-between gap-2.5">
-          <div className="flex-1 space-y-1">
-            <div className="flex items-center justify-between text-[11px] text-slate-300">
-              <span>
-                {t.dashboard.progress}:{" "}
-                <strong className="text-emerald-400">
-                  {completedSets} / {totalSets}
-                </strong>
-              </span>
-              <span className="font-mono text-slate-400 text-[10px]">
-                {Math.round((completedSets / (totalSets || 1)) * 100)}%
-              </span>
-            </div>
-            <Progress value={completedSets} max={totalSets} className="h-1.5" />
+        {/* ROW 2: Progress Bar of sets */}
+        <div className="mt-2 pt-1.5 border-t border-white/5 space-y-1">
+          <div className="flex items-center justify-between text-[11px] text-slate-300">
+            <span>
+              {t.dashboard.progress}:{" "}
+              <strong className="text-emerald-400">
+                {completedSets} / {totalSets}
+              </strong>
+            </span>
+            <span className="font-mono text-slate-400 text-[10px]">
+              {Math.round((completedSets / (totalSets || 1)) * 100)}%
+            </span>
           </div>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={openWarmupModal}
-            className="h-7 px-2 text-[10px] font-semibold border-amber-500/30 text-amber-300 hover:bg-amber-500/10 shrink-0"
-          >
-            <Flame className="h-3 w-3 mr-1 text-amber-400 shrink-0" />
-            <span>{t.workout.warmup}</span>
-          </Button>
+          <Progress value={completedSets} max={totalSets} className="h-1.5" />
         </div>
       </div>
 
