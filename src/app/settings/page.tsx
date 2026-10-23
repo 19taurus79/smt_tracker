@@ -257,9 +257,16 @@ export default function SettingsPage() {
   };
 
   const handleApplyTransferCode = () => {
-    if (!transferCodeText.trim()) return;
+    const raw = transferCodeText.trim();
+    if (!raw) return;
     try {
-      const jsonStr = decodeURIComponent(escape(atob(transferCodeText.trim())));
+      let jsonStr = "";
+      const cleaned = raw.replace(/\s+/g, "");
+      try {
+        jsonStr = decodeURIComponent(escape(atob(cleaned)));
+      } catch {
+        jsonStr = raw;
+      }
       const parsed = JSON.parse(jsonStr);
       if (parsed.workouts && Array.isArray(parsed.workouts)) {
         setWorkouts(parsed.workouts);
@@ -275,12 +282,27 @@ export default function SettingsPage() {
           : "🎉 Все тренировки и замеры успешно перенесены в Telegram!"
       );
       triggerHaptic("success");
-    } catch {
+    } catch (e) {
+      console.error("Transfer code error:", e);
       showToast(
         language === "uk"
           ? "❌ Невірний код перенесення"
           : "❌ Неверный код переноса"
       );
+    }
+  };
+
+  const handlePasteClipboard = async () => {
+    try {
+      if (navigator.clipboard?.readText) {
+        const text = await navigator.clipboard.readText();
+        if (text) {
+          setTransferCodeText(text.trim());
+          triggerHaptic("selection");
+        }
+      }
+    } catch (err) {
+      console.warn("Clipboard read not allowed:", err);
     }
   };
 
@@ -1208,54 +1230,75 @@ export default function SettingsPage() {
       </Card>
 
       {/* Transfer Code Modal */}
-      <Dialog open={transferCodeModalOpen} onOpenChange={setTransferCodeModalOpen}>
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
-          <div className="w-full max-w-md rounded-2xl border border-white/15 bg-slate-900 p-5 space-y-4 shadow-2xl">
-            <DialogHeader>
-              <DialogTitle className="text-base font-bold text-white flex items-center gap-2">
-                <ArrowRightLeft className="h-5 w-5 text-emerald-400" />
-                <span>
-                  {language === "uk"
-                    ? "Вставити код перенесення даних"
-                    : "Вставить код переноса данных"}
-                </span>
-              </DialogTitle>
-              <DialogDescription className="text-xs text-slate-400 leading-relaxed">
-                {language === "uk"
-                  ? "Вставте код, скопійований у Safari-версії трекера. Всі ваші тренування, робочі ваги та замери будуть миттєво перенесені в цей Telegram Mini App."
-                  : "Вставьте код, скопированный в Safari-версии трекера. Все ваши тренировки, рабочие веса и замеры будут мгновенно перенесены в этот Telegram Mini App."}
-              </DialogDescription>
-            </DialogHeader>
+      <Dialog open={transferCodeModalOpen} onOpenChange={setTransferCodeModalOpen} className="max-w-md p-4 sm:p-5">
+        <DialogHeader className="shrink-0 mb-2">
+          <DialogTitle
+            onClose={() => setTransferCodeModalOpen(false)}
+            className="text-base font-bold text-white flex items-center gap-2"
+          >
+            <ArrowRightLeft className="h-5 w-5 text-emerald-400" />
+            <span>
+              {language === "uk"
+                ? "Вставити код перенесення даних"
+                : "Вставить код переноса данных"}
+            </span>
+          </DialogTitle>
+          <DialogDescription className="text-xs text-slate-400 leading-relaxed mt-1">
+            {language === "uk"
+              ? "Вставте код, скопійований у Safari-версії трекера. Всі ваші тренування, робочі ваги та замери будуть миттєво перенесені в цей Telegram Mini App."
+              : "Вставьте код, скопированный в Safari-версии трекера. Все ваши тренировки, рабочие веса и замеры будут мгновенно перенесены в этот Telegram Mini App."}
+          </DialogDescription>
+        </DialogHeader>
 
-            <textarea
-              rows={4}
-              value={transferCodeText}
-              onChange={(e) => setTransferCodeText(e.target.value)}
-              placeholder={
-                language === "uk"
-                  ? "Вставте код перенесення тут..."
-                  : "Вставьте код переноса сюда..."
-              }
-              className="w-full rounded-xl border border-white/15 bg-slate-950 p-3 text-xs text-white placeholder:text-slate-500 font-mono focus:outline-none focus:border-emerald-500"
-            />
+        <div className="space-y-3 my-2">
+          <textarea
+            rows={4}
+            value={transferCodeText}
+            onChange={(e) => setTransferCodeText(e.target.value)}
+            placeholder={
+              language === "uk"
+                ? "Вставте код перенесення тут..."
+                : "Вставьте код переноса сюда..."
+            }
+            className="w-full rounded-xl border border-white/15 bg-slate-950 p-3 text-xs text-white placeholder:text-slate-500 font-mono break-all focus:outline-none focus:border-emerald-500 resize-none"
+          />
 
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setTransferCodeModalOpen(false)}
-                className="flex-1 text-xs border-white/10"
-              >
-                <span>{t.common.cancel}</span>
-              </Button>
-              <Button
-                size="sm"
-                onClick={handleApplyTransferCode}
-                className="flex-1 text-xs font-bold bg-emerald-500 text-slate-950 hover:bg-emerald-400"
-              >
-                <span>{language === "uk" ? "Застосувати" : "Применить"}</span>
-              </Button>
-            </div>
+          <div className="flex items-center justify-between gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handlePasteClipboard}
+              className="text-xs text-cyan-400 border-cyan-500/30 hover:bg-cyan-500/10 flex items-center gap-1.5"
+            >
+              <Copy className="h-3.5 w-3.5" />
+              <span>{language === "uk" ? "Вставити з буфера" : "Вставить из буфера"}</span>
+            </Button>
+
+            <span className="text-[10px] text-slate-400 font-mono">
+              {transferCodeText.length > 0 ? `${transferCodeText.length} симв.` : ""}
+            </span>
+          </div>
+
+          <div className="flex gap-2 pt-2 border-t border-white/10">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setTransferCodeModalOpen(false)}
+              className="flex-1 text-xs border-white/10"
+            >
+              <span>{t.common.cancel}</span>
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleApplyTransferCode}
+              disabled={!transferCodeText.trim()}
+              className="flex-1 text-xs font-bold bg-emerald-500 text-slate-950 hover:bg-emerald-400 disabled:opacity-50"
+            >
+              <span>{language === "uk" ? "Застосувати" : "Применить"}</span>
+            </Button>
           </div>
         </div>
       </Dialog>
