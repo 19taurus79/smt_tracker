@@ -285,9 +285,10 @@ export default function SettingsPage() {
         const tgUser = (window.Telegram?.WebApp as any)?.initDataUnsafe?.user;
         const effectiveUser = linkedTelegramUser || tgUser;
         if (effectiveUser) {
+          const athleteDisplayName = traineeName || effectiveUser.first_name || (effectiveUser as any).firstName || "Атлет";
           import("@/lib/tma/sync").then(({ syncTraineeTransfer }) => {
             syncTraineeTransfer({
-              name: effectiveUser.first_name || (effectiveUser as any).firstName || "Атлет",
+              name: athleteDisplayName,
               username: effectiveUser.username || "",
               telegramUserId: effectiveUser.id,
               totalWorkouts: totalW,

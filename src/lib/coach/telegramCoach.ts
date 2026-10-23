@@ -266,6 +266,7 @@ export function shareToTelegramCoach(text: string, coachTelegramUsername?: strin
 export async function sendDirectCoachReport(payload: {
   traineeName?: string;
   traineeUsername?: string;
+  telegramUserId?: string | number;
   workoutNumber: number;
   microcycle: number;
   durationSeconds: number;
@@ -285,5 +286,6 @@ export async function sendDirectCoachReport(payload: {
     ...payload,
     name: payload.traineeName,
     username: payload.traineeUsername,
+    telegramId: payload.telegramUserId ? Number(payload.telegramUserId) : undefined,
   });
 }

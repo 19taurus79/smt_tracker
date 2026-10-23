@@ -8,6 +8,7 @@ import { recordWorkoutForTrainee } from "@/lib/server/traineeStorage";
 interface CoachReportBody {
   traineeName?: string;
   traineeUsername?: string;
+  telegramUserId?: string | number;
   workoutNumber: number;
   microcycle: number;
   week?: number;
@@ -67,6 +68,7 @@ export async function POST(req: Request) {
     const {
       traineeName,
       traineeUsername,
+      telegramUserId,
       workoutNumber,
       microcycle,
       durationSeconds,
@@ -85,6 +87,7 @@ export async function POST(req: Request) {
       recordWorkoutForTrainee({
         traineeName,
         traineeUsername: cleanUsername,
+        telegramUserId,
         workoutNumber,
         microcycle,
         durationSeconds,

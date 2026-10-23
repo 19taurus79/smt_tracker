@@ -317,6 +317,7 @@ export function FinishModal({ open, onOpenChange, onFinished, workoutId }: Finis
         sendDirectCoachReport({
           traineeName: traineeName || linkedTelegramUser?.firstName || (typeof window !== "undefined" && window.Telegram?.WebApp?.initDataUnsafe?.user?.first_name) || "Атлет",
           traineeUsername: linkedTelegramUser?.username || (typeof window !== "undefined" && window.Telegram?.WebApp?.initDataUnsafe?.user?.username) || "",
+          telegramUserId: linkedTelegramUser?.id || (typeof window !== "undefined" ? window.Telegram?.WebApp?.initDataUnsafe?.user?.id : undefined),
           workoutNumber: currentWorkout.workoutNumber || 1,
           microcycle: currentWorkout.microcycle || 1,
           durationSeconds: effectiveDuration,

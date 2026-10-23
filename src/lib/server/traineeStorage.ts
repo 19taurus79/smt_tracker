@@ -76,9 +76,98 @@ function getRandomGradient(): string {
   return AVATAR_GRADIENTS[idx];
 }
 
+export function autoDeduplicateTrainees(trainees: TraineeProfile[]): TraineeProfile[] {
+  if (!trainees || trainees.length <= 1) return trainees || [];
+
+  const merged: TraineeProfile[] = [];
+  const handledIds = new Set<string>();
+
+  for (let i = 0; i < trainees.length; i++) {
+    const current = trainees[i];
+    if (handledIds.has(current.id)) continue;
+
+    let duplicateIndex = -1;
+    for (let j = i + 1; j < trainees.length; j++) {
+      if (handledIds.has(trainees[j].id)) continue;
+      const candidate = trainees[j];
+
+      // 1. Exact match on Telegram ID
+      const sameTgId = Boolean(current.telegramChatId && candidate.telegramChatId && current.telegramChatId === candidate.telegramChatId);
+      // 2. Exact match on username
+      const sameUsername = Boolean(current.username && candidate.username && current.username.toLowerCase() === candidate.username.toLowerCase());
+      // 3. One is orphan without username/tgId, or name matches, or single other trainee in team
+      const currentNameClean = current.name.toLowerCase().trim();
+      const candNameClean = candidate.name.toLowerCase().trim();
+      const sameName = Boolean(currentNameClean && candNameClean && (currentNameClean === candNameClean || currentNameClean.includes(candNameClean) || candNameClean.includes(currentNameClean)));
+      const oneIsOrphan = (!current.username && !current.telegramChatId) || (!candidate.username && !candidate.telegramChatId);
+      const isOnlyPair = trainees.length === 2 && oneIsOrphan;
+
+      if (sameTgId || sameUsername || (sameName && oneIsOrphan) || isOnlyPair) {
+        duplicateIndex = j;
+        break;
+      }
+    }
+
+    if (duplicateIndex >= 0) {
+      const candidate = trainees[duplicateIndex];
+      handledIds.add(candidate.id);
+
+      // Prefer the profile that has Telegram linking
+      const primary = (current.telegramChatId || current.username) ? current : candidate;
+      const secondary = primary === current ? candidate : current;
+
+      // Select real human name over telegram username handle if available
+      const humanName = [secondary.name, primary.name].find(n => n && !n.startsWith("@") && n.toLowerCase() !== (primary.username || "").toLowerCase()) || primary.name;
+      const aliasName = primary.name !== humanName ? primary.name : (secondary.name !== humanName ? secondary.name : undefined);
+
+      const combinedWorkouts = [...(primary.workoutHistory || []), ...(secondary.workoutHistory || [])];
+      const seenWorkouts = new Set<string>();
+      const dedupedWorkouts: TraineeWorkoutRecord[] = [];
+      for (const w of combinedWorkouts) {
+        const key = `${w.workoutNumber}_${w.microcycle}`;
+        if (!seenWorkouts.has(key)) {
+          seenWorkouts.add(key);
+          dedupedWorkouts.push(w);
+        }
+      }
+
+      const combinedMeasurements = [...(primary.measurementHistory || []), ...(secondary.measurementHistory || [])];
+      const bestWeight = primary.weightKg && primary.weightKg !== 80 ? primary.weightKg : (secondary.weightKg || primary.weightKg || 80);
+
+      const mergedTrainee: TraineeProfile = {
+        ...primary,
+        name: humanName,
+        alias: aliasName || primary.alias || secondary.alias,
+        username: primary.username || secondary.username,
+        telegramChatId: primary.telegramChatId || secondary.telegramChatId,
+        totalWorkouts: Math.max(primary.totalWorkouts || 0, secondary.totalWorkouts || 0, dedupedWorkouts.length),
+        currentWorkoutNumber: Math.max(primary.currentWorkoutNumber || 1, secondary.currentWorkoutNumber || 1),
+        currentMicrocycle: Math.max(primary.currentMicrocycle || 1, secondary.currentMicrocycle || 1),
+        weightKg: bestWeight,
+        status: primary.status === "blocked" || secondary.status === "blocked" ? "blocked" : "active",
+        tierKey: (primary.tierKey !== "lead" ? primary.tierKey : secondary.tierKey) || "active",
+        tierLabel: (primary.tierKey !== "lead" ? primary.tierLabel : secondary.tierLabel) || "Активний Атлет",
+        coachNotes: primary.coachNotes ? `${primary.coachNotes}` : secondary.coachNotes,
+        workoutHistory: dedupedWorkouts,
+        measurementHistory: combinedMeasurements,
+      };
+
+      merged.push(mergedTrainee);
+      handledIds.add(current.id);
+    } else {
+      merged.push(current);
+      handledIds.add(current.id);
+    }
+  }
+
+  return merged;
+}
+
 function ensureDataFile(): TraineeProfile[] {
   if (cacheLoaded && memoryCache.length > 0) {
-    return memoryCache;
+    const deduped = autoDeduplicateTrainees(memoryCache);
+    memoryCache = deduped;
+    return deduped;
   }
   try {
     if (!fs.existsSync(DATA_DIR)) {
@@ -89,9 +178,13 @@ function ensureDataFile(): TraineeProfile[] {
     if (fs.existsSync(DATA_FILE)) {
       const content = fs.readFileSync(DATA_FILE, "utf8");
       const parsed = JSON.parse(content) as TraineeProfile[];
-      memoryCache = parsed;
+      const deduped = autoDeduplicateTrainees(parsed);
+      if (deduped.length !== parsed.length) {
+        saveDataFile(deduped);
+      }
+      memoryCache = deduped;
       cacheLoaded = true;
-      return parsed;
+      return deduped;
     }
     // Also try local data/trainees.json if in serverless
     const fallbackPath = path.resolve(process.cwd(), "data", "trainees.json");
@@ -99,9 +192,10 @@ function ensureDataFile(): TraineeProfile[] {
       try {
         const content = fs.readFileSync(fallbackPath, "utf8");
         const parsed = JSON.parse(content) as TraineeProfile[];
-        memoryCache = parsed;
+        const deduped = autoDeduplicateTrainees(parsed);
+        memoryCache = deduped;
         cacheLoaded = true;
-        return parsed;
+        return deduped;
       } catch {}
     }
     cacheLoaded = true;
@@ -113,7 +207,8 @@ function ensureDataFile(): TraineeProfile[] {
 }
 
 function saveDataFile(trainees: TraineeProfile[]): void {
-  memoryCache = trainees;
+  const deduped = autoDeduplicateTrainees(trainees);
+  memoryCache = deduped;
   cacheLoaded = true;
   try {
     if (!fs.existsSync(DATA_DIR)) {
@@ -122,7 +217,7 @@ function saveDataFile(trainees: TraineeProfile[]): void {
       } catch {}
     }
     const tmpFile = `${DATA_FILE}.tmp.${Date.now()}`;
-    fs.writeFileSync(tmpFile, JSON.stringify(trainees, null, 2), "utf8");
+    fs.writeFileSync(tmpFile, JSON.stringify(deduped, null, 2), "utf8");
     fs.renameSync(tmpFile, DATA_FILE);
   } catch (err) {
     console.warn("[traineeStorage] Warning saving data file (cached in memory):", err);

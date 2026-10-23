@@ -16,7 +16,7 @@ import { isCoachAccount } from "@/lib/auth/roles";
 export function TopHeader() {
   const { t, language } = useTranslation();
   const { activeWorkoutId, workoutElapsedSeconds, workouts } = useWorkoutStore();
-  const { userRole, linkedTelegramUser } = useSettingsStore();
+  const { userRole, linkedTelegramUser, traineeName } = useSettingsStore();
   const [inTelegram, setInTelegram] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
 
@@ -29,12 +29,14 @@ export function TopHeader() {
       const effectiveUser = linkedTelegramUser || tgUser;
       if (effectiveUser && userRole !== "coach" && !isCoachAccount(effectiveUser.username, effectiveUser.id)) {
         const leadKey = `smt_lead_registered_${effectiveUser.id || effectiveUser.username}`;
+        const athleteDisplayName = traineeName || effectiveUser.first_name || (effectiveUser as any).firstName || "Атлет";
+
         // 1. Initial lead registration
         if (!localStorage.getItem(leadKey)) {
           localStorage.setItem(leadKey, "1");
           import("@/lib/tma/sync").then(({ syncTrainee }) => {
             syncTrainee({
-              name: effectiveUser.first_name || (effectiveUser as any).firstName || "Атлет",
+              name: athleteDisplayName,
               username: effectiveUser.username || "",
               telegramUserId: effectiveUser.id,
             }).catch(() => {});
@@ -50,7 +52,7 @@ export function TopHeader() {
             const latestW = workouts[0];
             import("@/lib/tma/sync").then(({ syncTraineeTransfer }) => {
               syncTraineeTransfer({
-                name: effectiveUser.first_name || (effectiveUser as any).firstName || "Атлет",
+                name: athleteDisplayName,
                 username: effectiveUser.username || "",
                 telegramUserId: effectiveUser.id,
                 totalWorkouts: workouts.length,
@@ -62,7 +64,7 @@ export function TopHeader() {
         }
       }
     }
-  }, [linkedTelegramUser, userRole, workouts]);
+  }, [linkedTelegramUser, userRole, workouts, traineeName]);
 
   const activeWorkout = workouts.find((w) => w.id === activeWorkoutId);
 

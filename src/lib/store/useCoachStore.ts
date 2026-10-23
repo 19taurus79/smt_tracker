@@ -584,6 +584,56 @@ const initialTrainees: TraineeProfile[] = [
   },
 ];
 
+function deduplicateLocalTrainees(trainees: TraineeProfile[]): TraineeProfile[] {
+  if (!trainees || trainees.length <= 1) return trainees || [];
+  const result: TraineeProfile[] = [];
+  const handledIds = new Set<string>();
+
+  for (let i = 0; i < trainees.length; i++) {
+    const current = trainees[i];
+    if (handledIds.has(current.id)) continue;
+
+    const duplicate = trainees.find((candidate, j) => {
+      if (j <= i || handledIds.has(candidate.id)) return false;
+      const sameTgId = Boolean(current.telegramChatId && candidate.telegramChatId && current.telegramChatId === candidate.telegramChatId);
+      const sameUsername = Boolean(current.username && candidate.username && current.username.toLowerCase() === candidate.username.toLowerCase());
+      const curName = current.name.toLowerCase().trim();
+      const candName = candidate.name.toLowerCase().trim();
+      const sameName = Boolean(curName && candName && (curName === candName || curName.includes(candName) || candName.includes(curName)));
+      const oneIsOrphan = (!current.username && !current.telegramChatId) || (!candidate.username && !candidate.telegramChatId);
+      const nonDemoCount = trainees.filter(t => !t.id.startsWith("trainee-1") && !t.id.startsWith("trainee-2") && !t.id.startsWith("trainee-3") && !t.id.startsWith("trainee-4") && !t.id.startsWith("trainee-5")).length;
+      const isOnlyPair = nonDemoCount <= 2 && oneIsOrphan;
+
+      return sameTgId || sameUsername || (sameName && oneIsOrphan) || isOnlyPair;
+    });
+
+    if (duplicate) {
+      handledIds.add(duplicate.id);
+      const primary = (current.telegramChatId || current.username) ? current : duplicate;
+      const secondary = primary === current ? duplicate : current;
+      const humanName = [secondary.name, primary.name].find(n => n && !n.startsWith("@") && n.toLowerCase() !== (primary.username || "").toLowerCase()) || primary.name;
+      const aliasName = primary.name !== humanName ? primary.name : (secondary.name !== humanName ? secondary.name : undefined);
+      const bestWeight = primary.weightKg && primary.weightKg !== 80 ? primary.weightKg : (secondary.weightKg || primary.weightKg || 80);
+
+      result.push({
+        ...primary,
+        name: humanName,
+        alias: aliasName || primary.alias || secondary.alias,
+        weightKg: bestWeight,
+        totalWorkouts: Math.max(primary.totalWorkouts || 0, secondary.totalWorkouts || 0),
+        workoutHistory: [...(primary.workoutHistory || []), ...(secondary.workoutHistory || [])],
+        measurementHistory: [...(primary.measurementHistory || []), ...(secondary.measurementHistory || [])],
+      });
+      handledIds.add(current.id);
+    } else {
+      result.push(current);
+      handledIds.add(current.id);
+    }
+  }
+
+  return result;
+}
+
 export const useCoachStore = create<CoachStoreState>()(
   persist(
     (set, get) => ({
@@ -608,7 +658,7 @@ export const useCoachStore = create<CoachStoreState>()(
                 });
               });
               if (res && res.ok && Array.isArray(res.trainees) && res.trainees.length > 0) {
-                set({ trainees: res.trainees });
+                set({ trainees: deduplicateLocalTrainees(res.trainees) });
                 return;
               }
             } catch (tgErr) {
@@ -620,10 +670,9 @@ export const useCoachStore = create<CoachStoreState>()(
           const res = await fetch("/api/coach/trainees");
           if (!res.ok) return;
           const data = await res.json();
-          if (data.ok && Array.isArray(data.trainees) && data.trainees.length > 0) {
+          if (data.ok && Array.isArray(data.trainees)) {
             set((state) => {
-              const currentList = [...state.trainees];
-              let hasChanges = false;
+              let currentList = [...state.trainees];
               for (const serverT of data.trainees) {
                 const idx = currentList.findIndex(
                   (t) =>
@@ -633,13 +682,11 @@ export const useCoachStore = create<CoachStoreState>()(
                 );
                 if (idx >= 0) {
                   currentList[idx] = { ...currentList[idx], ...serverT };
-                  hasChanges = true;
                 } else {
                   currentList.unshift(serverT);
-                  hasChanges = true;
                 }
               }
-              return hasChanges ? { trainees: currentList } : state;
+              return { trainees: deduplicateLocalTrainees(currentList) };
             });
           }
         } catch (err) {
@@ -698,11 +745,17 @@ export const useCoachStore = create<CoachStoreState>()(
           ),
         })),
 
-      deleteTrainee: (id) =>
-        set((state) => ({
+      deleteTrainee: (id) => {
+        fetch("/api/coach/trainees", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "delete", id }),
+        }).catch(() => {});
+        return set((state) => ({
           trainees: state.trainees.filter((t) => t.id !== id),
           selectedTraineeId: state.selectedTraineeId === id ? null : state.selectedTraineeId,
-        })),
+        }));
+      },
 
       clearAllTrainees: () =>
         set({

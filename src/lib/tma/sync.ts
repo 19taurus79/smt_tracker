@@ -130,6 +130,7 @@ export async function syncWorkout(payload: SyncWorkoutPayload): Promise<boolean>
       body: JSON.stringify({
         traineeName: athleteName,
         traineeUsername: athleteUsername,
+        telegramUserId: payload.telegramId,
         workoutNumber: payload.workoutNumber,
         microcycle: payload.microcycle,
         durationSeconds: payload.durationSeconds,
