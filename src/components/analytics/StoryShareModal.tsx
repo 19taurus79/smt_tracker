@@ -1110,7 +1110,33 @@ export function StoryShareModal({
       setPreviewUrl(dataUrl);
 
       const tgUser = getTelegramUser();
-      const tgUserId = tgUser?.id || (useSettingsStore.getState().linkedTelegramUser?.id);
+      const tgUserId =
+        tgUser?.id ||
+        useSettingsStore.getState().linkedTelegramUser?.id ||
+        (typeof window !== "undefined"
+          ? (window.Telegram?.WebApp?.initDataUnsafe?.user?.id ||
+             Number(localStorage.getItem("smt_tg_user_id")) ||
+             undefined)
+          : undefined);
+
+      if (!tgUserId) {
+        // User is running outside Telegram (Web/PWA/Desktop)
+        // Directly download image to device files/gallery!
+        const link = document.createElement("a");
+        const filenamePrefix = prepData
+          ? `smt_prep_s${prepData.prepSessionNumber}`
+          : `smt_story_w${workout.workoutNumber || 1}`;
+        link.download = `${filenamePrefix}_${selectedTemplate}.png`;
+        link.href = dataUrl;
+        link.click();
+        triggerHaptic("success");
+        setSendError(
+          language === "uk"
+            ? "📸 Картинку збережено у файли вашого пристрою для публікації в Instagram!"
+            : "📸 Картинка сохранена в файлы вашего устройства для публикации в Instagram!"
+        );
+        return;
+      }
 
       const res = await fetch("/api/story/share", {
         method: "POST",
@@ -1322,14 +1348,14 @@ export function StoryShareModal({
             <span>
               {isGenerating
                 ? (language === "uk" ? "Надсилаємо в чат..." : "Отправляем в чат...")
-                : (language === "uk" ? "✈️ НАДІСЛАТИ В БОТ ДЛЯ INSTAGRAM" : "✈️ ОТПРАВИТЬ В БОТ ДЛЯ INSTAGRAM")}
+                : (language === "uk" ? "✈️ НАДІСЛАТИ В МІЙ ЧАТ TELEGRAM" : "✈️ ОТПРАВИТЬ В МОЙ ЧАТ TELEGRAM")}
             </span>
           </Button>
 
           <span className="text-[10px] text-center text-slate-400">
             {language === "uk"
-              ? "Отримайте фото в чаті з покроковою інструкцією та кнопкою повернення"
-              : "Получите фото в чате с пошаговой инструкцией и кнопкой возврата"}
+              ? "Отримайте фото у вашому особистому чаті з ботом для публікації у Stories"
+              : "Получите фото в вашем личном чате с ботом для публикации в Stories"}
           </span>
 
           <Button

@@ -28,11 +28,11 @@ export async function POST(req: Request) {
       );
     }
 
-    const targetChatId = chatId || process.env.COACH_TELEGRAM_CHAT_ID;
+    const targetChatId = chatId;
 
     if (!targetChatId) {
       return NextResponse.json(
-        { ok: false, error: "chatId is required to send to Telegram chat" },
+        { ok: false, error: "chatId is required to send to athlete's Telegram chat" },
         { status: 400 }
       );
     }
