@@ -1132,22 +1132,16 @@ export function StoryShareModal({
 
   const openInstagramStoryCamera = () => {
     triggerHaptic("selection");
-    try {
-      window.location.href = "instagram://story-camera";
-      setTimeout(() => {
-        const tg = (window as any).Telegram?.WebApp;
-        if (tg?.openLink) {
-          tg.openLink("https://instagram.com");
-        }
-      }, 1200);
-    } catch {
-      const tg = (window as any).Telegram?.WebApp;
-      if (tg?.openLink) {
-        tg.openLink("https://instagram.com");
-      } else {
-        window.open("https://instagram.com", "_blank");
+    const tg = typeof window !== "undefined" ? (window as any).Telegram?.WebApp : null;
+    if (tg?.openLink) {
+      try {
+        tg.openLink("https://www.instagram.com");
+        return;
+      } catch (err) {
+        console.warn("tg.openLink error:", err);
       }
     }
+    window.open("https://www.instagram.com", "_blank", "noopener,noreferrer");
   };
 
   const handleShareTelegram = async () => {
@@ -1363,12 +1357,12 @@ export function StoryShareModal({
             <div className="rounded-xl border border-pink-500/40 bg-pink-950/70 p-3 shadow-lg flex flex-col gap-1.5 animate-in fade-in zoom-in-95">
               <div className="flex items-center gap-2 text-pink-300 font-bold text-xs sm:text-sm">
                 <Camera className="h-4 w-4 shrink-0 text-pink-400" />
-                <span>{language === "uk" ? "Фото збережено для Instagram!" : "Фото сохранено для Instagram!"}</span>
+                <span>{language === "uk" ? "Фото надіслано в чат з ботом!" : "Фото отправлено в чат с ботом!"}</span>
               </div>
               <p className="text-[11px] text-slate-300 leading-tight">
                 {language === "uk"
-                  ? "Зображення збережено. Натисніть кнопку нижче, щоб відкрити камеру Instagram Stories (фото буде першим у вашій галереї):"
-                  : "Изображение сохранено. Нажмите кнопку ниже, чтобы открыть камеру Instagram Stories (фото будет первым в вашей галерее):"}
+                  ? "Зображення збережено. Відкрийте Instagram та опублікуйте його у Stories:"
+                  : "Изображение сохранено. Откройте Instagram и опубликуйте его в Stories:"}
               </p>
               <div className="flex items-center gap-2 mt-1">
                 <Button
@@ -1377,7 +1371,7 @@ export function StoryShareModal({
                   onClick={openInstagramStoryCamera}
                 >
                   <Camera className="h-3 w-3 mr-1" />
-                  <span>{language === "uk" ? "Відкрити Instagram Stories ↗" : "Открыть Instagram Stories ↗"}</span>
+                  <span>{language === "uk" ? "Відкрити Instagram ↗" : "Открыть Instagram ↗"}</span>
                 </Button>
               </div>
             </div>
@@ -1536,8 +1530,8 @@ export function StoryShareModal({
           >
             <p className="text-[11px] text-amber-300 font-medium leading-tight">
               {language === "uk"
-                ? "💡 Затисніть картинку пальцем, щоб зберегти у галерею, або натисніть «Відкрити Instagram»:"
-                : "💡 Зажмите картинку пальцем, чтобы сохранить в галерею, или нажмите «Открыть Instagram»:"}
+                ? "💡 Картинку також надіслано вам у чат з ботом! Збережіть її в галерею та опублікуйте в Instagram:"
+                : "💡 Картинка также отправлена вам в чат с ботом! Сохраните её в галерею и опубликуйте в Instagram:"}
             </p>
             <div className="flex items-center gap-2">
               <Button
@@ -1546,12 +1540,12 @@ export function StoryShareModal({
                 onClick={openInstagramStoryCamera}
               >
                 <Camera className="h-3.5 w-3.5 shrink-0" />
-                <span>{language === "uk" ? "Відкрити Instagram Stories ↗" : "Открыть Instagram Stories ↗"}</span>
+                <span>{language === "uk" ? "Відкрити Instagram ↗" : "Открыть Instagram ↗"}</span>
               </Button>
               <Button
                 size="sm"
                 variant="outline"
-                className="h-8 text-xs border-white/20 text-slate-300"
+                className="h-8 text-xs border-white/20 text-slate-300 hover:text-white"
                 onClick={() => setShowFullPreview(false)}
               >
                 <span>{language === "uk" ? "Закрити" : "Закрыть"}</span>

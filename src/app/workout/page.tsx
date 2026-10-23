@@ -50,9 +50,17 @@ function WorkoutContent() {
     tickStopwatch,
     openWarmupModal,
     setViewingWorkoutId,
+    finishWorkout,
   } = useWorkoutStore();
 
-  const { keepScreenAwake, setKeepScreenAwake, defaultRestSeconds } = useSettingsStore();
+  const {
+    keepScreenAwake,
+    setKeepScreenAwake,
+    defaultRestSeconds,
+    weightIncrementKg,
+    soundEnabled,
+    hapticsEnabled,
+  } = useSettingsStore();
 
   const [isFinishModalOpen, setIsFinishModalOpen] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
@@ -143,7 +151,18 @@ function WorkoutContent() {
   }
 
   const handleOpenFinishModal = () => {
-    pauseStopwatch();
+    // 1. Immediately pause stopwatch & finalize workout in store so it is NEVER left running in background!
+    const effectiveDuration = workoutElapsedSeconds || currentWorkout.durationSeconds || 1;
+    finishWorkout(
+      "",
+      undefined,
+      weightIncrementKg,
+      soundEnabled,
+      hapticsEnabled,
+      effectiveDuration,
+      currentWorkout.id
+    );
+    // 2. Open finish modal for review, progression, tags, challenge & stories
     setIsFinishModalOpen(true);
   };
 
@@ -489,6 +508,7 @@ function WorkoutContent() {
       <FinishModal
         open={isFinishModalOpen}
         onOpenChange={setIsFinishModalOpen}
+        workoutId={currentWorkout.id}
         onFinished={(sent) => {
           setWasReportSentToCoach(Boolean(sent));
           setIsFinishModalOpen(false);

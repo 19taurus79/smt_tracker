@@ -498,7 +498,7 @@ export const useWorkoutStore = create<WorkoutState>()(
             return {
               ...w,
               status: "completed" as const,
-              completedAt: new Date().toISOString(),
+              completedAt: w.completedAt || new Date().toISOString(),
               durationSeconds: effectiveDuration,
               tonnageKg: tonnage,
               powerKgPerMin: power,

@@ -38,11 +38,13 @@ interface FinishModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onFinished: (reportSentToCoach?: boolean) => void;
+  workoutId?: string;
 }
 
-export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps) {
+export function FinishModal({ open, onOpenChange, onFinished, workoutId }: FinishModalProps) {
   const {
     activeWorkoutId,
+    viewingWorkoutId,
     workouts,
     workoutElapsedSeconds,
     pauseStopwatch,
@@ -124,21 +126,28 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
     }
   }, [open, isCoach, coachTelegramUsername]);
 
+  const targetWorkoutId = workoutId || activeWorkoutId || viewingWorkoutId;
+  const currentWorkout =
+    workouts.find((w) => w.id === targetWorkoutId) ||
+    workouts.find((w) => w.id === activeWorkoutId) ||
+    workouts.find((w) => w.status === "in_progress") ||
+    workouts.find((w) => w.status === "completed") ||
+    workouts[0];
+
   useEffect(() => {
     if (open) {
       pauseStopwatch();
-      setFrozenDuration(workoutElapsedSeconds || 1);
+      const dur = currentWorkout?.durationSeconds || workoutElapsedSeconds || 1;
+      setFrozenDuration(dur);
     } else {
       setFrozenDuration(0);
     }
-  }, [open]);
+  }, [open, currentWorkout]);
 
-  const effectiveDuration = frozenDuration > 0 ? frozenDuration : (workoutElapsedSeconds || 1);
-  const currentWorkout =
-    workouts.find((w) => w.id === activeWorkoutId) ||
-    workouts.find((w) => w.status === "in_progress") ||
-    workouts.find((w) => w.status === "upcoming") ||
-    workouts[0];
+  const effectiveDuration =
+    frozenDuration > 0
+      ? frozenDuration
+      : currentWorkout?.durationSeconds || workoutElapsedSeconds || 1;
   const tonnage = currentWorkout
     ? calculateWorkoutTonnage(currentWorkout.supersets)
     : 0;
@@ -326,12 +335,28 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
     }
   };
 
+  const handleClose = () => {
+    const fullNotes = buildFullNotes();
+    if (currentWorkout && (fullNotes || Object.keys(exerciseIncrements).length > 0)) {
+      finishWorkout(
+        fullNotes,
+        exerciseIncrements,
+        weightIncrementKg,
+        soundEnabled,
+        hapticsEnabled,
+        effectiveDuration,
+        currentWorkout.id
+      );
+    }
+    onOpenChange(false);
+  };
+
   if (!currentWorkout) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(isOpen) => { if (!isOpen) handleClose(); else onOpenChange(true); }}>
       <DialogHeader className="shrink-0 mb-2">
-        <DialogTitle onClose={() => onOpenChange(false)}>
+        <DialogTitle onClose={handleClose}>
           <div className="flex items-center gap-2">
             <Trophy className="h-6 w-6 text-amber-400" />
             <span>
@@ -669,8 +694,8 @@ export function FinishModal({ open, onOpenChange, onFinished }: FinishModalProps
           <CheckCircle className="h-5 w-5 shrink-0" />
           <span>
             {isFinishing
-              ? (language === "uk" ? "Збереження тренування..." : "Сохранение тренировки...")
-              : (language === "uk" ? "✔ ЗАВЕРШИТИ ТРЕНУВАННЯ" : "✔ ЗАВЕРШИТЬ ТРЕНИРОВКУ")}
+              ? (language === "uk" ? "Збереження..." : "Сохранение...")
+              : (language === "uk" ? "✔ ЗБЕРЕГТИ ТА ЗАКРИТИ" : "✔ СОХРАНИТЬ И ЗАКРЫТЬ")}
           </span>
         </Button>
       </div>

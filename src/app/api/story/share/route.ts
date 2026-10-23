@@ -5,6 +5,7 @@ import { NextResponse } from "next/server";
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const BOT_USERNAME = process.env.TELEGRAM_BOT_USERNAME || process.env.NEXT_PUBLIC_BOT_USERNAME || "athletic_smt_bot";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://smt-tracker.vercel.app";
 
 interface ShareStoryBody {
   chatId?: number | string;
@@ -47,7 +48,6 @@ export async function POST(req: Request) {
     const imageBuffer = Buffer.from(base64Data, "base64");
     const imageBlob = new Blob([imageBuffer], { type: "image/png" });
 
-    const cleanBotName = BOT_USERNAME.replace("@", "");
     const cleanCaption =
       caption ||
       `🔥 <b>Ваша історія SMT-1 готова!</b>\n\n` +
@@ -62,17 +62,19 @@ export async function POST(req: Request) {
     formData.append("parse_mode", "HTML");
     formData.append("photo", imageBlob, `smt_story_${workoutNumber}_${Date.now()}.png`);
 
-    // Add inline keyboard with direct links
+    // Add inline keyboard with direct Mini App launcher
     const inlineKeyboard = {
       inline_keyboard: [
         [
           {
             text: "🚀 Відкрити SMT Трекер",
-            url: `https://t.me/${cleanBotName}`,
+            web_app: {
+              url: APP_URL,
+            },
           },
           {
             text: "📸 В Instagram",
-            url: "https://instagram.com",
+            url: "https://www.instagram.com",
           },
         ],
       ],
