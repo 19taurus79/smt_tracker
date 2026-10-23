@@ -87,6 +87,27 @@ async function isUserSubscribed(userId: number): Promise<boolean> {
   return status === "creator" || status === "administrator" || status === "member";
 }
 
+/**
+ * Ensures user's bottom-left Menu button opens the SMT Tracker WebApp directly in 1 click
+ * with ZERO intermediate messages or command selections.
+ */
+async function ensureTrackerMenuButton(chatId: number, targetUrl: string = APP_URL) {
+  try {
+    await tgApi("setChatMenuButton", {
+      chat_id: chatId,
+      menu_button: {
+        type: "web_app",
+        text: "⚡️ Трекер",
+        web_app: {
+          url: targetUrl,
+        },
+      },
+    });
+  } catch (e) {
+    console.error("[Telegram Webhook] Failed to setChatMenuButton:", e);
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const update: TelegramUpdate = await req.json();
@@ -142,6 +163,9 @@ export async function POST(req: Request) {
             lang === "uk"
               ? `🔥 <b>Вітаємо в SMT-1 Tracker!</b>\n\nВи є учасником нашого Челенджу. Тренувальна система <b>СМТ-1 (Високощільний тренінг)</b> готова до старту.\n\n⚡️ <i>Правило #1: Відпочинок суворо 30 секунд. 24 підходи = 24-30 хв.</i>\n\n📲 <i>Натисніть кнопку «⚡️ Відкрити SMT-1 Трекер» нижче, щоб запустити нативний трекер у повноекранному режимі:</i>`
               : `🔥 <b>Добро пожаловать в SMT-1 Tracker!</b>\n\nВы являетесь участником Челленджа. Тренировочная система <b>СМТ-1 (Высокоплотный тренинг)</b> готова к старту.\n\n⚡️ <i>Правило #1: Отдых строго 30 секунд. 24 подхода = 24-30 минут.</i>\n\n📲 <i>Нажмите кнопку «⚡️ Открыть SMT-1 Трекер» ниже, чтобы запустить нативный трекер в полноэкранном режиме:</i>`;
+
+          // Automatically configure the bottom-left Menu button for 1-tap direct WebApp launch
+          ensureTrackerMenuButton(chat.id, miniAppUrl);
 
           await tgApi("sendMessage", {
             chat_id: chat.id,
@@ -284,13 +308,15 @@ export async function POST(req: Request) {
 
       // Handle /app command
       if (text.startsWith("/app")) {
-        const channelName = CHANNEL_ID.replace("@", "");
+        // Ensure 1-tap Menu button is configured
+        ensureTrackerMenuButton(chat.id, APP_URL);
+
         await tgApi("sendMessage", {
           chat_id: chat.id,
           text:
             lang === "uk"
-              ? "🏋️‍♂️ <b>SMT-1 Tracker & Challenge</b>\nНатисніть кнопку нижче, щоб відкрити персональний щоденник тренувань:"
-              : "🏋️‍♂️ <b>SMT-1 Tracker & Challenge</b>\nНажмите кнопку ниже, чтобы открыть персональный дневник тренировок:",
+              ? "⚡️ <b>SMT-1 Tracker & Challenge</b>\nНатисніть кнопку нижче або кнопку «⚡️ Трекер» внизу біля поля вводу, щоб запустити трекер:"
+              : "⚡️ <b>SMT-1 Tracker & Challenge</b>\nНажмите кнопку ниже или кнопку «⚡️ Трекер» внизу возле поля ввода, чтобы запустить трекер:",
           parse_mode: "HTML",
           reply_markup: {
             inline_keyboard: [
@@ -300,12 +326,6 @@ export async function POST(req: Request) {
                   web_app: {
                     url: APP_URL,
                   },
-                },
-              ],
-              [
-                {
-                  text: lang === "uk" ? "🏆 Канал Результатів" : "🏆 Канал Результатов",
-                  url: `https://t.me/${channelName}`,
                 },
               ],
             ],
@@ -334,6 +354,9 @@ export async function POST(req: Request) {
             const parts = data.split(":");
             const coachParam = parts[1] ? `?startapp=coach_${encodeURIComponent(parts[1])}` : "";
             const miniAppUrl = `${APP_URL}/${coachParam}`;
+
+            // Ensure 1-tap Menu button is configured
+            ensureTrackerMenuButton(message.chat.id, miniAppUrl);
 
             await tgApi("sendMessage", {
               chat_id: message.chat.id,
