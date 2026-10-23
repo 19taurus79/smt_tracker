@@ -89,7 +89,7 @@ export function WarmupModal() {
 
   return (
     <Dialog open={isWarmupModalOpen} onOpenChange={closeWarmupModal} className="max-w-xl">
-      <DialogHeader>
+      <DialogHeader className="shrink-0 mb-1">
         <DialogTitle onClose={closeWarmupModal}>
           <div className="flex items-center gap-2.5">
             <div className="h-9 w-9 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
@@ -113,7 +113,7 @@ export function WarmupModal() {
       </DialogHeader>
 
       {/* Modern 2-Step Segmented Navigation Pills */}
-      <div className="grid grid-cols-2 gap-1.5 p-1 rounded-2xl bg-slate-950/80 border border-white/10 my-1">
+      <div className="grid grid-cols-2 gap-1.5 p-1 rounded-2xl bg-slate-950/80 border border-white/10 shrink-0 mb-1.5">
         <button
           type="button"
           onClick={() => setActiveTab("mobility")}
@@ -151,16 +151,18 @@ export function WarmupModal() {
 
       {/* TAB 1: JOINT MOBILITY */}
       {activeTab === "mobility" && (
-        <div className="space-y-3.5 my-2 animate-in fade-in duration-200">
-          <div className="flex items-center justify-between text-xs text-slate-300 px-1">
-            <span className="font-medium text-slate-400">Прогрес суглобової підготовки:</span>
-            <span className="font-mono font-bold text-emerald-400">
-              {completedMobilityCount} з {totalMobilityCount} вправ
-            </span>
+        <div className="flex-1 min-h-0 flex flex-col animate-in fade-in duration-200">
+          <div className="shrink-0 space-y-1.5 px-0.5 mb-2">
+            <div className="flex items-center justify-between text-xs text-slate-300">
+              <span className="font-medium text-slate-400">Прогрес суглобової підготовки:</span>
+              <span className="font-mono font-bold text-emerald-400">
+                {completedMobilityCount} з {totalMobilityCount} вправ
+              </span>
+            </div>
+            <Progress value={completedMobilityCount} max={totalMobilityCount} className="h-2" />
           </div>
-          <Progress value={completedMobilityCount} max={totalMobilityCount} className="h-2" />
 
-          <div className="space-y-2 max-h-[50vh] overflow-y-auto scrollbar-none pr-1">
+          <div className="flex-1 min-h-0 space-y-2 overflow-y-auto overscroll-contain scrollbar-none pr-1">
             {localizedMobilityItems.map((item) => (
               <div
                 key={item.id}
@@ -193,23 +195,24 @@ export function WarmupModal() {
           </div>
 
           {/* Tab 1 Actions */}
-          <div className="pt-2 border-t border-white/10 flex flex-col sm:flex-row items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full sm:w-auto h-9 text-xs text-slate-400 border-white/10 hover:text-white"
-              onClick={completeWarmupAndStart}
-            >
-              {t.workout.skipToWorkoutDirectly}
-            </Button>
+          <div className="pt-2.5 mt-2 border-t border-white/10 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0">
             <Button
               type="button"
               variant="accent"
-              className="w-full sm:flex-1 h-10 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 shadow-md shadow-emerald-500/20"
+              className="w-full sm:flex-1 h-10 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 text-slate-950 shadow-md shadow-emerald-500/20 order-1 sm:order-2"
               onClick={() => setActiveTab("ramp_up")}
             >
               <span>{t.workout.nextStepRampUp}</span>
               <ArrowRight className="h-4 w-4 shrink-0" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="w-full sm:w-auto h-8 sm:h-10 text-xs text-slate-400 hover:text-white order-2 sm:order-1"
+              onClick={completeWarmupAndStart}
+            >
+              {t.workout.skipToWorkoutDirectly}
             </Button>
           </div>
         </div>
@@ -217,20 +220,19 @@ export function WarmupModal() {
 
       {/* TAB 2: WEIGHT RAMP-UP (SUB-WORKOUT PRO RAMP) */}
       {activeTab === "ramp_up" && (
-        <div className="space-y-3 my-2 animate-in fade-in duration-200">
-          {/* Important Rule Banner */}
-          <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-2.5">
-            <Info className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
-            <div className="text-[11px] text-amber-200/90 leading-snug">
-              <strong className="text-amber-300 block mb-0.5">
-                Правило безпеки та чистоти таймінгу СМТ:
-              </strong>
-              {t.workout.rampUpRule}
+        <div className="flex-1 min-h-0 flex flex-col animate-in fade-in duration-200">
+          {/* Scrollable area containing rule banner and ramp-up plans */}
+          <div className="flex-1 min-h-0 space-y-2.5 overflow-y-auto overscroll-contain scrollbar-none pr-1">
+            {/* Important Rule Banner */}
+            <div className="p-2.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-2.5">
+              <Info className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+              <div className="text-[11px] text-amber-200/90 leading-snug">
+                <strong className="text-amber-300 block mb-0.5">
+                  Правило безпеки та чистоти таймінгу СМТ:
+                </strong>
+                {t.workout.rampUpRule}
+              </div>
             </div>
-          </div>
-
-          {/* Ramp-up Plans List */}
-          <div className="space-y-3 max-h-[50vh] overflow-y-auto scrollbar-none pr-1">
             {rampUpPlans.length === 0 ? (
               <div className="p-6 text-center text-xs text-slate-400 rounded-2xl bg-white/5 border border-white/10">
                 Немає запланованих вправ для розрахунку.
@@ -331,24 +333,25 @@ export function WarmupModal() {
             )}
           </div>
 
-          {/* Tab 2 Actions */}
-          <div className="pt-2 border-t border-white/10 flex flex-col sm:flex-row items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full sm:w-auto h-9 text-xs text-slate-400 border-white/10 hover:text-white"
-              onClick={() => setActiveTab("mobility")}
-            >
-              « {t.workout.jointMobilityTab}
-            </Button>
+          {/* Tab 2 Actions (Footer pinned & ALWAYS visible!) */}
+          <div className="pt-2.5 mt-2 border-t border-white/10 flex flex-col sm:flex-row items-stretch sm:items-center gap-2 shrink-0">
             <Button
               type="button"
               variant="accent"
-              className="w-full sm:flex-1 h-11 font-black text-xs sm:text-sm flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-400 text-slate-950 shadow-lg shadow-emerald-500/30"
+              className="w-full sm:flex-1 h-11 font-black text-xs sm:text-sm flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-400 text-slate-950 shadow-lg shadow-emerald-500/30 order-1 sm:order-2"
               onClick={completeWarmupAndStart}
             >
               <Play className="h-4 w-4 fill-current shrink-0" />
               <span>{t.workout.startSmtWorkout}</span>
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="w-full sm:w-auto h-8 sm:h-11 text-xs text-slate-400 hover:text-white order-2 sm:order-1"
+              onClick={() => setActiveTab("mobility")}
+            >
+              « {t.workout.jointMobilityTab}
             </Button>
           </div>
         </div>
