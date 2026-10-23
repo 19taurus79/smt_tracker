@@ -860,6 +860,11 @@ export const useCoachStore = create<CoachStoreState>()(
     {
       name: "smt_coach_v2",
       storage: createJSONStorage(() => localStorage),
+      onRehydrateStorage: () => (state) => {
+        if (state && Array.isArray(state.trainees)) {
+          state.trainees = deduplicateLocalTrainees(state.trainees);
+        }
+      },
     }
   )
 );
