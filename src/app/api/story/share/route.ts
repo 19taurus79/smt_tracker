@@ -13,12 +13,13 @@ interface ShareStoryBody {
   caption?: string;
   workoutNumber?: number;
   template?: string;
+  language?: string;
 }
 
 export async function POST(req: Request) {
   try {
     const body: ShareStoryBody = await req.json();
-    const { chatId, photoBase64, caption, workoutNumber = 1, template = "power" } = body;
+    const { chatId, photoBase64, caption, workoutNumber = 1, template = "power", language = "uk" } = body;
 
     if (!photoBase64) {
       return NextResponse.json(
@@ -27,7 +28,9 @@ export async function POST(req: Request) {
       );
     }
 
-    if (!chatId) {
+    const targetChatId = chatId || process.env.COACH_TELEGRAM_CHAT_ID;
+
+    if (!targetChatId) {
       return NextResponse.json(
         { ok: false, error: "chatId is required to send to Telegram chat" },
         { status: 400 }
@@ -48,33 +51,40 @@ export async function POST(req: Request) {
     const imageBuffer = Buffer.from(base64Data, "base64");
     const imageBlob = new Blob([imageBuffer], { type: "image/png" });
 
+    const isUk = language === "uk";
     const cleanCaption =
       caption ||
-      `🔥 <b>Ваша історія SMT-1 готова!</b>\n\n` +
-      `🏋️‍♂️ <i>Тренування #${workoutNumber} (${template})</i>\n\n` +
-      `📌 <b>Як опублікувати:</b>\n` +
-      `1. ✈️ <b>В Telegram Stories:</b> Відкрийте це фото та натисніть значок «В історію» вгорі.\n` +
-      `2. 📸 <b>В Instagram Stories:</b> Натисніть «Зберегти в галерею» 📲 та опублікуйте в Instagram!`;
+      (isUk
+        ? `📸 <b>Ваша картка для Instagram Stories готова!</b>\n\n` +
+          `🏋️‍♂️ <i>Тренування #${workoutNumber}</i>\n\n` +
+          `📌 <b>Як опублікувати за 5 секунд:</b>\n` +
+          `1️⃣ Натисніть на це фото, щоб відкрити його на весь екран\n` +
+          `2️⃣ Вгорі праворуч натисніть три крапки <b>⋮</b> → <b>«Поділитися»</b>\n` +
+          `3️⃣ Оберіть <b>Instagram Stories</b> (або «Зберегти в галерею»)\n\n` +
+          `⚡️ <i>Щоб повернутися до трекера, натисніть кнопку нижче:</i>`
+        : `📸 <b>Ваша карточка для Instagram Stories готова!</b>\n\n` +
+          `🏋️‍♂️ <i>Тренировка #${workoutNumber}</i>\n\n` +
+          `📌 <b>Как опубликовать за 5 секунд:</b>\n` +
+          `1️⃣ Нажмите на это фото, чтобы открыть его на весь экран\n` +
+          `2️⃣ Вверху справа нажмите три точки <b>⋮</b> → <b>«Поделиться»</b>\n` +
+          `3️⃣ Выберите <b>Instagram Stories</b> (или «Сохранить в галерею»)\n\n` +
+          `⚡️ <i>Чтобы вернуться в трекер, нажмите кнопку ниже:</i>`);
 
     const formData = new FormData();
-    formData.append("chat_id", String(chatId));
+    formData.append("chat_id", String(targetChatId));
     formData.append("caption", cleanCaption);
     formData.append("parse_mode", "HTML");
     formData.append("photo", imageBlob, `smt_story_${workoutNumber}_${Date.now()}.png`);
 
-    // Add inline keyboard with direct Mini App launcher
+    // Add inline keyboard with direct Mini App launcher to return immediately
     const inlineKeyboard = {
       inline_keyboard: [
         [
           {
-            text: "🚀 Відкрити SMT Трекер",
+            text: isUk ? "⚡️ Повернутися до трекера" : "⚡️ Вернуться в трекер",
             web_app: {
               url: APP_URL,
             },
-          },
-          {
-            text: "📸 В Instagram",
-            url: "https://www.instagram.com",
           },
         ],
       ],
