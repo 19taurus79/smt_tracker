@@ -149,6 +149,7 @@ export default function HomePage() {
         bodyWeightKg: latestBody?.weightKg || 80,
         gender,
         age: userAge,
+        workout: latestCompleted,
       })
     : null;
   const latestTierColor = latestScore ? getTierColor(latestScore.tierKey) : null;

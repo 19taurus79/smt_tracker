@@ -103,6 +103,7 @@ export function StoryShareModal({
     bodyWeightKg: athleteWeight,
     gender: gender || "male",
     age: userAge || 28,
+    workout,
   });
 
   // Localized tier title

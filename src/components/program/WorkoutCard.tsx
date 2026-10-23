@@ -41,6 +41,7 @@ export function WorkoutCard({ workout, onStart, onOpenReport }: WorkoutCardProps
         bodyWeightKg: measurements[0]?.weightKg || 80,
         gender,
         age: userAge,
+        workout,
       })
     : null;
   const tierColor = scoreResult ? getTierColor(scoreResult.tierKey) : null;

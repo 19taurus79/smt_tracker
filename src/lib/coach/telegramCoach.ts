@@ -68,6 +68,7 @@ export function generateWorkoutCoachMessage({
     bodyWeightKg: latestMeasurement?.weightKg || 80,
     gender: gender || "male",
     age: userAge || 28,
+    workout,
   });
 
   const tierName =

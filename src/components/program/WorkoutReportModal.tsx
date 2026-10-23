@@ -77,6 +77,7 @@ export function WorkoutReportModal({
     bodyWeightKg: athleteWeight,
     gender,
     age: userAge,
+    workout,
   });
   const tierColor = getTierColor(athleticScore.tierKey);
   const tierLabel = getTierLabel(athleticScore.tierKey, t);

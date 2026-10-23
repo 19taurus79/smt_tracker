@@ -115,6 +115,7 @@ export function AthleticScoreChart() {
       bodyWeightKg: athleteWeight,
       gender,
       age: userAge,
+      workout: w,
     });
     return {
       workoutNumber: w.workoutNumber,
@@ -165,6 +166,7 @@ export function AthleticScoreChart() {
         bodyWeightKg: athleteWeight,
         gender,
         age: userAge,
+        workout: w,
       });
       scoreActual = res.score;
       pointTierKey = res.tierKey;
@@ -180,6 +182,8 @@ export function AthleticScoreChart() {
         bodyWeightKg: athleteWeight,
         gender,
         age: userAge,
+        completedSets: 24,
+        totalPlannedSets: 24,
       });
 
       if (!hasCompleted || originalIdx >= lastCompletedIdx) {

@@ -163,6 +163,7 @@ export function FinishModal({ open, onOpenChange, onFinished, workoutId }: Finis
     bodyWeightKg: athleteWeight,
     gender,
     age: userAge,
+    workout: currentWorkout,
   });
 
   const handlePublishChallenge = async () => {
@@ -398,6 +399,11 @@ export function FinishModal({ open, onOpenChange, onFinished, workoutId }: Finis
               </div>
               <p className="text-xs text-slate-300 font-medium mt-0.5">
                 {t.scoring.relativeTonnage}: <strong className="text-white">{athleticScore.relativeTonnage}x</strong> • {t.scoring.density}: <strong className="text-white">{athleticScore.densityKgPerMin} {t.common.kg}/{t.common.min}</strong>
+                {athleticScore.completedSets < athleticScore.totalPlannedSets && (
+                  <span className="text-amber-400 font-bold block sm:inline sm:ml-1.5">
+                    ({language === "uk" ? "Виконано підходів:" : "Выполнено подходов:"} {athleticScore.completedSets}/{athleticScore.totalPlannedSets})
+                  </span>
+                )}
               </p>
             </div>
           </div>
