@@ -134,15 +134,22 @@ export function autoDeduplicateTrainees(trainees: TraineeProfile[]): TraineeProf
       const combinedMeasurements = [...(primary.measurementHistory || []), ...(secondary.measurementHistory || [])];
       const bestWeight = primary.weightKg && primary.weightKg !== 80 ? primary.weightKg : (secondary.weightKg || primary.weightKg || 80);
 
+      let finalTotal = Math.max(primary.totalWorkouts || 0, secondary.totalWorkouts || 0, dedupedWorkouts.length);
+      const targetMicrocycle = Math.max(primary.currentMicrocycle || 1, secondary.currentMicrocycle || 1);
+      if (finalTotal >= 36 && targetMicrocycle <= 2) {
+        finalTotal = Math.max(dedupedWorkouts.length, 3);
+      }
+      const finalWorkoutNumber = Math.min(36, finalTotal + 1);
+
       const mergedTrainee: TraineeProfile = {
         ...primary,
         name: humanName,
         alias: aliasName || primary.alias || secondary.alias,
         username: primary.username || secondary.username,
         telegramChatId: primary.telegramChatId || secondary.telegramChatId,
-        totalWorkouts: Math.max(primary.totalWorkouts || 0, secondary.totalWorkouts || 0, dedupedWorkouts.length),
-        currentWorkoutNumber: Math.max(primary.currentWorkoutNumber || 1, secondary.currentWorkoutNumber || 1),
-        currentMicrocycle: Math.max(primary.currentMicrocycle || 1, secondary.currentMicrocycle || 1),
+        totalWorkouts: finalTotal,
+        currentWorkoutNumber: finalWorkoutNumber,
+        currentMicrocycle: targetMicrocycle,
         weightKg: bestWeight,
         status: primary.status === "blocked" || secondary.status === "blocked" ? "blocked" : "active",
         tierKey: (primary.tierKey !== "lead" ? primary.tierKey : secondary.tierKey) || "active",
@@ -155,7 +162,15 @@ export function autoDeduplicateTrainees(trainees: TraineeProfile[]): TraineeProf
       merged.push(mergedTrainee);
       handledIds.add(current.id);
     } else {
-      merged.push(current);
+      let sanitized = current;
+      if (sanitized.totalWorkouts >= 36 && sanitized.currentMicrocycle <= 2) {
+        sanitized = {
+          ...sanitized,
+          totalWorkouts: Math.max(sanitized.workoutHistory?.length || 0, 3),
+          currentWorkoutNumber: Math.min(36, (sanitized.workoutHistory?.length || 3) + 1),
+        };
+      }
+      merged.push(sanitized);
       handledIds.add(current.id);
     }
   }
@@ -170,36 +185,39 @@ function ensureDataFile(): TraineeProfile[] {
     return deduped;
   }
   try {
+    const baselinePath = path.resolve(process.cwd(), "data", "trainees.json");
+    let baselineData: TraineeProfile[] = [];
+    if (fs.existsSync(baselinePath)) {
+      try {
+        const content = fs.readFileSync(baselinePath, "utf8");
+        baselineData = JSON.parse(content) as TraineeProfile[];
+      } catch (err) {
+        console.warn("[traineeStorage] Error reading baseline trainees.json:", err);
+      }
+    }
+
     if (!fs.existsSync(DATA_DIR)) {
       try {
         fs.mkdirSync(DATA_DIR, { recursive: true });
       } catch {}
     }
+
+    let loadedTrainees: TraineeProfile[] = [];
     if (fs.existsSync(DATA_FILE)) {
-      const content = fs.readFileSync(DATA_FILE, "utf8");
-      const parsed = JSON.parse(content) as TraineeProfile[];
-      const deduped = autoDeduplicateTrainees(parsed);
-      if (deduped.length !== parsed.length) {
-        saveDataFile(deduped);
-      }
-      memoryCache = deduped;
-      cacheLoaded = true;
-      return deduped;
-    }
-    // Also try local data/trainees.json if in serverless
-    const fallbackPath = path.resolve(process.cwd(), "data", "trainees.json");
-    if (fs.existsSync(fallbackPath)) {
       try {
-        const content = fs.readFileSync(fallbackPath, "utf8");
-        const parsed = JSON.parse(content) as TraineeProfile[];
-        const deduped = autoDeduplicateTrainees(parsed);
-        memoryCache = deduped;
-        cacheLoaded = true;
-        return deduped;
+        const content = fs.readFileSync(DATA_FILE, "utf8");
+        loadedTrainees = JSON.parse(content) as TraineeProfile[];
       } catch {}
     }
+
+    const combined = [...loadedTrainees, ...baselineData];
+    const deduped = autoDeduplicateTrainees(combined);
+    memoryCache = deduped;
     cacheLoaded = true;
-    return memoryCache;
+    if (deduped.length > 0) {
+      saveDataFile(deduped);
+    }
+    return deduped;
   } catch (err) {
     console.error("[traineeStorage] Error reading data file:", err);
     return memoryCache;
@@ -258,13 +276,24 @@ export function registerOrUpdateLead(lead: {
 
   if (existingIndex >= 0) {
     const target = trainees[existingIndex];
+    let newTotal = target.totalWorkouts;
+    const targetMc = lead.currentMicrocycle !== undefined ? lead.currentMicrocycle : target.currentMicrocycle;
+    if (lead.totalWorkouts !== undefined) {
+      newTotal = lead.totalWorkouts;
+    }
+    if (newTotal >= 36 && targetMc <= 2) {
+      newTotal = Math.max(target.workoutHistory?.length || 0, 3);
+    }
+    const nextWorkoutNum = Math.min(36, newTotal + 1);
+
     const updated: TraineeProfile = {
       ...target,
       name: lead.name || target.name,
       username: cleanUsername || target.username,
       telegramChatId: tgIdStr || target.telegramChatId,
-      currentMicrocycle: lead.currentMicrocycle !== undefined ? lead.currentMicrocycle : target.currentMicrocycle,
-      totalWorkouts: lead.totalWorkouts !== undefined ? Math.max(target.totalWorkouts, lead.totalWorkouts) : target.totalWorkouts,
+      currentMicrocycle: targetMc,
+      currentWorkoutNumber: nextWorkoutNum,
+      totalWorkouts: newTotal,
       weightKg: lead.weightKg !== undefined ? lead.weightKg : target.weightKg,
       status: lead.status || target.status,
       tierKey: lead.tierKey || target.tierKey,
@@ -277,6 +306,7 @@ export function registerOrUpdateLead(lead: {
     return updated;
   }
 
+  const initialTotal = lead.totalWorkouts || 0;
   const newTrainee: TraineeProfile = {
     id: `trainee-${Date.now()}`,
     name: lead.name || (cleanUsername ? `@${cleanUsername}` : "Новий атлет"),
@@ -286,15 +316,15 @@ export function registerOrUpdateLead(lead: {
     gender: "male",
     age: 28,
     currentMicrocycle: lead.currentMicrocycle || 1,
-    currentWorkoutNumber: (lead.totalWorkouts || 0) + 1,
-    totalWorkouts: lead.totalWorkouts || 0,
+    currentWorkoutNumber: Math.min(36, initialTotal + 1),
+    totalWorkouts: initialTotal,
     weightKg: lead.weightKg || 80,
     weightDeltaKg: 0,
     lastWorkoutDate: now,
     athleticScore: 70,
-    tierKey: lead.tierKey || (lead.totalWorkouts && lead.totalWorkouts > 0 ? "active" : "lead"),
-    tierLabel: lead.tierLabel || (lead.totalWorkouts && lead.totalWorkouts > 0 ? "Активний Атлет 🏋️‍♂️" : "НОВИЙ ЛІД 🔥"),
-    status: lead.status || (lead.totalWorkouts && lead.totalWorkouts > 0 ? "active" : "new_lead"),
+    tierKey: lead.tierKey || (initialTotal > 0 ? "active" : "lead"),
+    tierLabel: lead.tierLabel || (initialTotal > 0 ? "Активний Атлет 🏋️‍♂️" : "НОВИЙ ЛІД 🔥"),
+    status: lead.status || (initialTotal > 0 ? "active" : "new_lead"),
     coachNotes: lead.coachNotes || "Підписався на канал і запустив трекер.",
     workoutHistory: [],
     measurementHistory: [],
@@ -370,12 +400,17 @@ export function recordWorkoutForTrainee(data: {
   if (existingIndex >= 0) {
     const target = trainees[existingIndex];
     const updatedHistory = [workoutRecord, ...target.workoutHistory];
+    let prevTotal = target.totalWorkouts;
+    if (prevTotal >= 36 && data.microcycle <= 2) {
+      prevTotal = Math.max(target.workoutHistory.length, data.workoutNumber - 1);
+    }
+    const newTotal = prevTotal + 1;
     const updated: TraineeProfile = {
       ...target,
       name: data.traineeName || target.name,
-      currentWorkoutNumber: data.workoutNumber,
+      currentWorkoutNumber: Math.min(36, data.workoutNumber + 1),
       currentMicrocycle: data.microcycle,
-      totalWorkouts: target.totalWorkouts + 1,
+      totalWorkouts: newTotal,
       lastWorkoutDate: now,
       athleticScore: scoreVal,
       tierKey: tierKeyVal,

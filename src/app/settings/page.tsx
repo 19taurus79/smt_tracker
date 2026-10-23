@@ -275,11 +275,23 @@ export default function SettingsPage() {
         setMeasurements(parsed.measurements);
       }
 
-      // Immediately notify coach and register athlete in server roster!
-      const totalW = parsed.workouts?.length || 0;
-      const latestW = parsed.workouts && parsed.workouts.length > 0 ? parsed.workouts[0] : null;
+      // Count ONLY actually completed workouts, NOT the planned/upcoming 36 workouts of the template!
+      const rawWorkouts = (parsed.workouts && Array.isArray(parsed.workouts)) ? parsed.workouts : [];
+      const completedWorkouts = rawWorkouts.filter((w: { status?: string; completedAt?: string; durationSeconds?: number; supersets?: Array<{ exercises?: Array<{ sets?: Array<{ completed?: boolean }> }> }> }) => 
+        w.status === "completed" || 
+        Boolean(w.completedAt) || 
+        (typeof w.durationSeconds === "number" && w.durationSeconds > 0) ||
+        (w.supersets && w.supersets.some((ss) => ss.exercises?.some((ex) => ex.sets?.some((s) => s.completed))))
+      );
+
+      const totalCompletedCount = completedWorkouts.length;
+      const lastCompletedWorkout = completedWorkouts.length > 0
+        ? completedWorkouts.reduce((max: any, w: any) => (w.workoutNumber > (max?.workoutNumber || 0) ? w : max), completedWorkouts[0])
+        : null;
+
+      const currentMicrocycle = lastCompletedWorkout?.microcycle || 1;
       const latestM = parsed.measurements && parsed.measurements.length > 0 ? parsed.measurements[0] : null;
-      const totalTonnage = parsed.workouts?.reduce((acc: number, w: { tonnageKg?: number }) => acc + (w.tonnageKg || 0), 0) || 0;
+      const totalTonnage = completedWorkouts.reduce((acc: number, w: { tonnageKg?: number }) => acc + (w.tonnageKg || 0), 0);
 
       if (typeof window !== "undefined") {
         const tgUser = (window.Telegram?.WebApp as any)?.initDataUnsafe?.user;
@@ -291,8 +303,8 @@ export default function SettingsPage() {
               name: athleteDisplayName,
               username: effectiveUser.username || "",
               telegramUserId: effectiveUser.id,
-              totalWorkouts: totalW,
-              currentMicrocycle: latestW?.microcycle || 1,
+              totalWorkouts: totalCompletedCount,
+              currentMicrocycle: currentMicrocycle,
               weightKg: latestM?.weightKg || 80,
               totalTonnageKg: totalTonnage,
             }).catch(() => {});

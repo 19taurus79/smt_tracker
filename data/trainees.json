@@ -1,0 +1,86 @@
+[
+  {
+    "id": "trainee-487406242",
+    "name": "Андрей",
+    "alias": "Serebankhic",
+    "username": "serebankhic",
+    "telegramChatId": "487406242",
+    "avatarColor": "from-blue-500 to-indigo-600",
+    "gender": "male",
+    "age": 28,
+    "currentMicrocycle": 1,
+    "currentWorkoutNumber": 4,
+    "totalWorkouts": 3,
+    "weightKg": 76,
+    "weightDeltaKg": 0,
+    "lastWorkoutDate": "2026-10-23T12:00:00.000Z",
+    "athleticScore": 80,
+    "tierKey": "power_master",
+    "tierLabel": "Майстер Потужності 💥",
+    "status": "active",
+    "coachNotes": "Атлет успішно переніс 3 тренування з PWA-версії. Загальний тоннаж: 9,050 кг. Поточний МКЦ-1.",
+    "workoutHistory": [
+      {
+        "id": "w-3-487406242",
+        "workoutNumber": 3,
+        "microcycle": 1,
+        "date": "2026-10-23T12:00:00.000Z",
+        "durationSeconds": 2400,
+        "tonnageKg": 9050,
+        "powerKgPerMin": 226,
+        "athleticScore": 80,
+        "tierKey": "power_master",
+        "tierLabel": "Майстер Потужності 💥",
+        "notes": "Тренування #3 виконано в Telegram Mini App, перенесено без втрати даних.",
+        "exercises": [
+          { "name": "Жим штанги лежачи", "weight": 75, "reps": 10, "setsCount": 4 },
+          { "name": "Присідання зі штангою", "weight": 95, "reps": 10, "setsCount": 4 },
+          { "name": "Тяга верхнього блоку", "weight": 60, "reps": 10, "setsCount": 4 }
+        ]
+      },
+      {
+        "id": "w-2-487406242",
+        "workoutNumber": 2,
+        "microcycle": 1,
+        "date": "2026-10-21T12:00:00.000Z",
+        "durationSeconds": 2520,
+        "tonnageKg": 8600,
+        "powerKgPerMin": 204,
+        "athleticScore": 78,
+        "tierKey": "power_master",
+        "tierLabel": "Майстер Потужності 💥",
+        "notes": "Тренування #2 виконано в PWA (перенесено)",
+        "exercises": [
+          { "name": "Жим гантелей на похилій лаві", "weight": 24, "reps": 10, "setsCount": 4 },
+          { "name": "Тяга штанги в нахилі", "weight": 70, "reps": 10, "setsCount": 4 }
+        ]
+      },
+      {
+        "id": "w-1-487406242",
+        "workoutNumber": 1,
+        "microcycle": 1,
+        "date": "2026-10-19T12:00:00.000Z",
+        "durationSeconds": 2600,
+        "tonnageKg": 8200,
+        "powerKgPerMin": 189,
+        "athleticScore": 75,
+        "tierKey": "active",
+        "tierLabel": "Активний Атлет 🏋️‍♂️",
+        "notes": "Стартове тренування #1 циклу СМТ-1 (перенесено)",
+        "exercises": [
+          { "name": "Жим штанги лежачи", "weight": 70, "reps": 10, "setsCount": 4 },
+          { "name": "Присідання зі штангою", "weight": 90, "reps": 10, "setsCount": 4 }
+        ]
+      }
+    ],
+    "measurementHistory": [
+      {
+        "id": "m-1-487406242",
+        "date": "2026-10-23T12:00:00.000Z",
+        "weightKg": 76,
+        "waistCm": 82,
+        "bicepsCm": 37
+      }
+    ]
+  }
+]

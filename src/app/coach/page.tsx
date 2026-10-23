@@ -87,6 +87,7 @@ export default function CoachDashboardPage() {
     unblockTrainee,
     deleteTrainee,
     clearAllTrainees,
+    clearDemoTrainees,
     resetToDefaultTrainees,
     fetchServerTrainees,
     isLoadingServer,
@@ -172,6 +173,10 @@ export default function CoachDashboardPage() {
       return true;
     });
   }, [trainees, searchQuery, statusFilter]);
+
+  const hasDemoTrainees = useMemo(() => {
+    return trainees.some((t) => ["trainee-1", "trainee-2", "trainee-3", "trainee-4", "trainee-5"].includes(t.id));
+  }, [trainees]);
 
   const inviteUrl = `https://t.me/${BOT_USERNAME}?start=coach_${MASTER_COACH_USERNAME}`;
 
@@ -446,6 +451,17 @@ export default function CoachDashboardPage() {
           >
             <RefreshCw className={"h-4 w-4 " + (isLoadingServer ? "animate-spin text-emerald-400" : "")} />
           </button>
+          {hasDemoTrainees && (
+            <button
+              type="button"
+              onClick={() => clearDemoTrainees()}
+              title="Прибрати демо-атлетів"
+              className="h-10 px-3 rounded-2xl border border-amber-500/30 bg-amber-500/10 text-amber-300 hover:bg-amber-500/20 text-xs font-bold flex items-center gap-1.5 transition-colors shrink-0"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Очистити демо</span>
+            </button>
+          )}
         </div>
 
         {/* Filter Pills with Horizontal Scroll on Mobile - Strict h-8 */}

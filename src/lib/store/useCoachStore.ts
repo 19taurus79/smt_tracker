@@ -78,6 +78,7 @@ interface CoachStoreState {
     workout: Omit<TraineeWorkoutRecord, "id">
   ) => void;
   resetToDefaultTrainees: () => void;
+  clearDemoTrainees: () => void;
   isLoadingServer: boolean;
   fetchServerTrainees: () => Promise<void>;
 }
@@ -614,19 +615,37 @@ function deduplicateLocalTrainees(trainees: TraineeProfile[]): TraineeProfile[] 
       const humanName = [secondary.name, primary.name].find(n => n && !n.startsWith("@") && n.toLowerCase() !== (primary.username || "").toLowerCase()) || primary.name;
       const aliasName = primary.name !== humanName ? primary.name : (secondary.name !== humanName ? secondary.name : undefined);
       const bestWeight = primary.weightKg && primary.weightKg !== 80 ? primary.weightKg : (secondary.weightKg || primary.weightKg || 80);
+      const targetMicrocycle = Math.max(primary.currentMicrocycle || 1, secondary.currentMicrocycle || 1);
+      const combinedHistory = [...(primary.workoutHistory || []), ...(secondary.workoutHistory || [])];
+      let finalTotal = Math.max(primary.totalWorkouts || 0, secondary.totalWorkouts || 0);
+      if (finalTotal >= 36 && targetMicrocycle <= 2) {
+        finalTotal = Math.max(combinedHistory.length, 3);
+      }
+      const finalWorkoutNumber = Math.min(36, finalTotal + 1);
 
       result.push({
         ...primary,
         name: humanName,
         alias: aliasName || primary.alias || secondary.alias,
         weightKg: bestWeight,
-        totalWorkouts: Math.max(primary.totalWorkouts || 0, secondary.totalWorkouts || 0),
-        workoutHistory: [...(primary.workoutHistory || []), ...(secondary.workoutHistory || [])],
+        currentMicrocycle: targetMicrocycle,
+        currentWorkoutNumber: finalWorkoutNumber,
+        totalWorkouts: finalTotal,
+        workoutHistory: combinedHistory,
         measurementHistory: [...(primary.measurementHistory || []), ...(secondary.measurementHistory || [])],
       });
       handledIds.add(current.id);
     } else {
-      result.push(current);
+      let sanitized = current;
+      if (sanitized.totalWorkouts >= 36 && sanitized.currentMicrocycle <= 2) {
+        const realCount = Math.max(sanitized.workoutHistory?.length || 0, 3);
+        sanitized = {
+          ...sanitized,
+          totalWorkouts: realCount,
+          currentWorkoutNumber: Math.min(36, realCount + 1),
+        };
+      }
+      result.push(sanitized);
       handledIds.add(current.id);
     }
   }
@@ -673,6 +692,12 @@ export const useCoachStore = create<CoachStoreState>()(
           if (data.ok && Array.isArray(data.trainees)) {
             set((state) => {
               let currentList = [...state.trainees];
+              if (data.trainees.length > 0) {
+                // Drop initial mock demo athletes when real trainees are loaded from server
+                currentList = currentList.filter(
+                  (t) => !["trainee-1", "trainee-2", "trainee-3", "trainee-4", "trainee-5"].includes(t.id)
+                );
+              }
               for (const serverT of data.trainees) {
                 const idx = currentList.findIndex(
                   (t) =>
@@ -856,13 +881,41 @@ export const useCoachStore = create<CoachStoreState>()(
           searchQuery: "",
           statusFilter: "all",
         }),
+
+      clearDemoTrainees: () =>
+        set((state) => ({
+          trainees: state.trainees.filter(
+            (t) => !["trainee-1", "trainee-2", "trainee-3", "trainee-4", "trainee-5"].includes(t.id)
+          ),
+          selectedTraineeId: null,
+        })),
     }),
     {
       name: "smt_coach_v2",
       storage: createJSONStorage(() => localStorage),
       onRehydrateStorage: () => (state) => {
         if (state && Array.isArray(state.trainees)) {
-          state.trainees = deduplicateLocalTrainees(state.trainees);
+          const hasRealTrainee = state.trainees.some(
+            (t) => !["trainee-1", "trainee-2", "trainee-3", "trainee-4", "trainee-5"].includes(t.id)
+          );
+          let list = state.trainees;
+          if (hasRealTrainee) {
+            list = list.filter(
+              (t) => !["trainee-1", "trainee-2", "trainee-3", "trainee-4", "trainee-5"].includes(t.id)
+            );
+          }
+          list = list.map((t) => {
+            if (t.totalWorkouts >= 36 && t.currentMicrocycle <= 2) {
+              const realCount = Math.max(t.workoutHistory?.length || 0, 3);
+              return {
+                ...t,
+                totalWorkouts: realCount,
+                currentWorkoutNumber: Math.min(36, realCount + 1),
+              };
+            }
+            return t;
+          });
+          state.trainees = deduplicateLocalTrainees(list);
         }
       },
     }

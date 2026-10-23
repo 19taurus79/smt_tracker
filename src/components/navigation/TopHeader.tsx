@@ -43,20 +43,31 @@ export function TopHeader() {
           });
         }
 
-        // 2. Auto-sync transferred workouts if athlete has imported workouts
-        if (workouts.length > 0) {
-          const transferKey = `smt_transfer_synced_${effectiveUser.id || effectiveUser.username}_${workouts.length}`;
+        // 2. Auto-sync transferred workouts if athlete has imported completed workouts
+        const completedWorkouts = workouts.filter(
+          (w) =>
+            w.status === "completed" ||
+            Boolean(w.completedAt) ||
+            (typeof w.durationSeconds === "number" && w.durationSeconds > 0) ||
+            (w.supersets && w.supersets.some((ss) => ss.exercises?.some((ex) => ex.sets?.some((s) => s.completed))))
+        );
+
+        if (completedWorkouts.length > 0) {
+          const transferKey = `smt_transfer_synced_${effectiveUser.id || effectiveUser.username}_c${completedWorkouts.length}`;
           if (!localStorage.getItem(transferKey)) {
             localStorage.setItem(transferKey, "1");
-            const totalTonnage = workouts.reduce((sum, w) => sum + (w.tonnageKg || 0), 0);
-            const latestW = workouts[0];
+            const totalTonnage = completedWorkouts.reduce((sum, w) => sum + (w.tonnageKg || 0), 0);
+            const lastCompleted = completedWorkouts.reduce(
+              (max, w) => (w.workoutNumber > (max?.workoutNumber || 0) ? w : max),
+              completedWorkouts[0]
+            );
             import("@/lib/tma/sync").then(({ syncTraineeTransfer }) => {
               syncTraineeTransfer({
                 name: athleteDisplayName,
                 username: effectiveUser.username || "",
                 telegramUserId: effectiveUser.id,
-                totalWorkouts: workouts.length,
-                currentMicrocycle: latestW?.microcycle || 1,
+                totalWorkouts: completedWorkouts.length,
+                currentMicrocycle: lastCompleted?.microcycle || 1,
                 totalTonnageKg: totalTonnage,
               }).catch(() => {});
             });
