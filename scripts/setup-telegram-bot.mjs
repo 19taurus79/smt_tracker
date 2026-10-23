@@ -110,7 +110,16 @@ async function setup() {
       type: "commands",
     },
   });
-  console.log("✅ Menu Button set to Commands List ([/] menu):", menuRes.ok ? "Success" : menuRes);
+  console.log("✅ Global Menu Button set to Commands List ([/] menu):", menuRes.ok ? "Success" : menuRes);
+
+  // Also reset coach's chat menu button to commands menu
+  const coachMenuRes = await callTg("setChatMenuButton", {
+    chat_id: 548019148,
+    menu_button: {
+      type: "commands",
+    },
+  });
+  console.log("✅ Coach (548019148) Menu Button set to Commands List ([/] menu):", coachMenuRes.ok ? "Success" : coachMenuRes);
 
   console.log("\n🎉 Telegram Bot successfully configured for 100% TMA!");
 }
