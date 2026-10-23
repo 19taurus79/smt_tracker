@@ -105,7 +105,67 @@ export function isTelegramWebApp(): boolean {
 
 export function getTelegramUser() {
   if (typeof window === "undefined") return null;
-  return window.Telegram?.WebApp?.initDataUnsafe?.user || null;
+
+  // 1. Direct initDataUnsafe.user
+  let user = window.Telegram?.WebApp?.initDataUnsafe?.user;
+  if (user?.id) {
+    try {
+      localStorage.setItem("smt_tg_user_id", String(user.id));
+      localStorage.setItem("smt_tg_user_data", JSON.stringify(user));
+    } catch {}
+    return user;
+  }
+
+  // 2. Parse initData query string
+  try {
+    const rawInitData = window.Telegram?.WebApp?.initData;
+    if (rawInitData) {
+      const params = new URLSearchParams(rawInitData);
+      const userStr = params.get("user");
+      if (userStr) {
+        user = JSON.parse(userStr);
+        if (user?.id) {
+          localStorage.setItem("smt_tg_user_id", String(user.id));
+          return user;
+        }
+      }
+    }
+  } catch {}
+
+  // 3. Parse tgWebAppData from location hash
+  try {
+    const hash = window.location.hash;
+    if (hash && hash.includes("tgWebAppData=")) {
+      const match = hash.match(/tgWebAppData=([^&]+)/);
+      if (match && match[1]) {
+        const decoded = decodeURIComponent(match[1]);
+        const params = new URLSearchParams(decoded);
+        const userStr = params.get("user");
+        if (userStr) {
+          user = JSON.parse(userStr);
+          if (user?.id) {
+            localStorage.setItem("smt_tg_user_id", String(user.id));
+            return user;
+          }
+        }
+      }
+    }
+  } catch {}
+
+  // 4. Fallback to cached user in localStorage
+  try {
+    const cachedData = localStorage.getItem("smt_tg_user_data");
+    if (cachedData) {
+      const parsed = JSON.parse(cachedData);
+      if (parsed?.id) return parsed;
+    }
+    const cachedId = localStorage.getItem("smt_tg_user_id");
+    if (cachedId) {
+      return { id: Number(cachedId), first_name: "Атлет" };
+    }
+  } catch {}
+
+  return null;
 }
 
 export function initTelegramWebApp(): void {

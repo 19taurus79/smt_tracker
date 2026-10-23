@@ -299,18 +299,10 @@ export default function SettingsPage() {
     setSyncResultText(null);
     triggerHaptic("selection");
     try {
-      const res = await syncAllStoresWithCloud();
+      const res = await syncAllStoresWithCloud({ forceUpload: workouts.filter((w) => w.status === "completed").length > 0 });
       triggerHaptic("success");
-      setSyncResultText(
-        language === "uk"
-          ? `✅ Синхронізація успішна! Дані оновлено між вашим телефоном та комп'ютером.`
-          : `✅ Синхронизация успешна! Данные обновлены между вашим телефоном и компьютером.`
-      );
-      showToast(
-        language === "uk"
-          ? "✅ Хмарна синхронізація завершена!"
-          : "✅ Облачная синхронизация завершена!"
-      );
+      setSyncResultText(res.message);
+      showToast(res.message);
     } catch (e: any) {
       setSyncResultText(
         language === "uk"

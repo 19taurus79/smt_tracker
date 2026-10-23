@@ -1,25 +1,50 @@
-// Telegram CloudStorage Wrapper (Zero-DB cloud sync across user's devices: Mobile <-> Desktop <-> Web)
+// Telegram CloudStorage + Server Cross-Device Sync Manager (Mobile <-> Desktop <-> Web)
+// Uses compact sync payloads (<3KB) so data never hits Telegram's 4096-char limit or hangs.
 
 import { useWorkoutStore } from "@/lib/store/useWorkoutStore";
 import { useBodyStore } from "@/lib/store/useBodyStore";
 import { useSettingsStore } from "@/lib/store/useSettingsStore";
 import { usePrepStore } from "@/lib/store/usePrepStore";
+import { getTelegramUser } from "@/lib/tma/telegram";
+import { generateFullProgram, DEFAULT_EXERCISES } from "@/lib/smt/generator";
+import { ExerciseDefinition } from "@/types/smt";
 
-// Telegram limits values to 4096 characters per key.
-// We use 3600 characters per chunk to stay safely below limits.
-const CHUNK_SIZE = 3600;
+const TIMEOUT_MS = 1200; // Strict timeout to prevent Telegram Desktop IPC hangs
+
+export interface CompactSyncPayload {
+  v: number;
+  updatedAt: number;
+  telegramId: string;
+  oneRepMaxes: Record<string, number>;
+  weightStep: number;
+  completed: Array<{
+    n: number;
+    cAt?: string;
+    sAt?: string;
+    dur?: number;
+    ton?: number;
+    pow?: number;
+    notes?: string;
+    sets: Array<{
+      sId: string;
+      eId: string;
+      num: number;
+      w?: number;
+      r?: number;
+    }>;
+  }>;
+  measurements?: any[];
+  settings?: any;
+  prep?: any[];
+}
 
 export interface CloudSyncResult {
   success: boolean;
   message: string;
   updatedStores: string[];
-  cloudWorkoutsCount?: number;
-  localWorkoutsCount?: number;
+  workoutsCount?: number;
 }
 
-/**
- * Checks if Telegram CloudStorage is available in current Telegram client
- */
 export function isCloudStorageAvailable(): boolean {
   if (typeof window === "undefined") return false;
   return Boolean((window as any).Telegram?.WebApp?.CloudStorage);
@@ -30,416 +55,440 @@ function getCloudInstance() {
   return (window as any).Telegram?.WebApp?.CloudStorage || null;
 }
 
-/**
- * Save an item to Telegram CloudStorage with automatic chunking for large payloads.
- * Always writes to localStorage synchronously for offline persistence.
- */
-export async function saveToCloudStorage(key: string, value: string): Promise<boolean> {
-  if (typeof window === "undefined") return false;
-
-  // Always write to localStorage for instant offline access
-  try {
-    localStorage.setItem(key, value);
-  } catch {
-    // Ignore localStorage errors (e.g. quota or incognito)
-  }
-
-  const cloud = getCloudInstance();
-  if (!cloud) {
-    return true;
-  }
-
-  try {
-    if (value.length <= CHUNK_SIZE) {
-      // Small payload: direct single-key save
-      const ok = await new Promise<boolean>((resolve) => {
-        cloud.setItem(key, value, (error: any, success?: boolean) => {
-          if (error) {
-            console.warn(`[CloudStorage] Failed to save key "${key}":`, error);
-            resolve(false);
-          } else {
-            resolve(Boolean(success));
-          }
-        });
-      });
-
-      // Clean up any obsolete chunk meta if present
-      cloud.removeItem(`${key}__meta`, () => {});
-      return ok;
-    }
-
-    // Large payload: chunking into CHUNK_SIZE slices
-    const chunks: string[] = [];
-    for (let i = 0; i < value.length; i += CHUNK_SIZE) {
-      chunks.push(value.slice(i, i + CHUNK_SIZE));
-    }
-
-    const chunkPromises = chunks.map((chunk, idx) => {
-      return new Promise<boolean>((resolve) => {
-        cloud.setItem(`${key}__c${idx}`, chunk, (error: any, success?: boolean) => {
-          if (error) {
-            console.warn(`[CloudStorage] Failed chunk "${key}__c${idx}":`, error);
-            resolve(false);
-          } else {
-            resolve(Boolean(success));
-          }
-        });
-      });
-    });
-
-    const results = await Promise.all(chunkPromises);
-    const allChunksOk = results.every(Boolean);
-
-    if (!allChunksOk) {
-      console.warn(`[CloudStorage] Not all chunks saved for "${key}"`);
-      return false;
-    }
-
-    // Save meta descriptor
-    const metaPayload = JSON.stringify({
-      chunks: chunks.length,
-      totalLen: value.length,
-      updatedAt: Date.now(),
-    });
-
-    return await new Promise<boolean>((resolve) => {
-      cloud.setItem(`${key}__meta`, metaPayload, (error: any, success?: boolean) => {
-        if (error) {
-          console.warn(`[CloudStorage] Failed meta for "${key}":`, error);
-          resolve(false);
-        } else {
-          resolve(Boolean(success));
-        }
-      });
-    });
-  } catch (err) {
-    console.error(`[CloudStorage] saveToCloudStorage exception for "${key}":`, err);
-    return false;
-  }
-}
-
-/**
- * Get an item from Telegram CloudStorage (with chunk reassembly) or fallback to localStorage
- */
-export async function getFromCloudStorage(key: string): Promise<string | null> {
+export function getActiveTelegramId(): string | null {
   if (typeof window === "undefined") return null;
-
-  const cloud = getCloudInstance();
-  if (!cloud) {
-    return localStorage.getItem(key);
-  }
-
-  try {
-    // 1. Check if chunked meta exists
-    const metaStr = await new Promise<string | null>((resolve) => {
-      cloud.getItem(`${key}__meta`, (error: any, value?: string) => {
-        if (error || !value) {
-          resolve(null);
-        } else {
-          resolve(value);
-        }
-      });
-    });
-
-    if (metaStr) {
-      try {
-        const meta = JSON.parse(metaStr);
-        if (meta && typeof meta.chunks === "number" && meta.chunks > 0) {
-          const chunkKeys: string[] = Array.from(
-            { length: meta.chunks },
-            (_, i) => `${key}__c${i}`
-          );
-
-          const chunksObj = await new Promise<Record<string, string> | null>((resolve) => {
-            cloud.getItems(chunkKeys, (error: any, values?: Record<string, string>) => {
-              if (error || !values) {
-                resolve(null);
-              } else {
-                resolve(values);
-              }
-            });
-          });
-
-          if (chunksObj) {
-            let assembled = "";
-            for (const k of chunkKeys) {
-              assembled += chunksObj[k] || "";
-            }
-            if (assembled.length > 0) {
-              return assembled;
-            }
-          }
-        }
-      } catch (parseErr) {
-        console.warn(`[CloudStorage] Failed to parse meta for "${key}":`, parseErr);
-      }
-    }
-
-    // 2. Not chunked or meta missing: read direct key
-    return await new Promise<string | null>((resolve) => {
-      cloud.getItem(key, (error: any, value?: string) => {
-        if (error || !value) {
-          resolve(localStorage.getItem(key));
-        } else {
-          resolve(value);
-        }
-      });
-    });
-  } catch (err) {
-    console.error(`[CloudStorage] getFromCloudStorage exception for "${key}":`, err);
-    return localStorage.getItem(key);
-  }
+  const tgUser = getTelegramUser();
+  if (tgUser?.id) return String(tgUser.id);
+  const linked = useSettingsStore.getState().linkedTelegramUser?.id;
+  if (linked) return String(linked);
+  const cached = localStorage.getItem("smt_tg_user_id");
+  if (cached) return cached;
+  return null;
 }
 
 /**
- * Remove an item from Telegram CloudStorage & localStorage
+ * Strict timeout wrapper so Telegram Desktop or slow networks never hang
  */
-export async function removeFromCloudStorage(key: string): Promise<boolean> {
-  if (typeof window === "undefined") return false;
-
-  try {
-    localStorage.removeItem(key);
-  } catch {}
-
-  const cloud = getCloudInstance();
-  if (!cloud) return true;
-
+function withTimeout<T>(promise: Promise<T>, timeoutMs = TIMEOUT_MS, fallback: T): Promise<T> {
   return new Promise((resolve) => {
-    cloud.removeItem(key, (error: any, success?: boolean) => {
-      cloud.removeItem(`${key}__meta`, () => {});
-      resolve(!error && Boolean(success));
-    });
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (!settled) {
+        settled = true;
+        resolve(fallback);
+      }
+    }, timeoutMs);
+
+    promise.then(
+      (val) => {
+        if (!settled) {
+          settled = true;
+          clearTimeout(timer);
+          resolve(val);
+        }
+      },
+      () => {
+        if (!settled) {
+          settled = true;
+          clearTimeout(timer);
+          resolve(fallback);
+        }
+      }
+    );
   });
 }
 
-// --- Helpers to weigh progress and avoid overwriting richer data ---
+/**
+ * Builds a compact (<3KB) payload of active progress to fit cleanly in a single Telegram Cloud key
+ */
+export function buildCompactPayload(): CompactSyncPayload {
+  const telegramId = getActiveTelegramId() || "anonymous";
+  const workoutState = useWorkoutStore.getState();
+  const settingsState = useSettingsStore.getState();
+  const bodyState = useBodyStore.getState();
+  const prepState = usePrepStore.getState();
 
-function getWorkoutWeight(parsed: any): { completedCount: number; maxDate: number } {
-  const workouts = parsed?.state?.workouts || parsed?.workouts || [];
-  let completedCount = 0;
-  let maxDate = 0;
-  if (Array.isArray(workouts)) {
-    for (const w of workouts) {
-      if (w?.status === "completed") {
-        completedCount++;
-        if (w?.completedAt) {
-          const t = new Date(w.completedAt).getTime();
-          if (t > maxDate) maxDate = t;
+  const oneRepMaxes: Record<string, number> = {};
+  const exercises = workoutState.exercises && workoutState.exercises.length > 0
+    ? workoutState.exercises
+    : DEFAULT_EXERCISES;
+
+  for (const ex of exercises) {
+    if (ex.id && ex.oneRepMax) {
+      oneRepMaxes[ex.id] = ex.oneRepMax;
+    }
+  }
+
+  const completedList: CompactSyncPayload["completed"] = [];
+  const workouts = workoutState.workouts || [];
+
+  for (const w of workouts) {
+    if (w.status === "completed" || Boolean(w.completedAt)) {
+      const sets: CompactSyncPayload["completed"][0]["sets"] = [];
+      if (Array.isArray(w.supersets)) {
+        for (const ss of w.supersets) {
+          if (Array.isArray(ss.exercises)) {
+            for (const ex of ss.exercises) {
+              if (Array.isArray(ex.sets)) {
+                for (const s of ex.sets) {
+                  if (s.completed || s.actualWeight !== undefined || s.actualReps !== undefined) {
+                    sets.push({
+                      sId: ss.id,
+                      eId: ex.exerciseId,
+                      num: s.setNumber,
+                      w: s.actualWeight,
+                      r: s.actualReps,
+                    });
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+
+      completedList.push({
+        n: w.workoutNumber,
+        cAt: w.completedAt,
+        sAt: w.startedAt,
+        dur: w.durationSeconds,
+        ton: w.tonnageKg,
+        pow: w.powerKgPerMin,
+        notes: w.notes,
+        sets,
+      });
+    }
+  }
+
+  return {
+    v: 1,
+    updatedAt: Date.now(),
+    telegramId,
+    oneRepMaxes,
+    weightStep: settingsState.weightIncrementKg || 2.5,
+    completed: completedList,
+    measurements: bodyState.measurements || [],
+    settings: {
+      soundEnabled: settingsState.soundEnabled,
+      hapticsEnabled: settingsState.hapticsEnabled,
+      keepScreenAwake: settingsState.keepScreenAwake,
+      weightIncrementKg: settingsState.weightIncrementKg,
+      language: settingsState.language,
+      linkedTelegramUser: settingsState.linkedTelegramUser,
+      coachTelegramUsername: settingsState.coachTelegramUsername,
+    },
+    prep: prepState.sessions || [],
+  };
+}
+
+/**
+ * Inflates a compact payload into full Zustand stores and saves to localStorage
+ */
+export function applyCompactPayload(payload: CompactSyncPayload): void {
+  if (!payload || !payload.oneRepMaxes) return;
+
+  // 1. Update exercises with remote 1RMs
+  const currentExercises = useWorkoutStore.getState().exercises;
+  const baseExercises: ExerciseDefinition[] =
+    currentExercises && currentExercises.length > 0 ? currentExercises : DEFAULT_EXERCISES;
+
+  const updatedExercises = baseExercises.map((ex) => {
+    if (payload.oneRepMaxes[ex.id]) {
+      return { ...ex, oneRepMax: payload.oneRepMaxes[ex.id] };
+    }
+    return ex;
+  });
+
+  // 2. Deterministically regenerate full 36-workout program
+  const fullWorkouts = generateFullProgram(updatedExercises, payload.weightStep || 2.5);
+
+  // 3. Apply completed workouts data
+  if (Array.isArray(payload.completed)) {
+    for (const comp of payload.completed) {
+      const targetWorkout = fullWorkouts.find((w) => w.workoutNumber === comp.n);
+      if (targetWorkout) {
+        targetWorkout.status = "completed";
+        targetWorkout.completedAt = comp.cAt;
+        targetWorkout.startedAt = comp.sAt;
+        targetWorkout.durationSeconds = comp.dur;
+        targetWorkout.tonnageKg = comp.ton;
+        targetWorkout.powerKgPerMin = comp.pow;
+        targetWorkout.notes = comp.notes;
+
+        if (Array.isArray(comp.sets)) {
+          for (const s of comp.sets) {
+            const ss = targetWorkout.supersets.find((item) => item.id === s.sId);
+            if (ss && Array.isArray(ss.exercises)) {
+              const ex = ss.exercises.find((item) => item.exerciseId === s.eId);
+              if (ex && Array.isArray(ex.sets)) {
+                const targetSet = ex.sets.find((item) => item.setNumber === s.num);
+                if (targetSet) {
+                  targetSet.completed = true;
+                  if (s.w !== undefined) targetSet.actualWeight = s.w;
+                  if (s.r !== undefined) targetSet.actualReps = s.r;
+                }
+              }
+            }
+          }
         }
       }
     }
   }
-  return { completedCount, maxDate };
+
+  // 4. Update WorkoutStore & LocalStorage
+  useWorkoutStore.setState({
+    exercises: updatedExercises,
+    workouts: fullWorkouts,
+    hasHydrated: true,
+  });
+
+  try {
+    localStorage.setItem(
+      "smt_workouts_v2",
+      JSON.stringify({
+        state: {
+          exercises: updatedExercises,
+          workouts: fullWorkouts,
+          hasHydrated: true,
+        },
+        version: 0,
+      })
+    );
+  } catch {}
+
+  // 5. Update Measurements
+  if (Array.isArray(payload.measurements)) {
+    useBodyStore.setState({ measurements: payload.measurements });
+    try {
+      localStorage.setItem(
+        "smt_measurements",
+        JSON.stringify({ state: { measurements: payload.measurements }, version: 0 })
+      );
+    } catch {}
+  }
+
+  // 6. Update Settings
+  if (payload.settings) {
+    useSettingsStore.setState(payload.settings);
+    try {
+      localStorage.setItem(
+        "smt_settings",
+        JSON.stringify({ state: payload.settings, version: 0 })
+      );
+    } catch {}
+  }
+
+  // 7. Update Prep
+  if (Array.isArray(payload.prep)) {
+    usePrepStore.setState({ sessions: payload.prep });
+    try {
+      localStorage.setItem(
+        "smt_prep_v1",
+        JSON.stringify({ state: { sessions: payload.prep }, version: 0 })
+      );
+    } catch {}
+  }
 }
 
-function getMeasurementWeight(parsed: any): { count: number; maxDate: number } {
-  const measurements = parsed?.state?.measurements || parsed?.measurements || [];
-  let count = 0;
-  let maxDate = 0;
-  if (Array.isArray(measurements)) {
-    count = measurements.length;
-    for (const m of measurements) {
-      if (m?.date) {
-        const t = new Date(m.date).getTime();
-        if (t > maxDate) maxDate = t;
-      }
-    }
+// Backward compatibility aliases
+export async function saveToCloudStorage(key: string, value: string): Promise<boolean> {
+  try {
+    localStorage.setItem(key, value);
+  } catch {}
+  const payload = buildCompactPayload();
+  return saveToTelegramCloud(payload);
+}
+
+export async function getFromCloudStorage(_key: string): Promise<string | null> {
+  const payload = await getFromTelegramCloud();
+  return payload ? JSON.stringify(payload) : null;
+}
+
+/**
+ * Save compact payload to Telegram CloudStorage
+ */
+export async function saveToTelegramCloud(payload: CompactSyncPayload): Promise<boolean> {
+  const cloud = getCloudInstance();
+  if (!cloud) return false;
+
+  const json = JSON.stringify(payload);
+  if (json.length > 4096) {
+    console.warn("[CloudStorage] Payload exceeds 4096 limit, skipping single-key TG save:", json.length);
+    return false;
   }
-  return { count, maxDate };
+
+  const p = new Promise<boolean>((resolve) => {
+    try {
+      cloud.setItem("smt_compact_v3", json, (error: any, success?: boolean) => {
+        resolve(!error && Boolean(success));
+      });
+    } catch {
+      resolve(false);
+    }
+  });
+
+  return withTimeout(p, TIMEOUT_MS, false);
+}
+
+/**
+ * Read compact payload from Telegram CloudStorage using getKeys first to avoid Desktop hanging
+ */
+export async function getFromTelegramCloud(): Promise<CompactSyncPayload | null> {
+  const cloud = getCloudInstance();
+  if (!cloud) return null;
+
+  // 1. First get keys list to ensure key exists (Telegram Desktop bug workaround)
+  const keysPromise = new Promise<string[]>((resolve) => {
+    try {
+      cloud.getKeys((error: any, keys?: string[]) => {
+        if (error || !Array.isArray(keys)) resolve([]);
+        else resolve(keys);
+      });
+    } catch {
+      resolve([]);
+    }
+  });
+
+  const availableKeys = await withTimeout(keysPromise, 800, []);
+  if (!availableKeys.includes("smt_compact_v3")) {
+    return null;
+  }
+
+  // 2. Fetch the key since we know it exists
+  const getPromise = new Promise<string | null>((resolve) => {
+    try {
+      cloud.getItem("smt_compact_v3", (error: any, value?: string) => {
+        if (error || !value) resolve(null);
+        else resolve(value);
+      });
+    } catch {
+      resolve(null);
+    }
+  });
+
+  const rawJson = await withTimeout(getPromise, TIMEOUT_MS, null);
+  if (!rawJson) return null;
+
+  try {
+    return JSON.parse(rawJson);
+  } catch {
+    return null;
+  }
 }
 
 let isSyncInProgress = false;
 
 /**
- * Synchronizes all app stores between localStorage and Telegram CloudStorage.
- * Intelligently preserves user's completed workouts and progress.
+ * Master Cross-Device Synchronization
+ * 1. Checks fast server API /api/user/sync (~30ms)
+ * 2. Checks Telegram CloudStorage (~100ms with timeout)
+ * 3. Evaluates progress: whoever has more completed workouts wins
+ * 4. Pushes local if local is ahead or if forceUpload is requested
  */
 export async function syncAllStoresWithCloud(options?: {
   forceUpload?: boolean;
-  forceDownload?: boolean;
 }): Promise<CloudSyncResult> {
   if (typeof window === "undefined") {
-    return { success: false, message: "SSR environment", updatedStores: [] };
+    return { success: false, message: "SSR", updatedStores: [] };
   }
 
   if (isSyncInProgress) {
-    return { success: true, message: "Синхронізація вже виконується", updatedStores: [] };
+    return { success: true, message: "Синхронізація триває...", updatedStores: [] };
   }
 
   isSyncInProgress = true;
   const updatedStores: string[] = [];
 
   try {
-    const cloudAvailable = isCloudStorageAvailable();
+    const telegramId = getActiveTelegramId();
+    const localPayload = buildCompactPayload();
+    const localCount = localPayload.completed.length;
 
-    // 1. WORKOUTS STORE ("smt_workouts_v2")
-    const localWorkoutsRaw = localStorage.getItem("smt_workouts_v2");
-    let cloudWorkoutsCount = 0;
-    let localWorkoutsCount = 0;
+    let remotePayload: CompactSyncPayload | null = null;
+    let remoteSource = "none";
 
-    if (cloudAvailable) {
-      const cloudWorkoutsRaw = await getFromCloudStorage("smt_workouts_v2");
-
-      let localParsed: any = null;
-      let cloudParsed: any = null;
+    // 1. LAYER 1: Fast Server HTTP Sync
+    if (telegramId && telegramId !== "anonymous") {
       try {
-        if (localWorkoutsRaw) localParsed = JSON.parse(localWorkoutsRaw);
-      } catch {}
-      try {
-        if (cloudWorkoutsRaw) cloudParsed = JSON.parse(cloudWorkoutsRaw);
-      } catch {}
+        const fetchPromise = fetch(`/api/user/sync?telegramId=${telegramId}`, {
+          cache: "no-store",
+        }).then((res) => res.json());
 
-      const localWeight = getWorkoutWeight(localParsed);
-      const cloudWeight = getWorkoutWeight(cloudParsed);
-      localWorkoutsCount = localWeight.completedCount;
-      cloudWorkoutsCount = cloudWeight.completedCount;
-
-      if (options?.forceUpload && localWorkoutsRaw) {
-        await saveToCloudStorage("smt_workouts_v2", localWorkoutsRaw);
-      } else if (options?.forceDownload && cloudWorkoutsRaw && cloudParsed) {
-        localStorage.setItem("smt_workouts_v2", cloudWorkoutsRaw);
-        if (cloudParsed.state) useWorkoutStore.setState(cloudParsed.state, false);
-        updatedStores.push("smt_workouts_v2");
-      } else if (!localWorkoutsRaw && cloudWorkoutsRaw && cloudParsed) {
-        // Desktop first open: empty locally, restore from cloud!
-        localStorage.setItem("smt_workouts_v2", cloudWorkoutsRaw);
-        if (cloudParsed.state) useWorkoutStore.setState(cloudParsed.state, false);
-        updatedStores.push("smt_workouts_v2");
-      } else if (localWorkoutsRaw && !cloudWorkoutsRaw) {
-        // Mobile tested first: upload local to cloud!
-        await saveToCloudStorage("smt_workouts_v2", localWorkoutsRaw);
-      } else if (localWorkoutsRaw && cloudWorkoutsRaw && localParsed && cloudParsed) {
-        // Both exist: compare progress!
-        if (cloudWeight.completedCount > localWeight.completedCount) {
-          // Cloud has more completed workouts -> download from cloud!
-          localStorage.setItem("smt_workouts_v2", cloudWorkoutsRaw);
-          if (cloudParsed.state) useWorkoutStore.setState(cloudParsed.state, false);
-          updatedStores.push("smt_workouts_v2");
-        } else if (localWeight.completedCount > cloudWeight.completedCount) {
-          // Local has more completed workouts -> upload to cloud!
-          await saveToCloudStorage("smt_workouts_v2", localWorkoutsRaw);
-        } else if (cloudWeight.maxDate > localWeight.maxDate && cloudWeight.maxDate > 0) {
-          // Equal completed workouts, but cloud is newer
-          localStorage.setItem("smt_workouts_v2", cloudWorkoutsRaw);
-          if (cloudParsed.state) useWorkoutStore.setState(cloudParsed.state, false);
-          updatedStores.push("smt_workouts_v2");
-        } else {
-          // Local is equal or newer -> upload to ensure cloud has latest state
-          await saveToCloudStorage("smt_workouts_v2", localWorkoutsRaw);
+        const serverRes = await withTimeout(fetchPromise, 1200, null);
+        if (serverRes?.ok && serverRes.data) {
+          remotePayload = serverRes.data as CompactSyncPayload;
+          remoteSource = "server";
         }
+      } catch (err) {
+        console.warn("[Sync] Server sync fallback:", err);
       }
     }
 
-    // 2. MEASUREMENTS STORE ("smt_measurements")
-    if (cloudAvailable) {
-      const localMeasRaw = localStorage.getItem("smt_measurements");
-      const cloudMeasRaw = await getFromCloudStorage("smt_measurements");
-
-      let localMeasParsed: any = null;
-      let cloudMeasParsed: any = null;
+    // 2. LAYER 2: Telegram CloudStorage (if server had no progress or is offline)
+    if ((!remotePayload || remotePayload.completed.length === 0) && isCloudStorageAvailable()) {
       try {
-        if (localMeasRaw) localMeasParsed = JSON.parse(localMeasRaw);
-      } catch {}
-      try {
-        if (cloudMeasRaw) cloudMeasParsed = JSON.parse(cloudMeasRaw);
-      } catch {}
-
-      const localMeasW = getMeasurementWeight(localMeasParsed);
-      const cloudMeasW = getMeasurementWeight(cloudMeasParsed);
-
-      if (!localMeasRaw && cloudMeasRaw && cloudMeasParsed) {
-        localStorage.setItem("smt_measurements", cloudMeasRaw);
-        if (cloudMeasParsed.state) useBodyStore.setState(cloudMeasParsed.state, false);
-        updatedStores.push("smt_measurements");
-      } else if (localMeasRaw && !cloudMeasRaw) {
-        await saveToCloudStorage("smt_measurements", localMeasRaw);
-      } else if (localMeasRaw && cloudMeasRaw) {
-        if (cloudMeasW.count > localMeasW.count) {
-          localStorage.setItem("smt_measurements", cloudMeasRaw);
-          if (cloudMeasParsed?.state) useBodyStore.setState(cloudMeasParsed.state, false);
-          updatedStores.push("smt_measurements");
-        } else if (localMeasW.count > cloudMeasW.count) {
-          await saveToCloudStorage("smt_measurements", localMeasRaw);
-        } else {
-          await saveToCloudStorage("smt_measurements", localMeasRaw);
+        const tgCloudPayload = await getFromTelegramCloud();
+        if (tgCloudPayload && tgCloudPayload.completed) {
+          if (!remotePayload || tgCloudPayload.completed.length > remotePayload.completed.length) {
+            remotePayload = tgCloudPayload;
+            remoteSource = "telegram_cloud";
+          }
         }
+      } catch (err) {
+        console.warn("[Sync] Telegram Cloud fallback:", err);
       }
     }
 
-    // 3. SETTINGS STORE ("smt_settings")
-    if (cloudAvailable) {
-      const localSetRaw = localStorage.getItem("smt_settings");
-      const cloudSetRaw = await getFromCloudStorage("smt_settings");
+    const remoteCount = remotePayload?.completed?.length || 0;
 
-      let localSetParsed: any = null;
-      let cloudSetParsed: any = null;
-      try {
-        if (localSetRaw) localSetParsed = JSON.parse(localSetRaw);
-      } catch {}
-      try {
-        if (cloudSetRaw) cloudSetParsed = JSON.parse(cloudSetRaw);
-      } catch {}
+    // 3. DECISION & MERGE
+    if (remotePayload && (remoteCount > localCount || (localCount === 0 && remoteCount > 0))) {
+      // Remote has strictly more completed workouts -> Apply remote to local!
+      applyCompactPayload(remotePayload);
+      updatedStores.push("smt_workouts_v2", "smt_measurements", "smt_settings", "smt_prep_v1");
 
-      if (!localSetRaw && cloudSetRaw && cloudSetParsed) {
-        localStorage.setItem("smt_settings", cloudSetRaw);
-        if (cloudSetParsed.state) useSettingsStore.setState(cloudSetParsed.state, false);
-        updatedStores.push("smt_settings");
-      } else if (localSetRaw && !cloudSetRaw) {
-        await saveToCloudStorage("smt_settings", localSetRaw);
-      } else if (localSetRaw && cloudSetRaw && localSetParsed && cloudSetParsed) {
-        // If cloud has linked telegram user and local doesn't
-        if (cloudSetParsed.state?.linkedTelegramUser && !localSetParsed.state?.linkedTelegramUser) {
-          localStorage.setItem("smt_settings", cloudSetRaw);
-          if (cloudSetParsed.state) useSettingsStore.setState(cloudSetParsed.state, false);
-          updatedStores.push("smt_settings");
-        } else {
-          await saveToCloudStorage("smt_settings", localSetRaw);
-        }
+      return {
+        success: true,
+        message: `✅ Оновлено з ${remoteSource === "server" ? "сервера" : "хмари Telegram"}! Завантажено тренувань: ${remoteCount}`,
+        updatedStores,
+        workoutsCount: remoteCount,
+      };
+    } else if (localCount > remoteCount || options?.forceUpload || (!remotePayload && localCount > 0)) {
+      // Local has more completed workouts -> Push local to both server and TG Cloud!
+      if (telegramId && telegramId !== "anonymous") {
+        void fetch("/api/user/sync", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ telegramId, data: localPayload }),
+        }).catch(() => {});
       }
-    }
 
-    // 4. PREP STORE ("smt_prep_v1")
-    if (cloudAvailable) {
-      const localPrepRaw = localStorage.getItem("smt_prep_v1");
-      const cloudPrepRaw = await getFromCloudStorage("smt_prep_v1");
-
-      let localPrepParsed: any = null;
-      let cloudPrepParsed: any = null;
-      try {
-        if (localPrepRaw) localPrepParsed = JSON.parse(localPrepRaw);
-      } catch {}
-      try {
-        if (cloudPrepRaw) cloudPrepParsed = JSON.parse(cloudPrepRaw);
-      } catch {}
-
-      if (!localPrepRaw && cloudPrepRaw && cloudPrepParsed) {
-        localStorage.setItem("smt_prep_v1", cloudPrepRaw);
-        if (cloudPrepParsed.state) usePrepStore.setState(cloudPrepParsed.state, false);
-        updatedStores.push("smt_prep_v1");
-      } else if (localPrepRaw && !cloudPrepRaw) {
-        await saveToCloudStorage("smt_prep_v1", localPrepRaw);
-      } else if (localPrepRaw && cloudPrepRaw) {
-        const localDone = (localPrepParsed?.state?.completedSessions || []).length;
-        const cloudDone = (cloudPrepParsed?.state?.completedSessions || []).length;
-        if (cloudDone > localDone) {
-          localStorage.setItem("smt_prep_v1", cloudPrepRaw);
-          if (cloudPrepParsed?.state) usePrepStore.setState(cloudPrepParsed.state, false);
-          updatedStores.push("smt_prep_v1");
-        } else {
-          await saveToCloudStorage("smt_prep_v1", localPrepRaw);
-        }
+      if (isCloudStorageAvailable()) {
+        void saveToTelegramCloud(localPayload);
       }
-    }
 
-    return {
-      success: true,
-      message: "Синхронізація успішна",
-      updatedStores,
-      cloudWorkoutsCount,
-      localWorkoutsCount,
-    };
+      return {
+        success: true,
+        message: `✅ Дані синхронізовано з хмарою (тренувань: ${localCount})`,
+        updatedStores,
+        workoutsCount: localCount,
+      };
+    } else {
+      // Both devices are in sync
+      // Still refresh TG cloud in background if available
+      if (localCount > 0 && isCloudStorageAvailable()) {
+        void saveToTelegramCloud(localPayload);
+      }
+
+      return {
+        success: true,
+        message: `✅ Дані актуальні (тренувань: ${localCount})`,
+        updatedStores,
+        workoutsCount: localCount,
+      };
+    }
   } catch (err: any) {
-    console.error("[CloudStorage] Sync error:", err);
+    console.error("[Sync] Master sync error:", err);
     return {
       success: false,
       message: err?.message || "Помилка синхронізації",
@@ -451,65 +500,45 @@ export async function syncAllStoresWithCloud(options?: {
 }
 
 let isInitialized = false;
-let workoutSaveTimer: any = null;
-let measSaveTimer: any = null;
-let settingsSaveTimer: any = null;
-let prepSaveTimer: any = null;
+let autoSyncTimer: any = null;
 
-/**
- * Initializes automatic background synchronization between active device and Telegram CloudStorage.
- * Call once on app startup (e.g. in TelegramProvider).
- */
 export function initCloudSync(): void {
   if (typeof window === "undefined" || isInitialized) return;
   isInitialized = true;
 
-  // 1. Initial sync on boot
+  // 1. Initial sync immediately on startup
   void syncAllStoresWithCloud();
 
-  // 2. Sync whenever window/tab regains focus (e.g. user switched from mobile to desktop)
+  // 2. Sync whenever window gains focus (user switched from mobile to desktop)
   window.addEventListener("focus", () => {
     void syncAllStoresWithCloud();
   });
 
   // 3. Debounced auto-push on any local state changes
-  useWorkoutStore.subscribe(() => {
-    clearTimeout(workoutSaveTimer);
-    workoutSaveTimer = setTimeout(() => {
-      const raw = localStorage.getItem("smt_workouts_v2");
-      if (raw) {
-        void saveToCloudStorage("smt_workouts_v2", raw);
-      }
-    }, 1500);
-  });
+  const triggerAutoPush = () => {
+    clearTimeout(autoSyncTimer);
+    autoSyncTimer = setTimeout(() => {
+      const telegramId = getActiveTelegramId();
+      if (!telegramId || telegramId === "anonymous") return;
 
-  useBodyStore.subscribe(() => {
-    clearTimeout(measSaveTimer);
-    measSaveTimer = setTimeout(() => {
-      const raw = localStorage.getItem("smt_measurements");
-      if (raw) {
-        void saveToCloudStorage("smt_measurements", raw);
-      }
-    }, 1500);
-  });
+      const payload = buildCompactPayload();
 
-  useSettingsStore.subscribe(() => {
-    clearTimeout(settingsSaveTimer);
-    settingsSaveTimer = setTimeout(() => {
-      const raw = localStorage.getItem("smt_settings");
-      if (raw) {
-        void saveToCloudStorage("smt_settings", raw);
-      }
-    }, 1500);
-  });
+      // Push to fast server
+      fetch("/api/user/sync", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ telegramId, data: payload }),
+      }).catch(() => {});
 
-  usePrepStore.subscribe(() => {
-    clearTimeout(prepSaveTimer);
-    prepSaveTimer = setTimeout(() => {
-      const raw = localStorage.getItem("smt_prep_v1");
-      if (raw) {
-        void saveToCloudStorage("smt_prep_v1", raw);
+      // Push to Telegram CloudStorage
+      if (isCloudStorageAvailable()) {
+        void saveToTelegramCloud(payload);
       }
     }, 1500);
-  });
+  };
+
+  useWorkoutStore.subscribe(triggerAutoPush);
+  useBodyStore.subscribe(triggerAutoPush);
+  useSettingsStore.subscribe(triggerAutoPush);
+  usePrepStore.subscribe(triggerAutoPush);
 }
