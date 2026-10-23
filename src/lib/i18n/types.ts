@@ -78,9 +78,11 @@ export interface TranslationDict {
     selectFromProgram: string;
     goToProgram: string;
     start: string;
+    startShort: string;
     pause: string;
     resume: string;
     finish: string;
+    finishShort: string;
     warmup: string;
     warmupTitle: string;
     warmupDesc: string;

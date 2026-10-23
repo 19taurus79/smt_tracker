@@ -264,11 +264,12 @@ function WorkoutContent() {
               <Button
                 variant="accent"
                 size="sm"
-                className="h-8 px-3 text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-md shadow-emerald-500/25"
+                className="h-8 px-2.5 sm:px-3 text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-md shadow-emerald-500/25 shrink-0"
                 onClick={handleOpenFinishModal}
               >
                 <CheckCircle className="h-3.5 w-3.5 mr-1 shrink-0 text-slate-950" />
-                <span>{t.workout.finish}</span>
+                <span>{t.workout.finishShort}</span>
+                <span className="hidden sm:inline">&nbsp;{language === "uk" ? "тренування" : language === "en" ? "Workout" : "тренировку"}</span>
               </Button>
             )}
 
@@ -278,7 +279,7 @@ function WorkoutContent() {
                   variant="outline"
                   size="sm"
                   onClick={openWarmupModal}
-                  className="h-8 px-2.5 text-xs font-semibold border-amber-500/30 text-amber-300 hover:bg-amber-500/10"
+                  className="h-8 px-2 sm:px-2.5 text-xs font-semibold border-amber-500/30 text-amber-300 hover:bg-amber-500/10 shrink-0"
                 >
                   <Flame className="h-3.5 w-3.5 mr-1 text-amber-400 shrink-0" />
                   <span>{t.workout.warmup}</span>
@@ -287,11 +288,12 @@ function WorkoutContent() {
                 <Button
                   variant="accent"
                   size="sm"
-                  className="h-8 px-3 text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-md shadow-emerald-500/25"
+                  className="h-8 px-2.5 sm:px-3 text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-950 shadow-md shadow-emerald-500/25 shrink-0 whitespace-nowrap"
                   onClick={handleStartThisWorkout}
                 >
-                  <Play className="h-3.5 w-3.5 mr-1 fill-current text-slate-950" />
-                  <span>{t.workout.start}</span>
+                  <Play className="h-3.5 w-3.5 mr-1 fill-current text-slate-950 shrink-0" />
+                  <span>{t.workout.startShort}</span>
+                  <span className="hidden sm:inline">&nbsp;{language === "uk" ? "тренування" : language === "en" ? "Workout" : "тренировку"}</span>
                 </Button>
               </div>
             )}
@@ -300,10 +302,10 @@ function WorkoutContent() {
               <Button
                 variant="default"
                 size="sm"
-                className="h-8 px-3 text-xs font-bold bg-emerald-600 hover:bg-emerald-500"
+                className="h-8 px-2.5 sm:px-3 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 shrink-0 whitespace-nowrap"
                 onClick={() => setIsReportOpen(true)}
               >
-                <FileText className="h-3.5 w-3.5 mr-1" />
+                <FileText className="h-3.5 w-3.5 mr-1 shrink-0" />
                 <span>{t.dashboard.viewReport}</span>
               </Button>
             )}
