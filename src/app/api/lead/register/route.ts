@@ -12,15 +12,38 @@ const LEAD_DEDUPE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { name, username, telegramUserId } = body;
+    const {
+      name,
+      username,
+      telegramUserId,
+      isTransfer,
+      totalWorkouts,
+      currentMicrocycle,
+      weightKg,
+      totalTonnageKg,
+    } = body;
 
     const cleanUsername = (username || "").replace(/^@/, "").trim();
+    const isTransferBool = Boolean(isTransfer);
+    const workoutsCount = Number(totalWorkouts) || 0;
+    const microcycleNum = Number(currentMicrocycle) || 1;
+    const weightNum = Number(weightKg) || 80;
+    const tonnageNum = Number(totalTonnageKg) || 0;
 
     // 1. Always record/update trainee in persistent server storage!
     const trainee = registerOrUpdateLead({
       name,
       username: cleanUsername,
       telegramUserId,
+      totalWorkouts: isTransferBool ? workoutsCount : undefined,
+      currentMicrocycle: isTransferBool ? microcycleNum : undefined,
+      weightKg: isTransferBool && weightNum > 0 ? weightNum : undefined,
+      status: isTransferBool && workoutsCount > 0 ? "active" : "new_lead",
+      tierKey: isTransferBool && workoutsCount >= 10 ? "titan" : "active",
+      tierLabel: isTransferBool && workoutsCount >= 10 ? "ТИТАН СИЛИ ⚡" : isTransferBool ? "Активний Атлет 🏋️‍♂️" : "НОВИЙ ЛІД 🔥",
+      coachNotes: isTransferBool
+        ? `Атлет переніс ${workoutsCount} тренувань з PWA-версії. Загальний тоннаж: ${tonnageNum.toLocaleString()} кг.`
+        : "Підписався на канал і запустив трекер.",
     });
 
     // Skip Telegram notification if the user is the coach himself
@@ -28,7 +51,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, isCoach: true, trainee });
     }
 
-    const dedupeKey = (telegramUserId ? `id:${telegramUserId}` : `u:${cleanUsername.toLowerCase()}`) || `name:${name}`;
+    const dedupeKey = isTransferBool
+      ? `transfer:${telegramUserId || cleanUsername}_w${workoutsCount}`
+      : (telegramUserId ? `id:${telegramUserId}` : `u:${cleanUsername.toLowerCase()}`) || `name:${name}`;
     const now = Date.now();
 
     // Clean up old entries if map gets too large
@@ -54,18 +79,34 @@ export async function POST(req: Request) {
       minute: "2-digit",
     });
 
-    const lines = [
-      `🎯 <b>НОВИЙ ЛІД У ВАШУ КОМАНДУ СМТ!</b>`,
-      ``,
-      `👤 <b>Атлет:</b> ${athleteDisplay} ${cleanUsername ? `(@${cleanUsername})` : ""}`,
-      `📅 <b>Дата:</b> ${timeFormatted}`,
-      `⚡ <b>Статус:</b> Підписався на канал та відкрив трекер!`,
-      ``,
-      `━━━━━━━━━━━━━━━━━━`,
-      cleanUsername
-        ? `💬 <i>Написати атлету:</i> https://t.me/${cleanUsername}`
-        : `💬 <i>Атлет поки не має публічного @username</i>`,
-    ];
+    const lines = isTransferBool
+      ? [
+          `⚡️ <b>АТЛЕТ УСПІШНО ПЕРЕНІС ДАНІ В TELEGRAM!</b>`,
+          ``,
+          `👤 <b>Атлет:</b> ${athleteDisplay} ${cleanUsername ? `(@${cleanUsername})` : ""}`,
+          `📅 <b>Дата:</b> ${timeFormatted}`,
+          `📊 <b>Перенесено тренувань:</b> ${workoutsCount} (поточний МКЦ-${microcycleNum})`,
+          tonnageNum > 0 ? `📦 <b>Загальний тоннаж:</b> ${tonnageNum.toLocaleString()} кг` : "",
+          weightNum > 0 ? `⚖️ <b>Вага атлета:</b> ${weightNum} кг` : "",
+          `✅ <i>Атлет приєднаний до вас у TMA і готовий тренуватися!</i>`,
+          ``,
+          `━━━━━━━━━━━━━━━━━━`,
+          cleanUsername
+            ? `💬 <i>Написати атлету:</i> https://t.me/${cleanUsername}`
+            : `💬 <i>Атлет поки не має публічного @username</i>`,
+        ].filter(Boolean)
+      : [
+          `🎯 <b>НОВИЙ ЛІД У ВАШУ КОМАНДУ СМТ!</b>`,
+          ``,
+          `👤 <b>Атлет:</b> ${athleteDisplay} ${cleanUsername ? `(@${cleanUsername})` : ""}`,
+          `📅 <b>Дата:</b> ${timeFormatted}`,
+          `⚡ <b>Статус:</b> Підписався на канал та відкрив трекер!`,
+          ``,
+          `━━━━━━━━━━━━━━━━━━`,
+          cleanUsername
+            ? `💬 <i>Написати атлету:</i> https://t.me/${cleanUsername}`
+            : `💬 <i>Атлет поки не має публічного @username</i>`,
+        ];
 
     const messageText = lines.join("\n");
 

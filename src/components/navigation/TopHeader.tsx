@@ -29,20 +29,40 @@ export function TopHeader() {
       const effectiveUser = linkedTelegramUser || tgUser;
       if (effectiveUser && userRole !== "coach" && !isCoachAccount(effectiveUser.username, effectiveUser.id)) {
         const leadKey = `smt_lead_registered_${effectiveUser.id || effectiveUser.username}`;
-        // Use localStorage so the user is only registered once permanently per device
+        // 1. Initial lead registration
         if (!localStorage.getItem(leadKey)) {
           localStorage.setItem(leadKey, "1");
           import("@/lib/tma/sync").then(({ syncTrainee }) => {
             syncTrainee({
-              name: effectiveUser.first_name || effectiveUser.firstName || "Атлет",
+              name: effectiveUser.first_name || (effectiveUser as any).firstName || "Атлет",
               username: effectiveUser.username || "",
               telegramUserId: effectiveUser.id,
             }).catch(() => {});
           });
         }
+
+        // 2. Auto-sync transferred workouts if athlete has imported workouts
+        if (workouts.length > 0) {
+          const transferKey = `smt_transfer_synced_${effectiveUser.id || effectiveUser.username}_${workouts.length}`;
+          if (!localStorage.getItem(transferKey)) {
+            localStorage.setItem(transferKey, "1");
+            const totalTonnage = workouts.reduce((sum, w) => sum + (w.tonnageKg || 0), 0);
+            const latestW = workouts[0];
+            import("@/lib/tma/sync").then(({ syncTraineeTransfer }) => {
+              syncTraineeTransfer({
+                name: effectiveUser.first_name || (effectiveUser as any).firstName || "Атлет",
+                username: effectiveUser.username || "",
+                telegramUserId: effectiveUser.id,
+                totalWorkouts: workouts.length,
+                currentMicrocycle: latestW?.microcycle || 1,
+                totalTonnageKg: totalTonnage,
+              }).catch(() => {});
+            });
+          }
+        }
       }
     }
-  }, [linkedTelegramUser, userRole]);
+  }, [linkedTelegramUser, userRole, workouts]);
 
   const activeWorkout = workouts.find((w) => w.id === activeWorkoutId);
 

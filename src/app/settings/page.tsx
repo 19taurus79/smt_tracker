@@ -274,6 +274,31 @@ export default function SettingsPage() {
       if (parsed.measurements && Array.isArray(parsed.measurements)) {
         setMeasurements(parsed.measurements);
       }
+
+      // Immediately notify coach and register athlete in server roster!
+      const totalW = parsed.workouts?.length || 0;
+      const latestW = parsed.workouts && parsed.workouts.length > 0 ? parsed.workouts[0] : null;
+      const latestM = parsed.measurements && parsed.measurements.length > 0 ? parsed.measurements[0] : null;
+      const totalTonnage = parsed.workouts?.reduce((acc: number, w: { tonnageKg?: number }) => acc + (w.tonnageKg || 0), 0) || 0;
+
+      if (typeof window !== "undefined") {
+        const tgUser = (window.Telegram?.WebApp as any)?.initDataUnsafe?.user;
+        const effectiveUser = linkedTelegramUser || tgUser;
+        if (effectiveUser) {
+          import("@/lib/tma/sync").then(({ syncTraineeTransfer }) => {
+            syncTraineeTransfer({
+              name: effectiveUser.first_name || (effectiveUser as any).firstName || "Атлет",
+              username: effectiveUser.username || "",
+              telegramUserId: effectiveUser.id,
+              totalWorkouts: totalW,
+              currentMicrocycle: latestW?.microcycle || 1,
+              weightKg: latestM?.weightKg || 80,
+              totalTonnageKg: totalTonnage,
+            }).catch(() => {});
+          });
+        }
+      }
+
       setTransferCodeModalOpen(false);
       setTransferCodeText("");
       showToast(

@@ -189,6 +189,37 @@ export async function syncTrainee(payload: {
   }
 }
 
+export interface SyncTransferPayload {
+  name?: string;
+  username?: string;
+  telegramUserId?: string | number;
+  totalWorkouts: number;
+  currentMicrocycle: number;
+  weightKg?: number;
+  totalTonnageKg?: number;
+}
+
+/**
+ * Synchronize imported data from transfer code and notify coach immediately
+ */
+export async function syncTraineeTransfer(payload: SyncTransferPayload): Promise<boolean> {
+  try {
+    const res = await fetch("/api/lead/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...payload,
+        isTransfer: true,
+      }),
+    });
+    const data = await res.json();
+    return Boolean(data.ok);
+  } catch (err) {
+    console.warn("[TMA Sync] Transfer sync error:", err);
+    return false;
+  }
+}
+
 /**
  * Flushes all pending offline queue items when connection restores
  */

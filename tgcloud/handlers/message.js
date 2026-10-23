@@ -4,7 +4,22 @@ export default async function (message, ctx) {
   const chatId = message.chat.id;
   const text = message.text || "";
 
+  const fromUser = message.from;
+  const isCoach = fromUser && (fromUser.id === 548019148 || fromUser.username?.toLowerCase() === "onyshchenkosergey");
+
   if (text.startsWith("/start") || text.startsWith("/app")) {
+    if (fromUser && !isCoach) {
+      try {
+        await api.sendMessage({
+          chat_id: 548019148,
+          text: `🎯 <b>НОВИЙ АТЛЕТ ЗАПУСТИВ БОТА!</b>\n\n👤 <b>Атлет:</b> ${fromUser.first_name || "Атлет"} ${fromUser.username ? `(@${fromUser.username})` : ""}\n⚡️ <i>Натиснув /start та відкрив SMT-1</i>\n━━━━━━━━━━━━━━━━━━\n💬 <i>Написати:</i> https://t.me/${fromUser.username || ""}`,
+          parse_mode: "HTML",
+        });
+      } catch (err) {
+        console.error("Failed to notify coach on start:", err);
+      }
+    }
+
     const lines = [
       "🔥 <b>Вітаємо в SMT-1 Tracker!</b>",
       "",
@@ -31,6 +46,25 @@ export default async function (message, ctx) {
             {
               text: "🏆 Канал Результатів та Челенджу",
               url: "https://t.me/athletic_league",
+            },
+          ],
+        ],
+      },
+    });
+    return;
+  }
+
+  if (text.startsWith("/coach")) {
+    await api.sendMessage({
+      chat_id: chatId,
+      text: "👤 <b>Головний Тренер Челенджу:</b> @OnyshchenkoSergey\n\nВи можете надіслати запитання щодо техніки, підбору робочих ваг або харчування:",
+      parse_mode: "HTML",
+      reply_markup: {
+        inline_keyboard: [
+          [
+            {
+              text: "💬 Написати Тренеру",
+              url: "https://t.me/OnyshchenkoSergey",
             },
           ],
         ],

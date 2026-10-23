@@ -52,8 +52,15 @@ export interface TraineeProfile {
   }>;
 }
 
-const DATA_DIR = path.resolve(process.cwd(), "data");
-const DATA_FILE = path.join(DATA_DIR, "trainees.json");
+import os from "os";
+
+const IS_SERVERLESS = Boolean(process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME);
+const DATA_DIR = IS_SERVERLESS ? os.tmpdir() : path.resolve(process.cwd(), "data");
+const DATA_FILE = path.join(DATA_DIR, "smt_trainees.json");
+
+// In-memory cache across serverless requests in the same lambda
+let memoryCache: TraineeProfile[] = [];
+let cacheLoaded = false;
 
 const AVATAR_GRADIENTS = [
   "from-blue-500 to-indigo-600",
@@ -70,33 +77,55 @@ function getRandomGradient(): string {
 }
 
 function ensureDataFile(): TraineeProfile[] {
+  if (cacheLoaded && memoryCache.length > 0) {
+    return memoryCache;
+  }
   try {
     if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
+      try {
+        fs.mkdirSync(DATA_DIR, { recursive: true });
+      } catch {}
     }
-    if (!fs.existsSync(DATA_FILE)) {
-      const initial: TraineeProfile[] = [];
-      fs.writeFileSync(DATA_FILE, JSON.stringify(initial, null, 2), "utf8");
-      return initial;
+    if (fs.existsSync(DATA_FILE)) {
+      const content = fs.readFileSync(DATA_FILE, "utf8");
+      const parsed = JSON.parse(content) as TraineeProfile[];
+      memoryCache = parsed;
+      cacheLoaded = true;
+      return parsed;
     }
-    const content = fs.readFileSync(DATA_FILE, "utf8");
-    return JSON.parse(content) as TraineeProfile[];
+    // Also try local data/trainees.json if in serverless
+    const fallbackPath = path.resolve(process.cwd(), "data", "trainees.json");
+    if (fs.existsSync(fallbackPath)) {
+      try {
+        const content = fs.readFileSync(fallbackPath, "utf8");
+        const parsed = JSON.parse(content) as TraineeProfile[];
+        memoryCache = parsed;
+        cacheLoaded = true;
+        return parsed;
+      } catch {}
+    }
+    cacheLoaded = true;
+    return memoryCache;
   } catch (err) {
     console.error("[traineeStorage] Error reading data file:", err);
-    return [];
+    return memoryCache;
   }
 }
 
 function saveDataFile(trainees: TraineeProfile[]): void {
+  memoryCache = trainees;
+  cacheLoaded = true;
   try {
     if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
+      try {
+        fs.mkdirSync(DATA_DIR, { recursive: true });
+      } catch {}
     }
     const tmpFile = `${DATA_FILE}.tmp.${Date.now()}`;
     fs.writeFileSync(tmpFile, JSON.stringify(trainees, null, 2), "utf8");
     fs.renameSync(tmpFile, DATA_FILE);
   } catch (err) {
-    console.error("[traineeStorage] Error saving data file:", err);
+    console.warn("[traineeStorage] Warning saving data file (cached in memory):", err);
   }
 }
 
@@ -108,6 +137,13 @@ export function registerOrUpdateLead(lead: {
   name: string;
   username?: string;
   telegramUserId?: string | number;
+  totalWorkouts?: number;
+  currentMicrocycle?: number;
+  weightKg?: number;
+  status?: TraineeProfile["status"];
+  tierKey?: TraineeProfile["tierKey"];
+  tierLabel?: string;
+  coachNotes?: string;
 }): TraineeProfile {
   const trainees = ensureDataFile();
   const cleanUsername = (lead.username || "").toLowerCase().replace(/^@/, "").trim();
@@ -132,6 +168,13 @@ export function registerOrUpdateLead(lead: {
       name: lead.name || target.name,
       username: cleanUsername || target.username,
       telegramChatId: tgIdStr || target.telegramChatId,
+      currentMicrocycle: lead.currentMicrocycle !== undefined ? lead.currentMicrocycle : target.currentMicrocycle,
+      totalWorkouts: lead.totalWorkouts !== undefined ? Math.max(target.totalWorkouts, lead.totalWorkouts) : target.totalWorkouts,
+      weightKg: lead.weightKg !== undefined ? lead.weightKg : target.weightKg,
+      status: lead.status || target.status,
+      tierKey: lead.tierKey || target.tierKey,
+      tierLabel: lead.tierLabel || target.tierLabel,
+      coachNotes: lead.coachNotes || target.coachNotes,
       lastWorkoutDate: target.lastWorkoutDate || now,
     };
     trainees[existingIndex] = updated;
@@ -147,17 +190,17 @@ export function registerOrUpdateLead(lead: {
     avatarColor: getRandomGradient(),
     gender: "male",
     age: 28,
-    currentMicrocycle: 1,
-    currentWorkoutNumber: 1,
-    totalWorkouts: 0,
-    weightKg: 80,
+    currentMicrocycle: lead.currentMicrocycle || 1,
+    currentWorkoutNumber: (lead.totalWorkouts || 0) + 1,
+    totalWorkouts: lead.totalWorkouts || 0,
+    weightKg: lead.weightKg || 80,
     weightDeltaKg: 0,
     lastWorkoutDate: now,
     athleticScore: 70,
-    tierKey: "lead",
-    tierLabel: "НОВИЙ ЛІД 🔥",
-    status: "new_lead",
-    coachNotes: "Підписався на канал і запустив трекер.",
+    tierKey: lead.tierKey || (lead.totalWorkouts && lead.totalWorkouts > 0 ? "active" : "lead"),
+    tierLabel: lead.tierLabel || (lead.totalWorkouts && lead.totalWorkouts > 0 ? "Активний Атлет 🏋️‍♂️" : "НОВИЙ ЛІД 🔥"),
+    status: lead.status || (lead.totalWorkouts && lead.totalWorkouts > 0 ? "active" : "new_lead"),
+    coachNotes: lead.coachNotes || "Підписався на канал і запустив трекер.",
     workoutHistory: [],
     measurementHistory: [],
   };

@@ -621,7 +621,26 @@ export const useCoachStore = create<CoachStoreState>()(
           if (!res.ok) return;
           const data = await res.json();
           if (data.ok && Array.isArray(data.trainees) && data.trainees.length > 0) {
-            set({ trainees: data.trainees });
+            set((state) => {
+              const currentList = [...state.trainees];
+              let hasChanges = false;
+              for (const serverT of data.trainees) {
+                const idx = currentList.findIndex(
+                  (t) =>
+                    (t.telegramChatId && serverT.telegramChatId && t.telegramChatId === serverT.telegramChatId) ||
+                    (t.username && serverT.username && t.username.toLowerCase() === serverT.username.toLowerCase()) ||
+                    t.id === serverT.id
+                );
+                if (idx >= 0) {
+                  currentList[idx] = { ...currentList[idx], ...serverT };
+                  hasChanges = true;
+                } else {
+                  currentList.unshift(serverT);
+                  hasChanges = true;
+                }
+              }
+              return hasChanges ? { trainees: currentList } : state;
+            });
           }
         } catch (err) {
           console.warn("[useCoachStore] fetchServerTrainees error:", err);
