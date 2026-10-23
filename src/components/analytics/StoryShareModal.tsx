@@ -1109,7 +1109,7 @@ export function StoryShareModal({
 
   const handleForInstagram = async () => {
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!canvas || isGenerating) return;
 
     setIsGenerating(true);
     triggerHaptic("selection");
@@ -1117,12 +1117,11 @@ export function StoryShareModal({
     try {
       const dataUrl = canvas.toDataURL("image/png");
       setPreviewUrl(dataUrl);
-      setTelegramSentStatus("instagram_ready");
 
       const tg = typeof window !== "undefined" ? (window as any).Telegram?.WebApp : null;
       const tgUserId = tg?.initDataUnsafe?.user?.id || (useSettingsStore.getState().linkedTelegramUser?.id);
 
-      // Send backup copy to Telegram chat in background
+      // 1. Send backup copy to Telegram chat in background (safe fallback)
       if (tgUserId) {
         fetch("/api/story/share", {
           method: "POST",
@@ -1136,7 +1135,41 @@ export function StoryShareModal({
         }).catch(() => {});
       }
 
-      // Try browser download
+      // 2. Try Native Web Share API (Direct OS Share Sheet to Instagram Stories)
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob((b) => resolve(b), "image/png", 1.0)
+      );
+
+      if (blob) {
+        const filenamePrefix = prepData
+          ? `smt_prep_s${prepData.prepSessionNumber}`
+          : `smt_story_w${workout.workoutNumber || 1}`;
+        const file = new File([blob], `${filenamePrefix}.png`, { type: "image/png" });
+
+        if (
+          typeof navigator !== "undefined" &&
+          navigator.canShare &&
+          navigator.canShare({ files: [file] })
+        ) {
+          try {
+            await navigator.share({
+              files: [file],
+              title: "SMT-1 Workout Story",
+            });
+            triggerHaptic("success");
+            setTelegramSentStatus("instagram_ready");
+            return;
+          } catch (shareErr: any) {
+            // If user closed or cancelled the native share sheet, stop cleanly
+            if (shareErr?.name === "AbortError") {
+              return;
+            }
+            console.warn("navigator.share failed, using fallback:", shareErr);
+          }
+        }
+      }
+
+      // 3. Fallback: try browser download
       try {
         const filenamePrefix = prepData
           ? `smt_prep_s${prepData.prepSessionNumber}`
@@ -1147,7 +1180,8 @@ export function StoryShareModal({
         link.click();
       } catch {}
 
-      // Open lightbox with instant action to launch Instagram
+      // 4. Open full-screen lightbox preview with one-tap Instagram launch
+      setTelegramSentStatus("instagram_ready");
       setShowFullPreview(true);
       triggerHaptic("success");
     } catch (err) {
