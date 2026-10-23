@@ -675,7 +675,7 @@ export function FinishModal({ open, onOpenChange, onFinished, workoutId }: Finis
             >
               <Camera className="h-3.5 w-3.5 text-pink-400 shrink-0" />
               <span className="truncate">
-                {language === "uk" ? "📸 Створити Stories" : "📸 Создать Stories"}
+                {language === "uk" ? "📸 Stories для Instagram" : "📸 Stories для Instagram"}
               </span>
             </Button>
           </div>

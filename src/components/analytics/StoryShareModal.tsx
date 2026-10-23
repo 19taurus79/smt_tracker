@@ -65,8 +65,6 @@ export function StoryShareModal({
     initialTemplate || (prepData?.isGraduation ? "prep_grad" : prepData ? "prep_step" : "power")
   );
   const [isGenerating, setIsGenerating] = useState(false);
-  const [isPublishingChallenge, setIsPublishingChallenge] = useState(false);
-  const [publishedChallenge, setPublishedChallenge] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
@@ -116,40 +114,6 @@ export function StoryShareModal({
       : athleticScore.tierKey === "power_master"
       ? t.scoring.tierPowerMaster
       : t.scoring.tierActive;
-
-  const handlePublishChallenge = async () => {
-    if (isPublishingChallenge || publishedChallenge || !workout) return;
-    setIsPublishingChallenge(true);
-    try {
-      const res = await fetch("/api/challenge/publish", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          workoutNumber: workout.workoutNumber || 1,
-          microcycle: workout.microcycle || 1,
-          durationSeconds: workout.durationSeconds || 0,
-          tonnageKg: workout.tonnageKg || 0,
-          powerKgPerMin: workout.powerKgPerMin || 0,
-          athleticScore: {
-            score: athleticScore.score,
-            tier: athleticScore.tierKey,
-            tierLabel: tierTitle,
-          },
-          athleteName: window.Telegram?.WebApp?.initDataUnsafe?.user?.first_name || "",
-          athleteUsername: window.Telegram?.WebApp?.initDataUnsafe?.user?.username || "",
-          notes: workout.notes || "",
-        }),
-      });
-      const data = await res.json();
-      if (data.ok) {
-        setPublishedChallenge(true);
-      }
-    } catch (e) {
-      console.error("Failed to publish challenge:", e);
-    } finally {
-      setIsPublishingChallenge(false);
-    }
-  };
 
   // Extract key exercises (Top 3)
   const exercisesSummary = workout.supersets
@@ -1125,8 +1089,7 @@ export function StoryShareModal({
     }
   }, [open, selectedTemplate, workout, language, athleticScore.score, prepData]);
 
-  const [isSharing, setIsSharing] = useState(false);
-  const [telegramSentStatus, setTelegramSentStatus] = useState<"telegram_success" | "instagram_ready" | "saved" | null>(null);
+  const [telegramSentStatus, setTelegramSentStatus] = useState<"instagram_ready" | "saved" | null>(null);
   const [showFullPreview, setShowFullPreview] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
@@ -1142,49 +1105,6 @@ export function StoryShareModal({
       }
     }
     window.open("https://www.instagram.com", "_blank", "noopener,noreferrer");
-  };
-
-  const handleShareTelegram = async () => {
-    const canvas = canvasRef.current;
-    if (!canvas || isSharing) return;
-
-    setIsSharing(true);
-    setTelegramSentStatus(null);
-    triggerHaptic("selection");
-
-    try {
-      const dataUrl = canvas.toDataURL("image/png");
-      const tg = typeof window !== "undefined" ? (window as any).Telegram?.WebApp : null;
-      const tgUserId = tg?.initDataUnsafe?.user?.id || (useSettingsStore.getState().linkedTelegramUser?.id);
-
-      if (tgUserId) {
-        const res = await fetch("/api/story/share", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            chatId: tgUserId,
-            photoBase64: dataUrl,
-            workoutNumber: workout.workoutNumber,
-            template: selectedTemplate,
-          }),
-        });
-        const result = await res.json();
-        if (result.ok) {
-          triggerHaptic("success");
-          setTelegramSentStatus("telegram_success");
-          setIsSharing(false);
-          return;
-        }
-      }
-
-      // Fallback if not inside Telegram
-      await handleForInstagram();
-    } catch (err: any) {
-      console.error("Telegram story share error:", err);
-      await handleForInstagram();
-    } finally {
-      setIsSharing(false);
-    }
   };
 
   const handleForInstagram = async () => {
@@ -1297,65 +1217,26 @@ export function StoryShareModal({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogHeader className="shrink-0 mb-2">
+        <DialogHeader className="shrink-0 mb-1.5">
           <DialogTitle onClose={() => onOpenChange(false)}>
             <div className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-pink-400" />
-              <span>{t.story.modalTitle}</span>
+              <Camera className="h-5 w-5 text-pink-400" />
+              <span>{language === "uk" ? "📸 Історія для Instagram" : "📸 История для Instagram"}</span>
             </div>
           </DialogTitle>
-          <DialogDescription>{t.story.modalDesc}</DialogDescription>
+          <DialogDescription>
+            {language === "uk"
+              ? "Оберіть стиль та згенеруйте готове зображення для Instagram Stories"
+              : "Выберите стиль и сгенерируйте готовое изображение для Instagram Stories"}
+          </DialogDescription>
         </DialogHeader>
 
         {/* Scrollable Modal Body: Uses flex-1 min-h-0 so footer NEVER overflows screen */}
-        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain space-y-3 pr-1 py-0.5">
-          {/* Telegram Stories Success Banner */}
-          {telegramSentStatus === "telegram_success" && (
-            <div className="rounded-xl border border-cyan-500/40 bg-cyan-950/70 p-3 shadow-lg flex flex-col gap-1.5 animate-in fade-in zoom-in-95">
-              <div className="flex items-center gap-2 text-cyan-300 font-bold text-xs sm:text-sm">
-                <Check className="h-4 w-4 shrink-0 text-cyan-400" />
-                <span>{language === "uk" ? "Історію надіслано в чат з ботом!" : "История отправлена в чат с ботом!"}</span>
-              </div>
-              <p className="text-[11px] text-slate-300 leading-tight">
-                {language === "uk"
-                  ? `Фото 1080×1920 доставлено в чат з ${botHandle}. Відкрийте фото в чаті та натисніть «В історію» вгорі!`
-                  : `Фото 1080×1920 доставлено в чат с ${botHandle}. Откройте фото в чате и нажмите «В историю» вверху!`}
-              </p>
-              <div className="flex items-center gap-2 mt-1">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-7 text-xs border-cyan-500/50 text-cyan-200 hover:bg-cyan-500/20 font-semibold"
-                  onClick={() => {
-                    const bot = botHandle.replace("@", "");
-                    const tg = (window as any).Telegram?.WebApp;
-                    if (tg?.openTelegramLink) {
-                      tg.openTelegramLink(`https://t.me/${bot}`);
-                    } else {
-                      window.open(`https://t.me/${bot}`, "_blank");
-                    }
-                  }}
-                >
-                  <Send className="h-3 w-3 mr-1" />
-                  <span>{language === "uk" ? "Відкрити чат з ботом ↗" : "Открыть чат с ботом ↗"}</span>
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-7 text-xs border-pink-500/40 text-pink-300 hover:bg-pink-500/20 font-semibold"
-                  onClick={openInstagramStoryCamera}
-                >
-                  <Camera className="h-3 w-3 mr-1" />
-                  <span>Instagram ↗</span>
-                </Button>
-              </div>
-            </div>
-          )}
-
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain space-y-2.5 pr-1 py-0.5">
           {/* Instagram Ready Banner */}
           {telegramSentStatus === "instagram_ready" && (
-            <div className="rounded-xl border border-pink-500/40 bg-pink-950/70 p-3 shadow-lg flex flex-col gap-1.5 animate-in fade-in zoom-in-95">
-              <div className="flex items-center gap-2 text-pink-300 font-bold text-xs sm:text-sm">
+            <div className="rounded-xl border border-pink-500/40 bg-pink-950/70 p-2.5 shadow-lg flex flex-col gap-1 animate-in fade-in zoom-in-95">
+              <div className="flex items-center gap-2 text-pink-300 font-bold text-xs">
                 <Camera className="h-4 w-4 shrink-0 text-pink-400" />
                 <span>{language === "uk" ? "Фото надіслано в чат з ботом!" : "Фото отправлено в чат с ботом!"}</span>
               </div>
@@ -1364,7 +1245,7 @@ export function StoryShareModal({
                   ? "Зображення збережено. Відкрийте Instagram та опублікуйте його у Stories:"
                   : "Изображение сохранено. Откройте Instagram и опубликуйте его в Stories:"}
               </p>
-              <div className="flex items-center gap-2 mt-1">
+              <div className="flex items-center gap-2 mt-0.5">
                 <Button
                   size="sm"
                   className="h-7 text-xs font-bold bg-gradient-to-r from-pink-500 via-rose-500 to-amber-500 text-white shadow-md"
@@ -1391,7 +1272,7 @@ export function StoryShareModal({
                   }}
                   className={`p-2 rounded-xl border text-left transition-all ${
                     isSelected
-                      ? "bg-emerald-500/15 border-emerald-500 text-white shadow-lg shadow-emerald-500/20"
+                      ? "bg-pink-500/15 border-pink-500 text-white shadow-lg shadow-pink-500/20"
                       : "bg-slate-900 border-white/10 text-slate-400 hover:text-white"
                   }`}
                 >
@@ -1400,7 +1281,7 @@ export function StoryShareModal({
                       {tmpl.icon}
                       <span className="text-[11px] font-bold block">{tmpl.name}</span>
                     </div>
-                    {isSelected && <Check className="h-3 w-3 text-emerald-400" />}
+                    {isSelected && <Check className="h-3 w-3 text-pink-400" />}
                   </div>
                   <span className="text-[9px] text-slate-400 block leading-tight">{tmpl.desc}</span>
                 </button>
@@ -1409,7 +1290,7 @@ export function StoryShareModal({
           </div>
 
           {/* Live Canvas Preview */}
-          <div className="flex flex-col items-center justify-center p-2.5 rounded-2xl bg-slate-950 border border-white/10">
+          <div className="flex flex-col items-center justify-center p-2 rounded-2xl bg-slate-950 border border-white/10">
             <div
               onClick={() => {
                 const c = canvasRef.current;
@@ -1418,7 +1299,7 @@ export function StoryShareModal({
                   setShowFullPreview(true);
                 }
               }}
-              className="w-[150px] h-[267px] sm:w-[200px] sm:h-[355px] cursor-pointer overflow-hidden rounded-xl shadow-2xl border border-white/20 relative group transition-transform active:scale-98"
+              className="w-[130px] h-[231px] sm:w-[160px] sm:h-[284px] cursor-pointer overflow-hidden rounded-xl shadow-2xl border border-white/20 relative group transition-transform active:scale-98"
               title={language === "uk" ? "Натисніть для перегляду" : "Нажмите для просмотра"}
             >
               <canvas ref={canvasRef} className="w-full h-full object-contain pointer-events-none" />
@@ -1426,73 +1307,34 @@ export function StoryShareModal({
                 🔍 {language === "uk" ? "Перегляд" : "Просмотр"}
               </div>
             </div>
-            <span className="text-[10px] text-slate-400 mt-1.5">{t.story.exportResolution}</span>
+            <span className="text-[10px] text-slate-400 mt-1">{t.story.exportResolution}</span>
           </div>
         </div>
 
-        {/* Compact Ergonomic Footer: 3 Tiers, Always Visible */}
+        {/* Fixed Ultra-Compact Footer: Always 100% visible without scrolling */}
         <div className="pt-2 border-t border-white/10 flex flex-col gap-1.5 shrink-0">
-          {/* Row 1: Primary Telegram Stories Button */}
           <Button
             variant="accent"
-            size="default"
-            className="w-full h-11 font-bold text-xs sm:text-sm bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-500 text-white hover:opacity-95 flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/20 active:scale-[0.99] transition-transform"
-            onClick={handleShareTelegram}
-            disabled={isSharing || isGenerating}
+            size="lg"
+            className="w-full h-12 font-black text-xs sm:text-sm bg-gradient-to-r from-pink-500 via-rose-500 to-amber-500 text-white hover:opacity-95 flex items-center justify-center gap-2 shadow-lg shadow-pink-500/25 active:scale-[0.99] transition-transform"
+            onClick={handleForInstagram}
+            disabled={isGenerating}
           >
-            <Send className="h-4 w-4 shrink-0" />
+            <Camera className="h-4 w-4 shrink-0 text-white" />
             <span>
-              {isSharing
-                ? (language === "uk" ? "Відправка в Telegram..." : "Отправка в Telegram...")
-                : (language === "uk" ? "✈️ В Telegram Stories (через бота)" : language === "en" ? "✈️ To Telegram Stories" : "✈️ В Telegram Stories (через бота)")}
+              {isGenerating
+                ? (language === "uk" ? "Генерація картинки..." : "Генерация картинки...")
+                : (language === "uk" ? "📸 ОПУБЛІКУВАТИ В INSTAGRAM STORIES" : "📸 ОПУБЛИКОВАТЬ В INSTAGRAM STORIES")}
             </span>
           </Button>
 
-          {/* Row 2: Secondary Actions in 2-Column Grid (Instagram + Challenge) */}
-          <div className="grid grid-cols-2 gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-9 border-pink-500/30 text-pink-200 hover:text-white hover:bg-pink-500/10 text-xs font-semibold flex items-center justify-center gap-1.5"
-              onClick={handleForInstagram}
-              disabled={isGenerating || isSharing}
-            >
-              <Camera className="h-3.5 w-3.5 shrink-0 text-pink-400" />
-              <span className="truncate">
-                {language === "uk" ? "📸 Для Instagram" : language === "en" ? "📸 For Instagram" : "📸 Для Instagram"}
-              </span>
-            </Button>
-
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={isPublishingChallenge || publishedChallenge}
-              className={`h-9 font-semibold text-xs transition-all flex items-center justify-center gap-1 ${
-                publishedChallenge
-                  ? "border-emerald-500/40 text-emerald-300 bg-emerald-500/10"
-                  : "border-amber-500/30 text-amber-300 hover:bg-amber-500/10"
-              }`}
-              onClick={handlePublishChallenge}
-            >
-              <Flame className="h-3.5 w-3.5 shrink-0 text-amber-400" />
-              <span className="truncate">
-                {publishedChallenge
-                  ? (language === "uk" ? "В Челенджі ✓" : "В Челлендже ✓")
-                  : isPublishingChallenge
-                  ? (language === "uk" ? "Публікація..." : "Публикация...")
-                  : (language === "uk" ? "В Челендж" : language === "en" ? "To Challenge" : "В Челлендж")}
-              </span>
-            </Button>
-          </div>
-
-          {/* Row 3: Close Button */}
           <Button
             variant="ghost"
             size="sm"
-            className="w-full h-7 text-xs font-medium text-slate-400 hover:text-white hover:bg-white/5"
+            className="w-full h-7 text-xs font-medium text-slate-400 hover:text-white"
             onClick={() => onOpenChange(false)}
           >
-            {t.story.closeButton}
+            {language === "uk" ? "Закрити" : "Закрыть"}
           </Button>
         </div>
       </Dialog>
