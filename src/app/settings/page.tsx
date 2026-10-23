@@ -477,24 +477,31 @@ export default function SettingsPage() {
           {/* Forecast in Analytics Toggle */}
           <div className="pt-2 border-t border-white/5">
             <div className="flex items-center justify-between gap-3">
-              <div>
+              <div className="min-w-0">
                 <span className="text-xs font-semibold text-slate-300 block">
                   {t.analytics.toggleForecast}
                 </span>
-                <span className="text-[11px] text-slate-400 block mt-0.5">
+                <span className="text-[11px] text-slate-400 block mt-0.5 leading-tight">
                   {t.analytics.forecastEnabled}
                 </span>
               </div>
               <button
                 type="button"
-                onClick={() => setShowForecastInAnalytics(!showForecastInAnalytics)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all shrink-0 ${
-                  showForecastInAnalytics
-                    ? "bg-emerald-500 text-slate-950 border-emerald-400 shadow-md shadow-emerald-500/20"
-                    : "bg-white/5 text-slate-400 border-white/10 hover:text-white"
+                role="switch"
+                aria-checked={showForecastInAnalytics}
+                onClick={() => {
+                  setShowForecastInAnalytics(!showForecastInAnalytics);
+                  triggerHaptic("selection");
+                }}
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                  showForecastInAnalytics ? "bg-emerald-500 shadow-md shadow-emerald-500/30" : "bg-slate-700"
                 }`}
               >
-                {showForecastInAnalytics ? t.common.confirm : t.common.cancel}
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                    showForecastInAnalytics ? "translate-x-5" : "translate-x-0"
+                  }`}
+                />
               </button>
             </div>
           </div>
@@ -502,24 +509,31 @@ export default function SettingsPage() {
           {/* Keep Screen Awake (Wake Lock) */}
           <div className="pt-2 border-t border-white/5">
             <div className="flex items-center justify-between gap-3">
-              <div>
+              <div className="min-w-0">
                 <span className="text-xs font-semibold text-slate-300 block">
                   {t.settings.screenWakeLock}
                 </span>
-                <span className="text-[11px] text-slate-400 block mt-0.5">
+                <span className="text-[11px] text-slate-400 block mt-0.5 leading-tight">
                   {t.settings.screenWakeLockDesc}
                 </span>
               </div>
               <button
                 type="button"
-                onClick={() => setKeepScreenAwake(!keepScreenAwake)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all shrink-0 ${
-                  keepScreenAwake
-                    ? "bg-emerald-500 text-slate-950 border-emerald-400 shadow-md shadow-emerald-500/20"
-                    : "bg-white/5 text-slate-400 border-white/10 hover:text-white"
+                role="switch"
+                aria-checked={keepScreenAwake}
+                onClick={() => {
+                  setKeepScreenAwake(!keepScreenAwake);
+                  triggerHaptic("selection");
+                }}
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                  keepScreenAwake ? "bg-emerald-500 shadow-md shadow-emerald-500/30" : "bg-slate-700"
                 }`}
               >
-                {keepScreenAwake ? t.common.confirm : t.common.cancel}
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                    keepScreenAwake ? "translate-x-5" : "translate-x-0"
+                  }`}
+                />
               </button>
             </div>
           </div>
@@ -713,43 +727,105 @@ export default function SettingsPage() {
       </Card>
 
       {/* 5. Sound & Haptics */}
-      <Card className="border-white/10 bg-slate-900/60 p-4 sm:p-5 space-y-3">
+      <Card className="border-white/10 bg-slate-900/60 p-4 sm:p-5 space-y-4">
         <CardTitle className="text-sm sm:text-base flex items-center gap-2">
           <Volume2 className="h-4 w-4 text-cyan-400" />
           <span>{t.settings.audioAndHaptics}</span>
         </CardTitle>
 
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-1">
-          <div className="flex items-center gap-3 w-full sm:w-auto">
-            <Button
-              variant={soundEnabled ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSoundEnabled(!soundEnabled)}
-              className="text-xs font-semibold"
-            >
-              <Volume2 className="h-4 w-4 mr-1.5" />
-              <span>{t.settings.soundEffects}: {soundEnabled ? t.common.confirm : t.common.cancel}</span>
-            </Button>
+        <div className="space-y-3 divide-y divide-white/5">
+          {/* Sound Effects Row */}
+          <div className="flex items-center justify-between gap-3 pt-1">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="h-9 w-9 rounded-xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center shrink-0 text-cyan-400">
+                <Volume2 className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <span className="text-xs sm:text-sm font-semibold text-white block truncate">
+                  {t.settings.soundEffects}
+                </span>
+                <span className="text-[11px] text-slate-400 block leading-tight">
+                  {language === "uk"
+                    ? "Звукові сигнали таймера відпочинку"
+                    : language === "en"
+                    ? "Rest timer beep notifications"
+                    : "Звуковые сигналы таймера отдыха"}
+                </span>
+              </div>
+            </div>
 
-            <Button
-              variant={hapticsEnabled ? "default" : "outline"}
-              size="sm"
-              onClick={() => setHapticsEnabled(!hapticsEnabled)}
-              className="text-xs font-semibold"
+            <button
+              type="button"
+              role="switch"
+              aria-checked={soundEnabled}
+              onClick={() => {
+                setSoundEnabled(!soundEnabled);
+                triggerHaptic("selection");
+              }}
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                soundEnabled ? "bg-emerald-500 shadow-md shadow-emerald-500/30" : "bg-slate-700"
+              }`}
             >
-              <Vibrate className="h-4 w-4 mr-1.5" />
-              <span>{t.settings.hapticFeedback}: {hapticsEnabled ? t.common.confirm : t.common.cancel}</span>
-            </Button>
+              <span
+                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                  soundEnabled ? "translate-x-5" : "translate-x-0"
+                }`}
+              />
+            </button>
           </div>
 
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleTestSound}
-            className="text-xs text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10"
-          >
-            {t.settings.testSound}
-          </Button>
+          {/* Haptics Row */}
+          <div className="flex items-center justify-between gap-3 pt-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="h-9 w-9 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center shrink-0 text-purple-400">
+                <Vibrate className="h-4 w-4" />
+              </div>
+              <div className="min-w-0">
+                <span className="text-xs sm:text-sm font-semibold text-white block truncate">
+                  {t.settings.hapticFeedback}
+                </span>
+                <span className="text-[11px] text-slate-400 block leading-tight">
+                  {language === "uk"
+                    ? "Тактильний відгук на кнопки та таймер"
+                    : language === "en"
+                    ? "Haptic vibration on taps and timer"
+                    : "Тактильный отклик на кнопки и таймер"}
+                </span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              role="switch"
+              aria-checked={hapticsEnabled}
+              onClick={() => {
+                setHapticsEnabled(!hapticsEnabled);
+                triggerHaptic("selection");
+              }}
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                hapticsEnabled ? "bg-emerald-500 shadow-md shadow-emerald-500/30" : "bg-slate-700"
+              }`}
+            >
+              <span
+                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                  hapticsEnabled ? "translate-x-5" : "translate-x-0"
+                }`}
+              />
+            </button>
+          </div>
+
+          {/* Test Sound Button */}
+          <div className="pt-3 flex justify-center">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleTestSound}
+              className="w-full sm:w-auto h-9 text-xs text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10 hover:text-emerald-300 font-semibold flex items-center justify-center gap-2"
+            >
+              <Volume2 className="h-3.5 w-3.5" />
+              <span>{t.settings.testSound}</span>
+            </Button>
+          </div>
         </div>
       </Card>
 
