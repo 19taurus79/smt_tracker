@@ -28,6 +28,8 @@ import {
   Copy,
   ArrowRightLeft,
   FileJson,
+  Cloud,
+  RefreshCw,
 } from "lucide-react";
 import { MASTER_COACH_USERNAME, isCoachAccount, generateTelegramLinkUrl } from "@/lib/auth/roles";
 import { useWorkoutStore } from "@/lib/store/useWorkoutStore";
@@ -36,6 +38,7 @@ import { useSettingsStore } from "@/lib/store/useSettingsStore";
 import { usePrepStore } from "@/lib/store/usePrepStore";
 import { soundPlayer } from "@/lib/audio/sound";
 import { triggerHaptic, isTelegramWebApp } from "@/lib/tma/telegram";
+import { syncAllStoresWithCloud, isCloudStorageAvailable } from "@/lib/tma/cloudStorage";
 import { shareToTelegramCoach } from "@/lib/coach/telegramCoach";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -286,6 +289,38 @@ export default function SettingsPage() {
     setTimeout(() => soundPlayer.playBeep(1760, 0.4), 180);
     triggerHaptic("success");
     showToast(t.settings.soundTestSuccess);
+  };
+
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncResultText, setSyncResultText] = useState<string | null>(null);
+
+  const handleManualCloudSync = async () => {
+    setIsSyncing(true);
+    setSyncResultText(null);
+    triggerHaptic("selection");
+    try {
+      const res = await syncAllStoresWithCloud();
+      triggerHaptic("success");
+      setSyncResultText(
+        language === "uk"
+          ? `✅ Синхронізація успішна! Дані оновлено між вашим телефоном та комп'ютером.`
+          : `✅ Синхронизация успешна! Данные обновлены между вашим телефоном и компьютером.`
+      );
+      showToast(
+        language === "uk"
+          ? "✅ Хмарна синхронізація завершена!"
+          : "✅ Облачная синхронизация завершена!"
+      );
+    } catch (e: any) {
+      setSyncResultText(
+        language === "uk"
+          ? `⚠️ Помилка синхронізації: ${e?.message || "Невідомо"}`
+          : `⚠️ Ошибка синхронизации: ${e?.message || "Неизвестно"}`
+      );
+      triggerHaptic("warning");
+    } finally {
+      setIsSyncing(false);
+    }
   };
 
   const inTelegram = mounted ? isTelegramWebApp() : false;
@@ -826,6 +861,68 @@ export default function SettingsPage() {
               <span>{t.settings.testSound}</span>
             </Button>
           </div>
+        </div>
+      </Card>
+
+      {/* 5.5. Telegram CloudStorage Cross-Device Sync */}
+      <Card className="border-cyan-500/30 bg-gradient-to-br from-cyan-950/25 via-slate-900/60 to-slate-900/60 p-4 sm:p-5 space-y-3 shadow-lg shadow-cyan-500/5">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm sm:text-base flex items-center gap-2 text-white">
+            <Cloud className="h-4 w-4 text-cyan-400" />
+            <span>
+              {language === "uk"
+                ? "Хмарна синхронізація Telegram"
+                : language === "en"
+                ? "Telegram Cloud Sync"
+                : "Облачная синхронизация Telegram"}
+            </span>
+          </CardTitle>
+          <span
+            className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+              isCloudStorageAvailable()
+                ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
+                : "bg-slate-800 text-slate-400 border-white/10"
+            }`}
+          >
+            {isCloudStorageAvailable() ? "🟢 CLOUD SYNC" : "📱 LOCAL"}
+          </span>
+        </div>
+
+        <p className="text-xs text-slate-400 leading-relaxed">
+          {language === "uk"
+            ? "Автоматична синхронізація ваших тренувань, 1ПМ та замірів між мобільним телефоном та десктопом під вашим акаунтом Telegram."
+            : language === "en"
+            ? "Automatic synchronization of workouts, 1RM, and body measurements between mobile and desktop."
+            : "Автоматическая синхронизация ваших тренировок, 1ПМ и замеров между мобильным телефоном и десктопом под вашим аккаунтом Telegram."}
+        </p>
+
+        {syncResultText && (
+          <div className="rounded-xl border border-cyan-500/30 bg-cyan-950/40 p-2.5 text-xs text-cyan-200">
+            {syncResultText}
+          </div>
+        )}
+
+        <div className="pt-1 flex flex-col sm:flex-row items-center gap-3">
+          <Button
+            variant="accent"
+            size="sm"
+            onClick={handleManualCloudSync}
+            disabled={isSyncing}
+            className="w-full sm:w-auto h-9 font-bold text-xs bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white flex items-center justify-center gap-2 shadow-md shadow-cyan-500/20"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? "animate-spin" : ""}`} />
+            <span>
+              {isSyncing
+                ? (language === "uk" ? "Синхронізація..." : "Синхронизация...")
+                : (language === "uk" ? "🔄 Синхронізувати зараз" : "🔄 Синхронизировать сейчас")}
+            </span>
+          </Button>
+
+          <span className="text-[11px] text-slate-400 text-center sm:text-left">
+            {language === "uk"
+              ? "Виконано тренувань у системі: " + workouts.filter((w) => w.status === "completed").length
+              : "Выполнено тренировок в системе: " + workouts.filter((w) => w.status === "completed").length}
+          </span>
         </div>
       </Card>
 

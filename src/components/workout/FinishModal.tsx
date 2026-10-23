@@ -33,6 +33,7 @@ import { useTranslation } from "@/lib/i18n";
 import { getLocalizedExerciseName } from "@/lib/i18n/exercises";
 import { calculateAthleticScore, getTierLabel, getTierColor } from "@/lib/scoring/athleticScore";
 import { triggerHaptic } from "@/lib/tma/telegram";
+import { saveToCloudStorage } from "@/lib/tma/cloudStorage";
 
 interface FinishModalProps {
   open: boolean;
@@ -292,6 +293,14 @@ export function FinishModal({ open, onOpenChange, onFinished, workoutId }: Finis
         effectiveDuration,
         currentWorkout.id
       );
+
+      // Instantly push to Telegram CloudStorage so desktop updates immediately
+      if (typeof window !== "undefined") {
+        setTimeout(() => {
+          const raw = localStorage.getItem("smt_workouts_v2");
+          if (raw) void saveToCloudStorage("smt_workouts_v2", raw);
+        }, 50);
+      }
 
       let didSendToCoach = false;
       if (sendToCoach && !isCoach) {

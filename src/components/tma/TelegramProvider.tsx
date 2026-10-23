@@ -2,6 +2,7 @@
 
 import React, { useEffect } from "react";
 import { initTelegramWebApp, getTelegramUser, isTelegramWebApp } from "@/lib/tma/telegram";
+import { initCloudSync } from "@/lib/tma/cloudStorage";
 import { useSettingsStore } from "@/lib/store/useSettingsStore";
 import { isCoachAccount, MASTER_COACH_USERNAME } from "@/lib/auth/roles";
 
@@ -31,6 +32,9 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
           setCoachTelegramUsername(MASTER_COACH_USERNAME);
         }
       }
+
+      // 3. Initialize Telegram CloudStorage Cross-Device Sync (Mobile <-> Desktop)
+      initCloudSync();
     }
   }, [linkedTelegramUser, linkTelegramAccount, setCoachTelegramUsername]);
 
