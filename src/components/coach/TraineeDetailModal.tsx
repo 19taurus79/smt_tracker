@@ -20,6 +20,7 @@ import {
   Trophy,
   Scale,
   Sparkles,
+  Layers,
 } from "lucide-react";
 import { Dialog, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,54 @@ import { TraineeProfile, useCoachStore } from "@/lib/store/useCoachStore";
 import { formatTime, formatDate } from "@/lib/utils";
 import { useTranslation } from "@/lib/i18n";
 import { EditTraineeModal } from "./EditTraineeModal";
+interface ExerciseItem {
+  name: string;
+  weight: number;
+  reps: number;
+  setsCount: number;
+  supersetLabel?: string;
+}
+
+interface ExerciseGroup {
+  label: string;
+  isSuperset: boolean;
+  supersetIndex?: string;
+  exercises: ExerciseItem[];
+}
+
+function groupExercises(exercises: ExerciseItem[]): ExerciseGroup[] {
+  const groups: ExerciseGroup[] = [];
+  let currentGroup: ExerciseGroup | null = null;
+
+  for (const ex of exercises) {
+    const rawLabel = ex.supersetLabel?.trim() || "";
+    // Clean label: "Суперсет 1: Тяга + Жим" -> "Суперсет 1"
+    const cleanedLabel = rawLabel.includes(":")
+      ? rawLabel.split(":")[0].trim()
+      : rawLabel;
+
+    if (
+      currentGroup &&
+      currentGroup.label &&
+      currentGroup.label.toLowerCase() === cleanedLabel.toLowerCase() &&
+      cleanedLabel !== ""
+    ) {
+      currentGroup.exercises.push(ex);
+    } else {
+      const isSuperset = /суперсет|superset/i.test(cleanedLabel);
+      const numMatch = cleanedLabel.match(/\d+/)?.[0];
+      currentGroup = {
+        label: cleanedLabel,
+        isSuperset,
+        supersetIndex: numMatch,
+        exercises: [ex],
+      };
+      groups.push(currentGroup);
+    }
+  }
+
+  return groups;
+}
 
 interface TraineeDetailModalProps {
   trainee: TraineeProfile | null;
@@ -40,6 +89,43 @@ export function TraineeDetailModal({ trainee: initialTrainee, open, onOpenChange
   const trainee = storeTrainee || initialTrainee;
 
   const { t, language } = useTranslation();
+
+  const setsLabel = (count: number) => {
+    if (language === "en") return count === 1 ? "set" : "sets";
+    if (language === "uk") {
+      if (count === 1) return "підхід";
+      if (count >= 2 && count <= 4) return "підходи";
+      return "підходів";
+    }
+    if (count === 1) return "подход";
+    if (count >= 2 && count <= 4) return "подхода";
+    return "подходов";
+  };
+
+  const exercisesTitle =
+    language === "en"
+      ? "Completed Exercises"
+      : language === "uk"
+      ? "Виконані вправи"
+      : "Выполненные упражнения";
+
+  const supersetTag = language === "en" ? "Superset" : "Суперсет";
+  const singleBlockTag =
+    language === "en"
+      ? "Single Block"
+      : language === "uk"
+      ? "Окремий блок"
+      : "Отдельный блок";
+
+  const volumeLabel =
+    language === "en" ? "volume" : language === "uk" ? "об'єм" : "объем";
+
+  const bwLabel =
+    language === "en"
+      ? "Bodyweight"
+      : language === "uk"
+      ? "Власна вага"
+      : "Свой вес";
 
   const [activeTab, setActiveTab] = useState<"workouts" | "body" | "notes">("workouts");
   const [editedNotes, setEditedNotes] = useState(trainee?.coachNotes || "");
@@ -389,38 +475,146 @@ export function TraineeDetailModal({ trainee: initialTrainee, open, onOpenChange
                     </div>
                   </div>
 
-                  {/* Exercises: Unified Divider List (NO nested double-margin boxes!) */}
+                  {/* Exercises: Grouped Bento Cards (Crystal-clear & legible) */}
                   {w.exercises && w.exercises.length > 0 && (
-                    <div className="pt-1.5 border-t border-white/5 space-y-1.5">
-                      <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">
-                        Виконані вправи:
-                      </span>
-                      <div className="rounded-xl bg-slate-950/50 border border-white/5 divide-y divide-white/5 overflow-hidden">
-                        {w.exercises.map((ex, idx) => (
-                          <div
-                            key={idx}
-                            className="flex items-center justify-between gap-2.5 px-3 py-2 text-xs hover:bg-white/[0.02] transition-colors"
-                          >
-                            <div className="flex items-center gap-2 min-w-0">
-                              {ex.supersetLabel && (
-                                <span className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[9px] font-mono text-emerald-400/80 shrink-0">
-                                  {ex.supersetLabel}
-                                </span>
+                    <div className="pt-2 border-t border-white/5 space-y-2">
+                      <div className="flex items-center justify-between text-[10px]">
+                        <span className="uppercase font-bold text-slate-400 tracking-wider">
+                          {exercisesTitle}:
+                        </span>
+                        <span className="text-slate-400 font-mono">
+                          {w.exercises.reduce((acc, curr) => acc + (curr.setsCount || 1), 0)}{" "}
+                          {setsLabel(w.exercises.reduce((acc, curr) => acc + (curr.setsCount || 1), 0))}
+                        </span>
+                      </div>
+
+                      <div className="space-y-2">
+                        {groupExercises(w.exercises).map((group, gIdx) => {
+                          const isSuperset = group.isSuperset;
+
+                          return (
+                            <div
+                              key={gIdx}
+                              className={`rounded-xl sm:rounded-2xl border overflow-hidden transition-all shadow-sm ${
+                                isSuperset
+                                  ? "bg-slate-950/75 border-emerald-500/25"
+                                  : "bg-slate-950/60 border-white/10"
+                              }`}
+                            >
+                              {/* Header if label exists */}
+                              {group.label && (
+                                <div
+                                  className={`px-3 py-1.5 border-b flex items-center justify-between text-xs ${
+                                    isSuperset
+                                      ? "bg-gradient-to-r from-emerald-950/40 via-emerald-900/15 to-transparent border-emerald-500/20 text-emerald-300"
+                                      : "bg-white/[0.03] border-white/5 text-slate-300"
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-1.5 font-bold tracking-wider uppercase text-[10px] sm:text-[11px]">
+                                    {isSuperset ? (
+                                      <Layers className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                                    ) : (
+                                      <Dumbbell className="h-3.5 w-3.5 text-cyan-400 shrink-0" />
+                                    )}
+                                    <span>{group.label}</span>
+                                  </div>
+                                  <span
+                                    className={`text-[9px] font-semibold px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                                      isSuperset
+                                        ? "bg-emerald-500/15 border border-emerald-500/30 text-emerald-300"
+                                        : "bg-white/5 border border-white/10 text-slate-400"
+                                    }`}
+                                  >
+                                    {isSuperset ? supersetTag : singleBlockTag}
+                                  </span>
+                                </div>
                               )}
-                              <span className="text-slate-200 font-medium leading-snug">
-                                {ex.name}
-                              </span>
+
+                              {/* Exercises in Group */}
+                              <div className="divide-y divide-white/5">
+                                {group.exercises.map((ex, exIdx) => {
+                                  const exVolume = ex.weight * ex.reps * (ex.setsCount || 1);
+                                  const letter = exIdx === 0 ? "А" : exIdx === 1 ? "Б" : `${exIdx + 1}`;
+                                  const stepLabel = isSuperset
+                                    ? (group.supersetIndex ? `${group.supersetIndex}${letter}` : letter)
+                                    : null;
+
+                                  return (
+                                    <div
+                                      key={exIdx}
+                                      className="p-2.5 sm:p-3 flex items-center justify-between gap-3 hover:bg-white/[0.02] transition-colors"
+                                    >
+                                      <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                        {stepLabel && (
+                                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-mono font-bold text-xs shadow-inner">
+                                            {stepLabel}
+                                          </span>
+                                        )}
+
+                                        <div className="min-w-0 flex-1">
+                                          <h5 className="font-bold text-white text-xs sm:text-sm leading-snug break-words">
+                                            {ex.name}
+                                          </h5>
+                                          <div className="flex items-center gap-2 mt-0.5 text-[11px] text-slate-400 flex-wrap">
+                                            <span className="inline-flex items-center gap-1 text-slate-300 font-medium">
+                                              <span className="text-emerald-400 font-bold font-mono">
+                                                {ex.setsCount || 1}
+                                              </span>
+                                              <span className="text-slate-400 text-[10px]">
+                                                {setsLabel(ex.setsCount || 1)}
+                                              </span>
+                                            </span>
+                                            {exVolume > 0 && (
+                                              <>
+                                                <span className="text-slate-600">•</span>
+                                                <span className="text-slate-400 font-mono text-[10px]">
+                                                  {volumeLabel}:{" "}
+                                                  <strong className="text-slate-300 font-bold">
+                                                    {exVolume.toLocaleString()} кг
+                                                  </strong>
+                                                </span>
+                                              </>
+                                            )}
+                                          </div>
+                                        </div>
+                                      </div>
+
+                                      {/* Working Weight & Reps Badge */}
+                                      <div className="shrink-0">
+                                        <div className="inline-flex items-center px-2.5 py-1.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-mono text-xs shadow-sm">
+                                          {ex.weight > 0 ? (
+                                            <>
+                                              <span className="font-black text-white text-xs sm:text-sm">
+                                                {ex.weight}
+                                              </span>
+                                              <span className="text-[10px] text-emerald-400 font-medium ml-0.5">
+                                                кг
+                                              </span>
+                                              <span className="text-emerald-500/60 mx-1 font-sans">×</span>
+                                              <span className="font-black text-white text-xs sm:text-sm">
+                                                {ex.reps}
+                                              </span>
+                                            </>
+                                          ) : (
+                                            <>
+                                              <span className="text-[10px] text-slate-300 font-medium mr-1">
+                                                {bwLabel}
+                                              </span>
+                                              <span className="text-emerald-500/60 mx-0.5 font-sans">×</span>
+                                              <span className="font-black text-white text-xs sm:text-sm">
+                                                {ex.reps}
+                                              </span>
+                                            </>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
                             </div>
-                            <div className="shrink-0 flex items-center gap-1.5">
-                              <span className="px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-mono font-bold text-xs whitespace-nowrap">
-                                {ex.weight} кг × {ex.reps}
-                              </span>
-                              <span className="text-[10px] text-slate-400 font-mono font-medium whitespace-nowrap">
-                                ({ex.setsCount} підх)
-                              </span>
-                            </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   )}
