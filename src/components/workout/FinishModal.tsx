@@ -48,6 +48,7 @@ export function FinishModal({ open, onOpenChange, onFinished, workoutId }: Finis
     viewingWorkoutId,
     workouts,
     workoutElapsedSeconds,
+    getRealElapsedSeconds,
     pauseStopwatch,
     finishWorkout,
   } = useWorkoutStore();
@@ -138,17 +139,31 @@ export function FinishModal({ open, onOpenChange, onFinished, workoutId }: Finis
   useEffect(() => {
     if (open) {
       pauseStopwatch();
-      const dur = currentWorkout?.durationSeconds || workoutElapsedSeconds || 1;
+      const realDur = typeof getRealElapsedSeconds === "function" ? getRealElapsedSeconds() : workoutElapsedSeconds;
+      const calcDur = (currentWorkout?.completedAt && currentWorkout?.startedAt)
+        ? Math.round((new Date(currentWorkout.completedAt).getTime() - new Date(currentWorkout.startedAt).getTime()) / 1000)
+        : 0;
+      const dur =
+        realDur > 0
+          ? realDur
+          : (currentWorkout?.durationSeconds && currentWorkout.durationSeconds > 0)
+          ? currentWorkout.durationSeconds
+          : (calcDur > 0 ? calcDur : 1);
       setFrozenDuration(dur);
     } else {
       setFrozenDuration(0);
     }
   }, [open, currentWorkout]);
 
+  const calcDurFallback = (currentWorkout?.completedAt && currentWorkout?.startedAt)
+    ? Math.round((new Date(currentWorkout.completedAt).getTime() - new Date(currentWorkout.startedAt).getTime()) / 1000)
+    : 0;
   const effectiveDuration =
     frozenDuration > 0
       ? frozenDuration
-      : currentWorkout?.durationSeconds || workoutElapsedSeconds || 1;
+      : (currentWorkout?.durationSeconds && currentWorkout.durationSeconds > 0)
+      ? currentWorkout.durationSeconds
+      : (calcDurFallback > 0 ? calcDurFallback : 1);
   const tonnage = currentWorkout
     ? calculateWorkoutTonnage(currentWorkout.supersets)
     : 0;

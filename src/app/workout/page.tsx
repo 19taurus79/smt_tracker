@@ -151,17 +151,8 @@ function WorkoutContent() {
   }
 
   const handleOpenFinishModal = () => {
-    // 1. Immediately pause stopwatch & finalize workout in store so it is NEVER left running in background!
-    const effectiveDuration = workoutElapsedSeconds || currentWorkout.durationSeconds || 1;
-    finishWorkout(
-      "",
-      undefined,
-      weightIncrementKg,
-      soundEnabled,
-      hapticsEnabled,
-      effectiveDuration,
-      currentWorkout.id
-    );
+    // 1. Pause stopwatch to freeze the exact elapsed duration
+    pauseStopwatch();
     // 2. Open finish modal for review, progression, tags, challenge & stories
     setIsFinishModalOpen(true);
   };

@@ -32,7 +32,14 @@ export function generateWorkoutCoachMessage({
       })
     : new Date().toLocaleDateString(localeStr);
 
-  const durationStr = formatTime(workout.durationSeconds || 0);
+  const calcDurFallback = (workout.completedAt && workout.startedAt)
+    ? Math.round((new Date(workout.completedAt).getTime() - new Date(workout.startedAt).getTime()) / 1000)
+    : 0;
+  const effectiveDuration = (workout.durationSeconds && workout.durationSeconds > 0)
+    ? workout.durationSeconds
+    : (calcDurFallback > 0 ? calcDurFallback : 0);
+
+  const durationStr = formatTime(effectiveDuration);
   const kgUnit = language === "en" ? "kg" : "кг";
   const minUnit = language === "en" ? "min" : "хв";
   const cmUnit = language === "en" ? "cm" : "см";
@@ -64,7 +71,7 @@ export function generateWorkoutCoachMessage({
 
   const scoreResult = calculateAthleticScore({
     tonnageKg: workout.tonnageKg || 0,
-    durationSeconds: workout.durationSeconds || 45 * 60,
+    durationSeconds: effectiveDuration,
     bodyWeightKg: latestMeasurement?.weightKg || 80,
     gender: gender || "male",
     age: userAge || 28,

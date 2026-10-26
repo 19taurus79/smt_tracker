@@ -109,9 +109,16 @@ export function AthleticScoreChart() {
 
   // Compute scores for completed workouts
   const completedScores = completedWorkouts.map((w) => {
+    const calcSec = (w.completedAt && w.startedAt)
+      ? Math.round((new Date(w.completedAt).getTime() - new Date(w.startedAt).getTime()) / 1000)
+      : 0;
+    const effSec = (w.durationSeconds && w.durationSeconds > 0)
+      ? w.durationSeconds
+      : (calcSec > 0 ? calcSec : 0);
+
     const res = calculateAthleticScore({
       tonnageKg: w.tonnageKg || 0,
-      durationSeconds: w.durationSeconds || 45 * 60,
+      durationSeconds: effSec,
       bodyWeightKg: athleteWeight,
       gender,
       age: userAge,
@@ -160,9 +167,16 @@ export function AthleticScoreChart() {
     let pointTonnage = 0;
 
     if (isCompleted) {
+      const calcSec = (w.completedAt && w.startedAt)
+        ? Math.round((new Date(w.completedAt).getTime() - new Date(w.startedAt).getTime()) / 1000)
+        : 0;
+      const effSec = (w.durationSeconds && w.durationSeconds > 0)
+        ? w.durationSeconds
+        : (calcSec > 0 ? calcSec : 0);
+
       const res = calculateAthleticScore({
         tonnageKg: w.tonnageKg || 0,
-        durationSeconds: w.durationSeconds || 45 * 60,
+        durationSeconds: effSec,
         bodyWeightKg: athleteWeight,
         gender,
         age: userAge,

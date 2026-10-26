@@ -142,10 +142,17 @@ export default function HomePage() {
   const latestCompleted = completedWorkouts[completedWorkouts.length - 1];
   const latestBody = measurements[0];
 
+  const calcLatestDuration = (latestCompleted?.completedAt && latestCompleted?.startedAt)
+    ? Math.round((new Date(latestCompleted.completedAt).getTime() - new Date(latestCompleted.startedAt).getTime()) / 1000)
+    : 0;
+  const effectiveLatestDuration = (latestCompleted?.durationSeconds && latestCompleted.durationSeconds > 0)
+    ? latestCompleted.durationSeconds
+    : (calcLatestDuration > 0 ? calcLatestDuration : 0);
+
   const latestScore = latestCompleted
     ? calculateAthleticScore({
         tonnageKg: latestCompleted.tonnageKg || 0,
-        durationSeconds: latestCompleted.durationSeconds || 45 * 60,
+        durationSeconds: effectiveLatestDuration,
         bodyWeightKg: latestBody?.weightKg || 80,
         gender,
         age: userAge,

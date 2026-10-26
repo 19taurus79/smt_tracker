@@ -34,10 +34,17 @@ export function WorkoutCard({ workout, onStart, onOpenReport }: WorkoutCardProps
   const isCurrentActive = activeWorkoutId === workout.id;
   const isCompleted = workout.status === "completed";
 
+  const calcDurFallback = (workout.completedAt && workout.startedAt)
+    ? Math.round((new Date(workout.completedAt).getTime() - new Date(workout.startedAt).getTime()) / 1000)
+    : 0;
+  const effectiveDuration = (workout.durationSeconds && workout.durationSeconds > 0)
+    ? workout.durationSeconds
+    : (calcDurFallback > 0 ? calcDurFallback : 0);
+
   const scoreResult = isCompleted
     ? calculateAthleticScore({
         tonnageKg: workout.tonnageKg || 0,
-        durationSeconds: workout.durationSeconds || 45 * 60,
+        durationSeconds: effectiveDuration,
         bodyWeightKg: measurements[0]?.weightKg || 80,
         gender,
         age: userAge,

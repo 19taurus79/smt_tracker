@@ -25,6 +25,9 @@ interface WorkoutState {
   activeWorkoutId: string | null;
   viewingWorkoutId: string | null;
   workoutElapsedSeconds: number;
+  workoutStartedAtTimestamp: number | null;
+  workoutLastResumeTimestamp: number | null;
+  workoutAccumulatedSeconds: number;
   isStopwatchRunning: boolean;
   
   // Разминка
@@ -41,6 +44,7 @@ interface WorkoutState {
   setHasHydrated: (val: boolean) => void;
 
   // Actions
+  getRealElapsedSeconds: () => number;
   initializeProgram: (exercises: ExerciseDefinition[], weightStep?: number) => void;
   updateExercise1RM: (exerciseId: string, oneRepMax: number) => void;
   setViewingWorkoutId: (workoutId: string | null) => void;
@@ -112,6 +116,9 @@ export const useWorkoutStore = create<WorkoutState>()(
       activeWorkoutId: null,
       viewingWorkoutId: null,
       workoutElapsedSeconds: 0,
+      workoutStartedAtTimestamp: null,
+      workoutLastResumeTimestamp: null,
+      workoutAccumulatedSeconds: 0,
       isStopwatchRunning: false,
 
       isWarmupModalOpen: false,
@@ -132,6 +139,9 @@ export const useWorkoutStore = create<WorkoutState>()(
           activeWorkoutId: null,
           viewingWorkoutId: null,
           workoutElapsedSeconds: 0,
+          workoutStartedAtTimestamp: null,
+          workoutLastResumeTimestamp: null,
+          workoutAccumulatedSeconds: 0,
           isStopwatchRunning: false,
         });
       },
@@ -147,7 +157,7 @@ export const useWorkoutStore = create<WorkoutState>()(
       setViewingWorkoutId: (workoutId) => set({ viewingWorkoutId: workoutId }),
 
       startWorkout: (workoutId) => {
-        const { workouts } = get();
+        const { workouts, workoutElapsedSeconds, workoutAccumulatedSeconds } = get();
         const workout = workouts.find((w) => w.id === workoutId);
         if (!workout) return;
 
@@ -160,10 +170,23 @@ export const useWorkoutStore = create<WorkoutState>()(
           return;
         }
 
+        const now = Date.now();
+        const baseSeconds =
+          workout.durationSeconds && workout.durationSeconds > 0
+            ? workout.durationSeconds
+            : workoutElapsedSeconds > 0
+            ? workoutElapsedSeconds
+            : workoutAccumulatedSeconds > 0
+            ? workoutAccumulatedSeconds
+            : 0;
+
         set({
           activeWorkoutId: workoutId,
           viewingWorkoutId: workoutId,
-          workoutElapsedSeconds: workout.durationSeconds || 0,
+          workoutStartedAtTimestamp: now,
+          workoutLastResumeTimestamp: now,
+          workoutAccumulatedSeconds: baseSeconds,
+          workoutElapsedSeconds: baseSeconds,
           isStopwatchRunning: true,
         });
         setWorkoutActiveMode(true);
@@ -191,6 +214,9 @@ export const useWorkoutStore = create<WorkoutState>()(
         set({
           activeWorkoutId: isActive ? null : activeWorkoutId,
           workoutElapsedSeconds: isActive ? 0 : get().workoutElapsedSeconds,
+          workoutAccumulatedSeconds: isActive ? 0 : get().workoutAccumulatedSeconds,
+          workoutLastResumeTimestamp: isActive ? null : get().workoutLastResumeTimestamp,
+          workoutStartedAtTimestamp: isActive ? null : get().workoutStartedAtTimestamp,
           isStopwatchRunning: isActive ? false : get().isStopwatchRunning,
           isRestTimerActive: isActive ? false : get().isRestTimerActive,
           workouts: workouts.map((w) => {
@@ -227,12 +253,45 @@ export const useWorkoutStore = create<WorkoutState>()(
         get().startWorkout(workoutId);
       },
 
-      pauseStopwatch: () => set({ isStopwatchRunning: false }),
-      resumeStopwatch: () => set({ isStopwatchRunning: true }),
+      getRealElapsedSeconds: () => {
+        const { isStopwatchRunning, workoutLastResumeTimestamp, workoutAccumulatedSeconds, workoutElapsedSeconds } = get();
+        if (isStopwatchRunning && workoutLastResumeTimestamp) {
+          const delta = Math.max(0, Math.floor((Date.now() - workoutLastResumeTimestamp) / 1000));
+          return (workoutAccumulatedSeconds || 0) + delta;
+        }
+        return workoutElapsedSeconds || workoutAccumulatedSeconds || 0;
+      },
+
+      pauseStopwatch: () => {
+        const { isStopwatchRunning, workoutLastResumeTimestamp, workoutAccumulatedSeconds } = get();
+        if (isStopwatchRunning && workoutLastResumeTimestamp) {
+          const delta = Math.max(0, Math.floor((Date.now() - workoutLastResumeTimestamp) / 1000));
+          const total = (workoutAccumulatedSeconds || 0) + delta;
+          set({
+            isStopwatchRunning: false,
+            workoutLastResumeTimestamp: null,
+            workoutAccumulatedSeconds: total,
+            workoutElapsedSeconds: total,
+          });
+        } else {
+          set({ isStopwatchRunning: false, workoutLastResumeTimestamp: null });
+        }
+      },
+
+      resumeStopwatch: () => {
+        const now = Date.now();
+        set({
+          isStopwatchRunning: true,
+          workoutLastResumeTimestamp: now,
+          workoutStartedAtTimestamp: get().workoutStartedAtTimestamp || now,
+        });
+      },
+
       tickStopwatch: () => {
-        const { isStopwatchRunning, workoutElapsedSeconds } = get();
-        if (isStopwatchRunning) {
-          set({ workoutElapsedSeconds: workoutElapsedSeconds + 1 });
+        const { isStopwatchRunning, workoutLastResumeTimestamp, workoutAccumulatedSeconds } = get();
+        if (isStopwatchRunning && workoutLastResumeTimestamp) {
+          const delta = Math.max(0, Math.floor((Date.now() - workoutLastResumeTimestamp) / 1000));
+          set({ workoutElapsedSeconds: (workoutAccumulatedSeconds || 0) + delta });
         }
       },
 
@@ -472,10 +531,11 @@ export const useWorkoutStore = create<WorkoutState>()(
         const currentWorkout = workouts.find((w) => w.id === workoutIdToFinish);
         if (!currentWorkout) return { tonnage: 0, power: 0, progressed: false };
 
+        const realElapsed = get().getRealElapsedSeconds();
         const effectiveDuration =
           overrideDurationSeconds !== undefined && overrideDurationSeconds > 0
             ? overrideDurationSeconds
-            : (currentWorkout.durationSeconds || workoutElapsedSeconds);
+            : (realElapsed > 0 ? realElapsed : (currentWorkout.durationSeconds || 1));
 
         const tonnage = calculateWorkoutTonnage(currentWorkout.supersets);
         const power = calculateWorkoutPower(tonnage, effectiveDuration);
@@ -551,6 +611,9 @@ export const useWorkoutStore = create<WorkoutState>()(
           workouts: updatedWorkouts,
           activeWorkoutId: null,
           workoutElapsedSeconds: 0,
+          workoutAccumulatedSeconds: 0,
+          workoutLastResumeTimestamp: null,
+          workoutStartedAtTimestamp: null,
           isStopwatchRunning: false,
           isRestTimerActive: false,
         });
@@ -572,6 +635,9 @@ export const useWorkoutStore = create<WorkoutState>()(
         set({
           activeWorkoutId: null,
           workoutElapsedSeconds: 0,
+          workoutAccumulatedSeconds: 0,
+          workoutLastResumeTimestamp: null,
+          workoutStartedAtTimestamp: null,
           isStopwatchRunning: false,
           isRestTimerActive: false,
           workouts: workouts.map((w) =>
@@ -587,6 +653,9 @@ export const useWorkoutStore = create<WorkoutState>()(
           workouts: getDemoProgram(),
           activeWorkoutId: null,
           workoutElapsedSeconds: 0,
+          workoutAccumulatedSeconds: 0,
+          workoutLastResumeTimestamp: null,
+          workoutStartedAtTimestamp: null,
           isStopwatchRunning: false,
           isRestTimerActive: false,
         });
@@ -598,6 +667,9 @@ export const useWorkoutStore = create<WorkoutState>()(
           workouts: generateFullProgram(exercises, 2.5),
           activeWorkoutId: null,
           workoutElapsedSeconds: 0,
+          workoutAccumulatedSeconds: 0,
+          workoutLastResumeTimestamp: null,
+          workoutStartedAtTimestamp: null,
           isStopwatchRunning: false,
           isRestTimerActive: false,
         });
@@ -609,7 +681,41 @@ export const useWorkoutStore = create<WorkoutState>()(
       name: "smt_workouts_v2",
       storage: createJSONStorage(() => localStorage),
       onRehydrateStorage: () => (state) => {
-        state?.setHasHydrated(true);
+        if (!state) return;
+        state.setHasHydrated(true);
+
+        // Синхронизация времени секундомера, если приложение закрывалось или сворачивалось во время тренировки
+        if (state.isStopwatchRunning && state.workoutLastResumeTimestamp) {
+          const delta = Math.max(0, Math.floor((Date.now() - state.workoutLastResumeTimestamp) / 1000));
+          state.workoutElapsedSeconds = (state.workoutAccumulatedSeconds || 0) + delta;
+        }
+
+        // Авто-восстановление старых завершенных тренировок при наличии точных меток startedAt и completedAt
+        if (Array.isArray(state.workouts)) {
+          let hasRepairs = false;
+          const repaired = state.workouts.map((w) => {
+            if (w.status === "completed" && w.startedAt && w.completedAt) {
+              const wallClockSec = Math.round(
+                (new Date(w.completedAt).getTime() - new Date(w.startedAt).getTime()) / 1000
+              );
+              // Если сохраненное время нулевое или неправдоподобно занижено (< 25% астрономического времени из-за сна экрана):
+              if (wallClockSec > 60 && (!w.durationSeconds || w.durationSeconds < Math.min(300, wallClockSec * 0.25))) {
+                hasRepairs = true;
+                const tonnage = w.tonnageKg || 0;
+                const power = tonnage > 0 ? Math.round(tonnage / (wallClockSec / 60)) : w.powerKgPerMin;
+                return {
+                  ...w,
+                  durationSeconds: wallClockSec,
+                  powerKgPerMin: power,
+                };
+              }
+            }
+            return w;
+          });
+          if (hasRepairs) {
+            state.workouts = repaired;
+          }
+        }
       },
     }
   )

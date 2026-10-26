@@ -70,10 +70,17 @@ export function WorkoutReportModal({
 
   if (!workout) return null;
 
+  const calcDurFallback = (workout.completedAt && workout.startedAt)
+    ? Math.round((new Date(workout.completedAt).getTime() - new Date(workout.startedAt).getTime()) / 1000)
+    : 0;
+  const effectiveDuration = (workout.durationSeconds && workout.durationSeconds > 0)
+    ? workout.durationSeconds
+    : (calcDurFallback > 0 ? calcDurFallback : 0);
+
   const athleteWeight = measurements[0]?.weightKg || 80;
   const athleticScore = calculateAthleticScore({
     tonnageKg: workout.tonnageKg || 0,
-    durationSeconds: workout.durationSeconds || 45 * 60,
+    durationSeconds: effectiveDuration,
     bodyWeightKg: athleteWeight,
     gender,
     age: userAge,
@@ -92,7 +99,7 @@ export function WorkoutReportModal({
         body: JSON.stringify({
           workoutNumber: workout.workoutNumber || 1,
           microcycle: workout.microcycle || 1,
-          durationSeconds: workout.durationSeconds || 45 * 60,
+          durationSeconds: effectiveDuration,
           tonnageKg: workout.tonnageKg || 0,
           powerKgPerMin: workout.powerKgPerMin || 0,
           athleticScore: {
@@ -134,7 +141,7 @@ export function WorkoutReportModal({
         traineeUsername: linkedTelegramUser?.username || (typeof window !== "undefined" && window.Telegram?.WebApp?.initDataUnsafe?.user?.username) || "",
         workoutNumber: workout.workoutNumber || 1,
         microcycle: workout.microcycle || 1,
-        durationSeconds: workout.durationSeconds || 45 * 60,
+        durationSeconds: effectiveDuration,
         tonnageKg: workout.tonnageKg || 0,
         powerKgPerMin: workout.powerKgPerMin || 0,
         athleticScore: {

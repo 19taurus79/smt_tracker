@@ -83,7 +83,14 @@ export function StoryShareModal({
 
   if (!workout) return null;
 
-  const durationStr = formatTime(workout.durationSeconds || 0);
+  const calcDurFallback = (workout.completedAt && workout.startedAt)
+    ? Math.round((new Date(workout.completedAt).getTime() - new Date(workout.startedAt).getTime()) / 1000)
+    : 0;
+  const effectiveDuration = (workout.durationSeconds && workout.durationSeconds > 0)
+    ? workout.durationSeconds
+    : (calcDurFallback > 0 ? calcDurFallback : 0);
+
+  const durationStr = formatTime(effectiveDuration);
   const tonnage = workout.tonnageKg || 0;
   const power = workout.powerKgPerMin || 0;
   
@@ -101,7 +108,7 @@ export function StoryShareModal({
   const athleteWeight = latestMeasurement?.weightKg || 80;
   const athleticScore = calculateAthleticScore({
     tonnageKg: tonnage,
-    durationSeconds: workout.durationSeconds || 45 * 60,
+    durationSeconds: effectiveDuration,
     bodyWeightKg: athleteWeight,
     gender: gender || "male",
     age: userAge || 28,
