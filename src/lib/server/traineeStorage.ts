@@ -121,13 +121,17 @@ export function autoDeduplicateTrainees(trainees: TraineeProfile[]): TraineeProf
       const aliasName = primary.name !== humanName ? primary.name : (secondary.name !== humanName ? secondary.name : undefined);
 
       const combinedWorkouts = [...(primary.workoutHistory || []), ...(secondary.workoutHistory || [])];
-      const seenWorkouts = new Set<string>();
       const dedupedWorkouts: TraineeWorkoutRecord[] = [];
       for (const w of combinedWorkouts) {
         const key = `${w.workoutNumber}_${w.microcycle}`;
-        if (!seenWorkouts.has(key)) {
-          seenWorkouts.add(key);
+        const existingIdx = dedupedWorkouts.findIndex(dw => `${dw.workoutNumber}_${dw.microcycle}` === key);
+        if (existingIdx === -1) {
           dedupedWorkouts.push(w);
+        } else {
+          // If incoming workout record has more exercises, prefer the fuller one!
+          if ((w.exercises?.length || 0) > (dedupedWorkouts[existingIdx].exercises?.length || 0)) {
+            dedupedWorkouts[existingIdx] = w;
+          }
         }
       }
 
@@ -257,6 +261,7 @@ export function registerOrUpdateLead(lead: {
   tierKey?: TraineeProfile["tierKey"];
   tierLabel?: string;
   coachNotes?: string;
+  workoutHistory?: TraineeWorkoutRecord[];
 }): TraineeProfile {
   const trainees = ensureDataFile();
   const cleanUsername = (lead.username || "").toLowerCase().replace(/^@/, "").trim();
@@ -286,6 +291,11 @@ export function registerOrUpdateLead(lead: {
     }
     const nextWorkoutNum = Math.min(36, newTotal + 1);
 
+    const updatedWorkoutHistory =
+      lead.workoutHistory && lead.workoutHistory.length > 0
+        ? lead.workoutHistory
+        : target.workoutHistory;
+
     const updated: TraineeProfile = {
       ...target,
       name: lead.name || target.name,
@@ -300,6 +310,7 @@ export function registerOrUpdateLead(lead: {
       tierLabel: lead.tierLabel || target.tierLabel,
       coachNotes: lead.coachNotes || target.coachNotes,
       lastWorkoutDate: target.lastWorkoutDate || now,
+      workoutHistory: updatedWorkoutHistory,
     };
     trainees[existingIndex] = updated;
     saveDataFile(trainees);
@@ -326,7 +337,7 @@ export function registerOrUpdateLead(lead: {
     tierLabel: lead.tierLabel || (initialTotal > 0 ? "Активний Атлет 🏋️‍♂️" : "НОВИЙ ЛІД 🔥"),
     status: lead.status || (initialTotal > 0 ? "active" : "new_lead"),
     coachNotes: lead.coachNotes || "Підписався на канал і запустив трекер.",
-    workoutHistory: [],
+    workoutHistory: lead.workoutHistory || [],
     measurementHistory: [],
   };
 

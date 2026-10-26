@@ -401,9 +401,16 @@ export function TraineeDetailModal({ trainee: initialTrainee, open, onOpenChange
                             key={idx}
                             className="flex items-center justify-between gap-2.5 px-3 py-2 text-xs hover:bg-white/[0.02] transition-colors"
                           >
-                            <span className="text-slate-200 font-medium leading-snug">
-                              {ex.name}
-                            </span>
+                            <div className="flex items-center gap-2 min-w-0">
+                              {ex.supersetLabel && (
+                                <span className="px-1.5 py-0.5 rounded bg-white/5 border border-white/10 text-[9px] font-mono text-emerald-400/80 shrink-0">
+                                  {ex.supersetLabel}
+                                </span>
+                              )}
+                              <span className="text-slate-200 font-medium leading-snug">
+                                {ex.name}
+                              </span>
+                            </div>
                             <div className="shrink-0 flex items-center gap-1.5">
                               <span className="px-2 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-mono font-bold text-xs whitespace-nowrap">
                                 {ex.weight} кг × {ex.reps}

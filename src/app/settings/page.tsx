@@ -293,6 +293,32 @@ export default function SettingsPage() {
       const latestM = parsed.measurements && parsed.measurements.length > 0 ? parsed.measurements[0] : null;
       const totalTonnage = completedWorkouts.reduce((acc: number, w: { tonnageKg?: number }) => acc + (w.tonnageKg || 0), 0);
 
+      const serializedWorkouts = completedWorkouts.map((w: any) => {
+        const exercisesList = (w.supersets || []).flatMap((ss: any) =>
+          (ss.exercises || []).map((ex: any) => ({
+            name: ex.name,
+            weight: ex.sets?.[0]?.actualWeight ?? ex.sets?.[0]?.targetWeight ?? 0,
+            reps: ex.sets?.[0]?.actualReps ?? ex.sets?.[0]?.targetReps ?? 10,
+            setsCount: ex.sets?.filter((s: any) => s.completed).length || ex.sets?.length || 4,
+            supersetLabel: ss.label,
+          }))
+        );
+        return {
+          id: w.id || `w-${w.workoutNumber}-${Date.now()}`,
+          workoutNumber: w.workoutNumber,
+          microcycle: w.microcycle,
+          date: w.completedAt || w.startedAt || new Date().toISOString(),
+          durationSeconds: w.durationSeconds || 0,
+          tonnageKg: w.tonnageKg || 0,
+          powerKgPerMin: w.powerKgPerMin || 0,
+          athleticScore: 80,
+          tierKey: "power_master" as const,
+          tierLabel: "Майстер Потужності 💥",
+          notes: w.notes || "Перенесено з PWA без втрати даних",
+          exercises: exercisesList,
+        };
+      });
+
       if (typeof window !== "undefined") {
         const tgUser = (window.Telegram?.WebApp as any)?.initDataUnsafe?.user;
         const effectiveUser = linkedTelegramUser || tgUser;
@@ -307,6 +333,7 @@ export default function SettingsPage() {
               currentMicrocycle: currentMicrocycle,
               weightKg: latestM?.weightKg || 80,
               totalTonnageKg: totalTonnage,
+              workoutHistory: serializedWorkouts,
             }).catch(() => {});
           });
         }

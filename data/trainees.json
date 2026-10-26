@@ -33,9 +33,12 @@
         "tierLabel": "Майстер Потужності 💥",
         "notes": "Тренування #3 виконано в Telegram Mini App, перенесено без втрати даних.",
         "exercises": [
-          { "name": "Жим штанги лежачи", "weight": 75, "reps": 10, "setsCount": 4 },
-          { "name": "Присідання зі штангою", "weight": 95, "reps": 10, "setsCount": 4 },
-          { "name": "Тяга верхнього блоку", "weight": 60, "reps": 10, "setsCount": 4 }
+          { "name": "Жим штанги лежачи", "weight": 50, "reps": 10, "setsCount": 4, "supersetLabel": "Блок 1" },
+          { "name": "Жим лежачи вузьким хватом", "weight": 40, "reps": 10, "setsCount": 4, "supersetLabel": "Блок 2" },
+          { "name": "Підтягування (або тяга)", "weight": 40, "reps": 10, "setsCount": 4, "supersetLabel": "Суперсет 1" },
+          { "name": "Штанга на біцепс", "weight": 17.5, "reps": 15, "setsCount": 4, "supersetLabel": "Суперсет 1" },
+          { "name": "Присідання зі штангою", "weight": 50, "reps": 10, "setsCount": 4, "supersetLabel": "Суперсет 2" },
+          { "name": "Армійський жим (стоячи)", "weight": 17.5, "reps": 15, "setsCount": 4, "supersetLabel": "Суперсет 2" }
         ]
       },
       {
@@ -51,8 +54,12 @@
         "tierLabel": "Майстер Потужності 💥",
         "notes": "Тренування #2 виконано в PWA (перенесено)",
         "exercises": [
-          { "name": "Жим гантелей на похилій лаві", "weight": 24, "reps": 10, "setsCount": 4 },
-          { "name": "Тяга штанги в нахилі", "weight": 70, "reps": 10, "setsCount": 4 }
+          { "name": "Жим штанги лежачи", "weight": 47.5, "reps": 10, "setsCount": 4, "supersetLabel": "Блок 1" },
+          { "name": "Жим лежачи вузьким хватом", "weight": 37.5, "reps": 10, "setsCount": 4, "supersetLabel": "Блок 2" },
+          { "name": "Підтягування (або тяга)", "weight": 37.5, "reps": 10, "setsCount": 4, "supersetLabel": "Суперсет 1" },
+          { "name": "Штанга на біцепс", "weight": 15, "reps": 15, "setsCount": 4, "supersetLabel": "Суперсет 1" },
+          { "name": "Присідання зі штангою", "weight": 47.5, "reps": 10, "setsCount": 4, "supersetLabel": "Суперсет 2" },
+          { "name": "Армійський жим (стоячи)", "weight": 15, "reps": 15, "setsCount": 4, "supersetLabel": "Суперсет 2" }
         ]
       },
       {
@@ -68,8 +75,12 @@
         "tierLabel": "Активний Атлет 🏋️‍♂️",
         "notes": "Стартове тренування #1 циклу СМТ-1 (перенесено)",
         "exercises": [
-          { "name": "Жим штанги лежачи", "weight": 70, "reps": 10, "setsCount": 4 },
-          { "name": "Присідання зі штангою", "weight": 90, "reps": 10, "setsCount": 4 }
+          { "name": "Жим штанги лежачи", "weight": 45, "reps": 10, "setsCount": 4, "supersetLabel": "Блок 1" },
+          { "name": "Жим лежачи вузьким хватом", "weight": 35, "reps": 10, "setsCount": 4, "supersetLabel": "Блок 2" },
+          { "name": "Підтягування (або тяга)", "weight": 35, "reps": 10, "setsCount": 4, "supersetLabel": "Суперсет 1" },
+          { "name": "Штанга на біцепс", "weight": 15, "reps": 15, "setsCount": 4, "supersetLabel": "Суперсет 1" },
+          { "name": "Присідання зі штангою", "weight": 45, "reps": 10, "setsCount": 4, "supersetLabel": "Суперсет 2" },
+          { "name": "Армійський жим (стоячи)", "weight": 15, "reps": 15, "setsCount": 4, "supersetLabel": "Суперсет 2" }
         ]
       }
     ],

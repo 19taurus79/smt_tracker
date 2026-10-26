@@ -21,6 +21,7 @@ export async function POST(req: Request) {
       currentMicrocycle,
       weightKg,
       totalTonnageKg,
+      workoutHistory,
     } = body;
 
     const cleanUsername = (username || "").replace(/^@/, "").trim();
@@ -44,6 +45,7 @@ export async function POST(req: Request) {
       coachNotes: isTransferBool
         ? `Атлет переніс ${workoutsCount} тренувань з PWA-версії. Загальний тоннаж: ${tonnageNum.toLocaleString()} кг.`
         : "Підписався на канал і запустив трекер.",
+      workoutHistory: Array.isArray(workoutHistory) ? workoutHistory : undefined,
     });
 
     // Skip Telegram notification if the user is the coach himself

@@ -198,6 +198,7 @@ export interface SyncTransferPayload {
   currentMicrocycle: number;
   weightKg?: number;
   totalTonnageKg?: number;
+  workoutHistory?: any[];
 }
 
 /**

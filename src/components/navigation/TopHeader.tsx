@@ -61,6 +61,33 @@ export function TopHeader() {
               (max, w) => (w.workoutNumber > (max?.workoutNumber || 0) ? w : max),
               completedWorkouts[0]
             );
+
+            const serializedWorkouts = completedWorkouts.map((w) => {
+              const exercisesList = (w.supersets || []).flatMap((ss) =>
+                (ss.exercises || []).map((ex) => ({
+                  name: ex.name,
+                  weight: ex.sets?.[0]?.actualWeight ?? ex.sets?.[0]?.targetWeight ?? 0,
+                  reps: ex.sets?.[0]?.actualReps ?? ex.sets?.[0]?.targetReps ?? 10,
+                  setsCount: ex.sets?.filter((s) => s.completed).length || ex.sets?.length || 4,
+                  supersetLabel: ss.label,
+                }))
+              );
+              return {
+                id: w.id || `w-${w.workoutNumber}-${Date.now()}`,
+                workoutNumber: w.workoutNumber,
+                microcycle: w.microcycle,
+                date: w.completedAt || w.startedAt || new Date().toISOString(),
+                durationSeconds: w.durationSeconds || 0,
+                tonnageKg: w.tonnageKg || 0,
+                powerKgPerMin: w.powerKgPerMin || 0,
+                athleticScore: 80,
+                tierKey: "power_master" as const,
+                tierLabel: "Майстер Потужності 💥",
+                notes: w.notes || "Перенесено з PWA без втрати даних",
+                exercises: exercisesList,
+              };
+            });
+
             import("@/lib/tma/sync").then(({ syncTraineeTransfer }) => {
               syncTraineeTransfer({
                 name: athleteDisplayName,
@@ -69,6 +96,7 @@ export function TopHeader() {
                 totalWorkouts: completedWorkouts.length,
                 currentMicrocycle: lastCompleted?.microcycle || 1,
                 totalTonnageKg: totalTonnage,
+                workoutHistory: serializedWorkouts,
               }).catch(() => {});
             });
           }
