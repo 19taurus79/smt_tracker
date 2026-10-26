@@ -18,6 +18,7 @@ export interface TraineeWorkoutRecord {
     weight: number;
     reps: number;
     setsCount: number;
+    supersetLabel?: string;
   }>;
 }
 
