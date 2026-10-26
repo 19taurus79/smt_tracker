@@ -577,9 +577,9 @@ export default function CoachDashboardPage() {
               >
                 {/* Top Section */}
                 <div className="space-y-3">
-                  {/* Card Header with aligned elements */}
-                  <div className="flex items-center justify-between gap-2.5">
-                    <div className="flex items-center gap-3 min-w-0">
+                  {/* Card Header: Avatar + Identity + Menu */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
                       {/* Avatar with Status Dot */}
                       <div className="relative shrink-0">
                         <div
@@ -600,13 +600,14 @@ export default function CoachDashboardPage() {
                         )}
                       </div>
 
-                      <div className="min-w-0">
+                      {/* Name & Handle Information: Full width, zero cramped wraps */}
+                      <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <h3 className="text-sm font-black text-white leading-tight truncate">
+                          <h3 className="text-sm sm:text-base font-black text-white leading-tight truncate">
                             {displayName}
                           </h3>
                           {trainee.alias && (
-                            <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-amber-500/20 border border-amber-500/40 text-amber-300 shrink-0">
+                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-300 shrink-0">
                               ПСЕВДОНІМ
                             </span>
                           )}
@@ -622,24 +623,28 @@ export default function CoachDashboardPage() {
                             <Edit3 className="h-3 w-3" />
                           </button>
                         </div>
-                        <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+
+                        <div className="flex items-center gap-1.5 mt-0.5 text-xs text-slate-400 flex-wrap">
                           {trainee.alias && (
-                            <span className="text-[11px] text-slate-400 truncate">
-                              Ориг: {trainee.name} •
-                            </span>
+                            <>
+                              <span className="text-[11px] text-slate-400 truncate max-w-[140px]">
+                                Ориг: <span className="text-slate-300 font-medium">{trainee.name}</span>
+                              </span>
+                              <span className="text-slate-600">•</span>
+                            </>
                           )}
                           {cleanUsername ? (
                             <a
                               href={telegramChatUrl}
                               target="_blank"
                               rel="noreferrer"
-                              className="text-xs font-medium text-cyan-400 hover:text-cyan-300 flex items-center gap-1 truncate"
+                              className="text-xs font-semibold text-cyan-400 hover:text-cyan-300 inline-flex items-center gap-1 truncate"
                             >
                               <span>@{cleanUsername}</span>
                               <ExternalLink className="h-2.5 w-2.5 inline shrink-0" />
                             </a>
                           ) : (
-                            <span className="text-[11px] text-slate-500 block truncate">
+                            <span className="text-[11px] text-slate-500 italic">
                               Без юзернейму
                             </span>
                           )}
@@ -647,86 +652,91 @@ export default function CoachDashboardPage() {
                       </div>
                     </div>
 
-                    {/* Right side: Badge & Options Menu */}
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      {getTierBadge(trainee)}
+                    {/* Options Menu Trigger */}
+                    <div className="relative shrink-0">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveMenuId(activeMenuId === trainee.id ? null : trainee.id);
+                        }}
+                        className="h-8 w-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                      </button>
 
-                      {/* Dropdown Menu Trigger */}
-                      <div className="relative">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setActiveMenuId(activeMenuId === trainee.id ? null : trainee.id);
-                          }}
-                          className="h-8 w-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+                      {/* Dropdown Popover */}
+                      {activeMenuId === trainee.id && (
+                        <div
+                          onClick={(e) => e.stopPropagation()}
+                          className="absolute right-0 top-9 z-30 w-48 rounded-2xl border border-white/15 bg-slate-950 p-1.5 shadow-2xl backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-150"
                         >
-                          <MoreVertical className="h-4 w-4" />
-                        </button>
-
-                        {/* Dropdown Popover */}
-                        {activeMenuId === trainee.id && (
-                          <div
-                            onClick={(e) => e.stopPropagation()}
-                            className="absolute right-0 top-9 z-30 w-48 rounded-2xl border border-white/15 bg-slate-950 p-1.5 shadow-2xl backdrop-blur-2xl animate-in fade-in zoom-in-95 duration-150"
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEdit(trainee)}
+                            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-amber-300 hover:text-white hover:bg-amber-500/15 transition-colors"
                           >
-                            <button
-                              type="button"
-                              onClick={() => handleOpenEdit(trainee)}
-                              className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-amber-300 hover:text-white hover:bg-amber-500/15 transition-colors"
-                            >
-                              <Edit3 className="h-3.5 w-3.5 text-amber-400" />
-                              <span>Змінити псевдонім / ім&apos;я</span>
-                            </button>
+                            <Edit3 className="h-3.5 w-3.5 text-amber-400" />
+                            <span>Змінити псевдонім / ім&apos;я</span>
+                          </button>
 
-                            <button
-                              type="button"
-                              onClick={() => handleToggleBlock(trainee)}
-                              className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-white/10 transition-colors"
-                            >
-                              {isBlocked ? (
-                                <>
-                                  <Unlock className="h-3.5 w-3.5 text-emerald-400" />
-                                  <span>Розблокувати</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Ban className="h-3.5 w-3.5 text-amber-400" />
-                                  <span>Заблокувати</span>
-                                </>
-                              )}
-                            </button>
+                          <button
+                            type="button"
+                            onClick={() => handleToggleBlock(trainee)}
+                            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-white/10 transition-colors"
+                          >
+                            {isBlocked ? (
+                              <>
+                                <Unlock className="h-3.5 w-3.5 text-emerald-400" />
+                                <span>Розблокувати</span>
+                              </>
+                            ) : (
+                              <>
+                                <Ban className="h-3.5 w-3.5 text-amber-400" />
+                                <span>Заблокувати</span>
+                              </>
+                            )}
+                          </button>
 
-                            <button
-                              type="button"
-                              onClick={() => confirmDelete(trainee)}
-                              className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-rose-400 hover:text-rose-300 hover:bg-rose-500/15 transition-colors"
-                            >
-                              <Trash2 className="h-3.5 w-3.5 text-rose-400" />
-                              <span>Видалити</span>
-                            </button>
-                          </div>
-                        )}
-                      </div>
+                          <button
+                            type="button"
+                            onClick={() => confirmDelete(trainee)}
+                            className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium text-rose-400 hover:text-rose-300 hover:bg-rose-500/15 transition-colors"
+                          >
+                            <Trash2 className="h-3.5 w-3.5 text-rose-400" />
+                            <span>Видалити</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Status Strip: Tier Badge & SMT Progress Stats */}
+                  <div className="flex items-center justify-between gap-2 pt-1 border-t border-white/5">
+                    <div className="shrink-0">
+                      {getTierBadge(trainee)}
+                    </div>
+                    <div className="flex items-center gap-1.5 text-[11px] text-slate-400 font-medium">
+                      <span>
+                        Тренування: <strong className="text-white font-mono">#{trainee.currentWorkoutNumber}</strong>/36
+                      </span>
+                      <span className="text-slate-600">•</span>
+                      <span className="text-slate-300 font-mono">
+                        МКЦ-{trainee.currentMicrocycle}
+                      </span>
+                      <span className="text-slate-600">•</span>
+                      <span className="text-emerald-400 font-bold font-mono">
+                        {progressPercent}%
+                      </span>
                     </div>
                   </div>
 
                   {/* Progress Bar in SMT 36 */}
-                  <div className="space-y-1">
-                    <div className="flex justify-between text-[11px] text-slate-400 font-medium">
-                      <span>
-                        Тренування: <strong className="text-white font-mono">#{trainee.currentWorkoutNumber}</strong> / 36
-                      </span>
-                      <span>
-                        МКЦ-<strong className="text-white font-mono">{trainee.currentMicrocycle}</strong> ({progressPercent}%)
-                      </span>
-                    </div>
-                    <div className="h-1.5 w-full rounded-full bg-slate-950 overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-cyan-500 transition-all duration-500"
-                        style={{ width: `${progressPercent}%` }}
-                      />
-                    </div>
+                  <div className="h-1.5 w-full rounded-full bg-slate-950 overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-cyan-500 transition-all duration-500"
+                      style={{ width: `${progressPercent}%` }}
+                    />
                   </div>
 
                   {/* 3 Metrics: Equal 33.3% columns */}
