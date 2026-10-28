@@ -128,12 +128,11 @@ export function FinishModal({ open, onOpenChange, onFinished, workoutId }: Finis
     }
   }, [open, isCoach, coachTelegramUsername]);
 
-  const targetWorkoutId = workoutId || activeWorkoutId || viewingWorkoutId;
   const currentWorkout =
-    workouts.find((w) => w.id === targetWorkoutId) ||
+    (workoutId ? workouts.find((w) => w.id === workoutId) : null) ||
     workouts.find((w) => w.id === activeWorkoutId) ||
     workouts.find((w) => w.status === "in_progress") ||
-    workouts.find((w) => w.status === "completed") ||
+    workouts.find((w) => w.id === viewingWorkoutId) ||
     workouts[0];
 
   useEffect(() => {
@@ -383,12 +382,17 @@ export function FinishModal({ open, onOpenChange, onFinished, workoutId }: Finis
       <DialogHeader className="shrink-0 mb-2">
         <DialogTitle onClose={handleClose}>
           <div className="flex items-center gap-2">
-            <Trophy className="h-6 w-6 text-amber-400" />
-            <span>
-              {isEndOfMicrocycle
-                ? `🎉 ${t.common.microcycle} ${currentWorkout.microcycle} ${t.program.statusCompleted}!`
-                : t.workout.finishModalTitle}
-            </span>
+            <Trophy className="h-6 w-6 text-amber-400 shrink-0" />
+            <div className="min-w-0">
+              <span className="block truncate">
+                {isEndOfMicrocycle
+                  ? `🎉 ${t.common.microcycle} ${currentWorkout.microcycle} ${t.program.statusCompleted}!`
+                  : t.workout.finishModalTitle}
+              </span>
+              <span className="text-[11px] font-bold text-emerald-400 block font-mono">
+                {language === "uk" ? "Тренування" : language === "en" ? "Workout" : "Тренировка"} #{currentWorkout.workoutNumber} • {t.common.microcycle} {currentWorkout.microcycle}, {t.common.week} {currentWorkout.week}
+              </span>
+            </div>
           </div>
         </DialogTitle>
         <DialogDescription>

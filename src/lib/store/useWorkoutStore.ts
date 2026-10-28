@@ -73,6 +73,22 @@ interface WorkoutState {
     data: { actualWeight?: number; actualReps?: number; completed?: boolean }
   ) => void;
 
+  batchUpdateSets: (
+    workoutId: string,
+    supersetId: string,
+    updates: Array<{
+      exerciseId: string;
+      setNumber: number;
+      data: { actualWeight?: number; actualReps?: number; completed?: boolean };
+    }>
+  ) => void;
+
+  copyFirstSetWeightToAll: (
+    workoutId: string,
+    supersetId: string,
+    exerciseId: string
+  ) => void;
+
   toggleSetCompletion: (
     workoutId: string,
     supersetId: string,
@@ -191,15 +207,23 @@ export const useWorkoutStore = create<WorkoutState>()(
         });
         setWorkoutActiveMode(true);
         set({
-          workouts: workouts.map((w) =>
-            w.id === workoutId
-              ? {
-                  ...w,
-                  status: "in_progress",
-                  startedAt: w.startedAt || new Date().toISOString(),
-                }
-              : w
-          ),
+          workouts: workouts.map((w) => {
+            if (w.id === workoutId) {
+              return {
+                ...w,
+                status: "in_progress",
+                startedAt: w.startedAt || new Date().toISOString(),
+              };
+            }
+            // Если была другая тренировка in_progress, переводим её в upcoming во избежание конфликтов
+            if (w.status === "in_progress") {
+              return {
+                ...w,
+                status: "upcoming" as const,
+              };
+            }
+            return w;
+          }),
         });
       },
 
@@ -388,6 +412,83 @@ export const useWorkoutStore = create<WorkoutState>()(
             };
           }),
         }));
+      },
+
+      batchUpdateSets: (workoutId, supersetId, updates) => {
+        if (!updates || updates.length === 0) return;
+        const updateMap = new Map<string, { actualWeight?: number; actualReps?: number; completed?: boolean }>();
+        for (const u of updates) {
+          updateMap.set(`${u.exerciseId}:${u.setNumber}`, u.data);
+        }
+
+        set((state) => ({
+          workouts: state.workouts.map((w) => {
+            if (w.id !== workoutId) return w;
+            return {
+              ...w,
+              supersets: w.supersets.map((ss) => {
+                if (ss.id !== supersetId) return ss;
+                return {
+                  ...ss,
+                  exercises: ss.exercises.map((ex) => ({
+                    ...ex,
+                    sets: ex.sets.map((s) => {
+                      const match = updateMap.get(`${ex.exerciseId}:${s.setNumber}`);
+                      if (!match) return s;
+                      return {
+                        ...s,
+                        ...match,
+                        completedAt:
+                          match.completed === true
+                            ? s.completedAt || new Date().toISOString()
+                            : match.completed === false
+                            ? undefined
+                            : s.completedAt,
+                      };
+                    }),
+                  })),
+                };
+              }),
+            };
+          }),
+        }));
+      },
+
+      copyFirstSetWeightToAll: (workoutId, supersetId, exerciseId) => {
+        set((state) => {
+          const workout = state.workouts.find((w) => w.id === workoutId);
+          if (!workout) return state;
+          const ss = workout.supersets.find((s) => s.id === supersetId);
+          const ex = ss?.exercises.find((e) => e.exerciseId === exerciseId);
+          if (!ex || ex.sets.length === 0) return state;
+
+          const firstWeight = ex.sets[0].actualWeight ?? ex.sets[0].targetWeight;
+
+          return {
+            workouts: state.workouts.map((w) => {
+              if (w.id !== workoutId) return w;
+              return {
+                ...w,
+                supersets: w.supersets.map((s) => {
+                  if (s.id !== supersetId) return s;
+                  return {
+                    ...s,
+                    exercises: s.exercises.map((e) => {
+                      if (e.exerciseId !== exerciseId) return e;
+                      return {
+                        ...e,
+                        sets: e.sets.map((set) => ({
+                          ...set,
+                          actualWeight: firstWeight,
+                        })),
+                      };
+                    }),
+                  };
+                }),
+              };
+            }),
+          };
+        });
       },
 
       toggleSetCompletion: (

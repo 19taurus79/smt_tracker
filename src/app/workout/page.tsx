@@ -26,6 +26,7 @@ import { WarmupModal } from "@/components/workout/WarmupModal";
 import { FinishModal } from "@/components/workout/FinishModal";
 import { WorkoutReportModal } from "@/components/program/WorkoutReportModal";
 import { ConfirmResetModal } from "@/components/workout/ConfirmResetModal";
+import { ActiveWorkoutConflictModal } from "@/components/workout/ActiveWorkoutConflictModal";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
@@ -51,6 +52,7 @@ function WorkoutContent() {
     openWarmupModal,
     setViewingWorkoutId,
     finishWorkout,
+    resetWorkout,
   } = useWorkoutStore();
 
   const {
@@ -63,9 +65,11 @@ function WorkoutContent() {
   } = useSettingsStore();
 
   const [isFinishModalOpen, setIsFinishModalOpen] = useState(false);
+  const [activeFinishTargetId, setActiveFinishTargetId] = useState<string | null>(null);
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [wasReportSentToCoach, setWasReportSentToCoach] = useState(false);
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
+  const [isConflictModalOpen, setIsConflictModalOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -90,13 +94,29 @@ function WorkoutContent() {
     return () => clearInterval(interval);
   }, [isStopwatchRunning, tickStopwatch]);
 
-  const targetId = queryId || viewingWorkoutId || activeWorkoutId;
+  // Strict & Robust workout resolution
   const currentWorkout =
-    workouts.find((w) => w.id === targetId) ||
-    workouts.find((w) => w.id === activeWorkoutId) ||
+    (queryId ? workouts.find((w) => w.id === queryId) : null) ||
+    workouts.find((w) => w.id === activeWorkoutId && w.status === "in_progress") ||
     workouts.find((w) => w.status === "in_progress") ||
+    (viewingWorkoutId ? workouts.find((w) => w.id === viewingWorkoutId && w.status !== "completed") : null) ||
     workouts.find((w) => w.status === "upcoming") ||
     workouts[0];
+
+  // Detect conflict if another session is actively in progress
+  const conflictingActiveWorkout =
+    currentWorkout &&
+    workouts.find(
+      (w) => w.id !== currentWorkout.id && (w.id === activeWorkoutId || w.status === "in_progress")
+    );
+
+  useEffect(() => {
+    if (conflictingActiveWorkout) {
+      setIsConflictModalOpen(true);
+    } else {
+      setIsConflictModalOpen(false);
+    }
+  }, [conflictingActiveWorkout?.id]);
 
   const isCurrentActive =
     !!currentWorkout &&
@@ -500,8 +520,11 @@ function WorkoutContent() {
       <WarmupModal />
       <FinishModal
         open={isFinishModalOpen}
-        onOpenChange={setIsFinishModalOpen}
-        workoutId={currentWorkout.id}
+        onOpenChange={(isOpen) => {
+          setIsFinishModalOpen(isOpen);
+          if (!isOpen) setActiveFinishTargetId(null);
+        }}
+        workoutId={activeFinishTargetId || currentWorkout.id}
         onFinished={(sent) => {
           setWasReportSentToCoach(Boolean(sent));
           setIsFinishModalOpen(false);
@@ -530,6 +553,29 @@ function WorkoutContent() {
           router.push(`/workout?id=${currentWorkout.id}`);
         }}
       />
+      {conflictingActiveWorkout && (
+        <ActiveWorkoutConflictModal
+          open={isConflictModalOpen}
+          onOpenChange={setIsConflictModalOpen}
+          activeWorkout={conflictingActiveWorkout}
+          targetWorkout={currentWorkout}
+          onGoToActive={() => {
+            setIsConflictModalOpen(false);
+            setViewingWorkoutId(conflictingActiveWorkout.id);
+            router.push(`/workout?id=${conflictingActiveWorkout.id}`);
+          }}
+          onFinishActive={() => {
+            setIsConflictModalOpen(false);
+            setActiveFinishTargetId(conflictingActiveWorkout.id);
+            setIsFinishModalOpen(true);
+          }}
+          onResetActiveAndSwitch={() => {
+            setIsConflictModalOpen(false);
+            resetWorkout(conflictingActiveWorkout.id);
+            startWorkout(currentWorkout.id);
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -20,7 +20,7 @@ import { useTranslation } from "@/lib/i18n";
 
 export function BottomNav() {
   const pathname = usePathname();
-  const { activeWorkoutId } = useWorkoutStore();
+  const { activeWorkoutId, workouts } = useWorkoutStore();
   const { userRole, linkedTelegramUser } = useSettingsStore();
   const { t, language } = useTranslation();
 
@@ -28,10 +28,18 @@ export function BottomNav() {
 
   const coachLabel = language === "uk" ? "Тренер" : language === "en" ? "Coach" : "Тренер";
 
+  // Calculate dynamic destination for Workout tab
+  const activeOrUpcomingWorkout =
+    workouts.find((w) => w.id === activeWorkoutId && w.status === "in_progress") ||
+    workouts.find((w) => w.status === "in_progress") ||
+    workouts.find((w) => w.status === "upcoming") ||
+    workouts[0];
+  const workoutHref = activeOrUpcomingWorkout ? `/workout?id=${activeOrUpcomingWorkout.id}` : "/workout";
+
   const navItems = isCoach
     ? [
         { href: "/", label: t.nav.home, icon: Home },
-        { href: "/workout", label: t.nav.workout, icon: Dumbbell, hasBadge: true },
+        { href: workoutHref, baseHref: "/workout", label: t.nav.workout, icon: Dumbbell, hasBadge: true },
         { href: "/program", label: t.nav.program, icon: Calendar },
         { href: "/coach", label: coachLabel, icon: Crown, isCoachTab: true },
         { href: "/analytics", label: t.nav.analytics, icon: TrendingUp },
@@ -39,7 +47,7 @@ export function BottomNav() {
       ]
     : [
         { href: "/", label: t.nav.home, icon: Home },
-        { href: "/workout", label: t.nav.workout, icon: Dumbbell, hasBadge: true },
+        { href: workoutHref, baseHref: "/workout", label: t.nav.workout, icon: Dumbbell, hasBadge: true },
         { href: "/program", label: t.nav.program, icon: Calendar },
         { href: "/body", label: t.nav.body, icon: Ruler },
         { href: "/analytics", label: t.nav.analytics, icon: TrendingUp },
@@ -50,7 +58,9 @@ export function BottomNav() {
     <nav className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-slate-950/95 backdrop-blur-2xl ios-safe-bottom">
       <div className="mx-auto flex h-14 sm:h-16 max-w-lg items-center justify-around px-1">
         {navItems.map((item) => {
-          const isActive = pathname === item.href;
+          const isActive = item.baseHref
+            ? pathname.startsWith(item.baseHref)
+            : pathname === item.href;
           const Icon = item.icon;
           const showPill = item.hasBadge && activeWorkoutId;
 

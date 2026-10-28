@@ -17,6 +17,7 @@ export default function ProgramPage() {
   const { workouts, restartWorkout, startWorkout } = useWorkoutStore();
   const { t, language } = useTranslation();
   const [selectedMkc, setSelectedMkc] = useState<number | "all">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "upcoming" | "completed">("all");
   const [isSetupOpen, setIsSetupOpen] = useState(false);
   const [isPrepCalcOpen, setIsPrepCalcOpen] = useState(false);
   const [selectedReportWorkout, setSelectedReportWorkout] = useState<WorkoutSession | null>(null);
@@ -34,15 +35,18 @@ export default function ProgramPage() {
     );
   }
 
-  const filteredWorkouts =
+  const mkcWorkouts =
     selectedMkc === "all"
       ? workouts
       : workouts.filter((w) => w.microcycle === selectedMkc);
 
-  const completedCount = workouts.filter((w) => w.status === "completed").length;
+  const upcomingWorkouts = mkcWorkouts.filter((w) => w.status !== "completed");
+  const completedWorkouts = mkcWorkouts.filter((w) => w.status === "completed");
+
+  const totalCompleted = workouts.filter((w) => w.status === "completed").length;
 
   return (
-    <div className="space-y-5 animate-in fade-in duration-200">
+    <div className="space-y-4 sm:space-y-5 animate-in fade-in duration-200">
       {/* Header & Generator Button */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
@@ -83,74 +87,138 @@ export default function ProgramPage() {
         </div>
       </div>
 
-      {/* Microcycle Filter Tabs */}
+      {/* Row 1: Status Filter Tabs (All / Upcoming / Completed) */}
+      <div className="flex items-center gap-1.5 bg-slate-900/80 p-1 rounded-2xl border border-white/10 w-fit">
+        <button
+          onClick={() => setStatusFilter("all")}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+            statusFilter === "all"
+              ? "bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20"
+              : "text-slate-400 hover:text-white"
+          }`}
+        >
+          {language === "uk" ? "Всі" : language === "en" ? "All" : "Все"} ({mkcWorkouts.length})
+        </button>
+
+        <button
+          onClick={() => setStatusFilter("upcoming")}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+            statusFilter === "upcoming"
+              ? "bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/20"
+              : "text-slate-400 hover:text-white"
+          }`}
+        >
+          {language === "uk" ? "До виконання" : language === "en" ? "Upcoming" : "К выполнению"} ({upcomingWorkouts.length})
+        </button>
+
+        <button
+          onClick={() => setStatusFilter("completed")}
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+            statusFilter === "completed"
+              ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20"
+              : "text-slate-400 hover:text-white"
+          }`}
+        >
+          {language === "uk" ? "Завершені" : language === "en" ? "Completed" : "Завершенные"} ({completedWorkouts.length})
+        </button>
+      </div>
+
+      {/* Row 2: Microcycle Filter Tabs */}
       <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
         <button
           onClick={() => setSelectedMkc("all")}
           className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
             selectedMkc === "all"
-              ? "bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20"
+              ? "bg-white/15 text-white border border-white/20 shadow-sm"
               : "bg-white/5 text-slate-400 hover:text-white hover:bg-white/10"
           }`}
         >
-          {t.program.tabAll} ({workouts.length})
+          {t.program.tabAll}
         </button>
 
-        <button
-          onClick={() => setSelectedMkc(1)}
-          className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-            selectedMkc === 1
-              ? "bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20"
-              : "bg-white/5 text-slate-400 hover:text-white hover:bg-white/10"
-          }`}
-        >
-          {t.program.tabMkc1}
-        </button>
-
-        <button
-          onClick={() => setSelectedMkc(2)}
-          className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-            selectedMkc === 2
-              ? "bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20"
-              : "bg-white/5 text-slate-400 hover:text-white hover:bg-white/10"
-          }`}
-        >
-          {t.program.tabMkc2}
-        </button>
-
-        <button
-          onClick={() => setSelectedMkc(3)}
-          className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-            selectedMkc === 3
-              ? "bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20"
-              : "bg-white/5 text-slate-400 hover:text-white hover:bg-white/10"
-          }`}
-        >
-          {t.program.tabMkc3}
-        </button>
-
-        <button
-          onClick={() => setSelectedMkc(4)}
-          className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-            selectedMkc === 4
-              ? "bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20"
-              : "bg-white/5 text-slate-400 hover:text-white hover:bg-white/10"
-          }`}
-        >
-          {t.program.tabMkc4}
-        </button>
-      </div>
-
-      {/* Workouts Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-        {filteredWorkouts.map((workout) => (
-          <WorkoutCard
-            key={workout.id}
-            workout={workout}
-            onOpenReport={(w) => setSelectedReportWorkout(w)}
-          />
+        {[1, 2, 3, 4].map((mkcNum) => (
+          <button
+            key={mkcNum}
+            onClick={() => setSelectedMkc(mkcNum)}
+            className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
+              selectedMkc === mkcNum
+                ? "bg-white/15 text-white border border-white/20 shadow-sm"
+                : "bg-white/5 text-slate-400 hover:text-white hover:bg-white/10"
+            }`}
+          >
+            {mkcNum === 1
+              ? t.program.tabMkc1
+              : mkcNum === 2
+              ? t.program.tabMkc2
+              : mkcNum === 3
+              ? t.program.tabMkc3
+              : t.program.tabMkc4}
+          </button>
         ))}
       </div>
+
+      {/* SECTION 1: UPCOMING WORKOUTS (Priority at the top) */}
+      {(statusFilter === "all" || statusFilter === "upcoming") && upcomingWorkouts.length > 0 && (
+        <div className="space-y-2.5">
+          <div className="flex items-center justify-between px-1">
+            <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-cyan-400 flex items-center gap-1.5">
+              <span>⚡️</span>
+              <span>
+                {language === "uk"
+                  ? `До виконання (${upcomingWorkouts.length})`
+                  : language === "en"
+                  ? `Upcoming Sessions (${upcomingWorkouts.length})`
+                  : `К выполнению (${upcomingWorkouts.length})`}
+              </span>
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+            {upcomingWorkouts.map((workout) => (
+              <WorkoutCard
+                key={workout.id}
+                workout={workout}
+                onOpenReport={(w) => setSelectedReportWorkout(w)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* SECTION 2: COMPLETED WORKOUTS (Organized cleanly at the bottom) */}
+      {(statusFilter === "all" || statusFilter === "completed") && completedWorkouts.length > 0 && (
+        <div className="space-y-2.5 pt-2">
+          <div className="flex items-center justify-between px-1 border-t border-white/5 pt-3">
+            <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+              <span>✅</span>
+              <span>
+                {language === "uk"
+                  ? `Завершені тренування (${completedWorkouts.length})`
+                  : language === "en"
+                  ? `Completed Sessions (${completedWorkouts.length})`
+                  : `Завершенные тренировки (${completedWorkouts.length})`}
+              </span>
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 opacity-90">
+            {completedWorkouts.map((workout) => (
+              <WorkoutCard
+                key={workout.id}
+                workout={workout}
+                onOpenReport={(w) => setSelectedReportWorkout(w)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Empty State */}
+      {mkcWorkouts.length === 0 && (
+        <div className="text-center py-12 text-slate-400 text-xs">
+          {t.workout.noWorkoutsAvailable}
+        </div>
+      )}
 
       {/* Modals */}
       <InitialSetupModal isOpen={isSetupOpen} onClose={() => setIsSetupOpen(false)} />
