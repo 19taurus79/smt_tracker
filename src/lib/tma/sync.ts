@@ -199,6 +199,7 @@ export interface SyncTransferPayload {
   weightKg?: number;
   totalTonnageKg?: number;
   workoutHistory?: any[];
+  silent?: boolean;
 }
 
 /**

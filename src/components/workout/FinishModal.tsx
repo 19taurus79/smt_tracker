@@ -18,6 +18,7 @@ import {
   Share2,
   ChevronDown,
   ChevronUp,
+  AlertTriangle,
 } from "lucide-react";
 import { useWorkoutStore } from "@/lib/store/useWorkoutStore";
 import { useSettingsStore } from "@/lib/store/useSettingsStore";
@@ -90,22 +91,22 @@ export function FinishModal({ open, onOpenChange, onFinished, workoutId }: Finis
   const [publishedChallenge, setPublishedChallenge] = useState(false);
 
   const fatigueOptions = [
-    { level: 1, emoji: "🟢", label: language === "uk" ? "Легко" : "Легко", rpe: "RPE 6" },
-    { level: 2, emoji: "🔵", label: language === "uk" ? "Норм" : "Норм", rpe: "RPE 7" },
-    { level: 3, emoji: "🟡", label: language === "uk" ? "Важко" : "Тяжело", rpe: "RPE 8" },
-    { level: 4, emoji: "🟠", label: language === "uk" ? "На межі" : "На пределе", rpe: "RPE 9" },
-    { level: 5, emoji: "🔴", label: language === "uk" ? "Відмова" : "Отказ", rpe: "RPE 10" },
+    { level: 1, emoji: "🟢", label: language === "uk" ? "Легко" : language === "en" ? "Easy" : "Легко", rpe: "RPE 6" },
+    { level: 2, emoji: "🔵", label: language === "uk" ? "Норм" : language === "en" ? "Good" : "Норм", rpe: "RPE 7" },
+    { level: 3, emoji: "🟡", label: language === "uk" ? "Важко" : language === "en" ? "Hard" : "Тяжело", rpe: "RPE 8" },
+    { level: 4, emoji: "🟠", label: language === "uk" ? "На межі" : language === "en" ? "Near Max" : "На пределе", rpe: "RPE 9" },
+    { level: 5, emoji: "🔴", label: language === "uk" ? "Відмова" : language === "en" ? "Failure" : "Отказ", rpe: "RPE 10" },
   ];
 
   const conditionTags = [
-    { id: "sleep", label: language === "uk" ? "😴 Мало спав" : "😴 Мало спал" },
-    { id: "fresh", label: language === "uk" ? "⚡️ Повен сил" : "⚡️ Полон сил" },
-    { id: "sick", label: language === "uk" ? "🤧 Прихворів" : "🤧 Приболел" },
-    { id: "alcohol", label: language === "uk" ? "🍺 Алкоголь напередодні" : "🍺 Алкоголь накануне" },
-    { id: "stress", label: language === "uk" ? "🤯 Стрес на роботі" : "🤯 Стресс на работе" },
-    { id: "no_preworkout", label: language === "uk" ? "☕️ Без передтрену" : "☕️ Без предтрена" },
-    { id: "rest_kept", label: language === "uk" ? "⏱ 30с витримано" : "⏱ 30с выдержано" },
-    { id: "food", label: language === "uk" ? "🍕 Збив режим їжі" : "🍕 Сбил режим еды" },
+    { id: "sleep", label: language === "uk" ? "😴 Мало спав" : language === "en" ? "😴 Poor sleep" : "😴 Мало спал" },
+    { id: "fresh", label: language === "uk" ? "⚡️ Повен сил" : language === "en" ? "⚡️ Full of energy" : "⚡️ Полон сил" },
+    { id: "sick", label: language === "uk" ? "🤧 Прихворів" : language === "en" ? "🤧 Feeling sick" : "🤧 Приболел" },
+    { id: "alcohol", label: language === "uk" ? "🍺 Алкоголь напередодні" : language === "en" ? "🍺 Alcohol yesterday" : "🍺 Алкоголь накануне" },
+    { id: "stress", label: language === "uk" ? "🤯 Стрес на роботі" : language === "en" ? "🤯 Work stress" : "🤯 Стресс на работе" },
+    { id: "no_preworkout", label: language === "uk" ? "☕️ Без передтрену" : language === "en" ? "☕️ No pre-workout" : "☕️ Без предтрена" },
+    { id: "rest_kept", label: language === "uk" ? "⏱ 30с витримано" : language === "en" ? "⏱ Rest kept" : "⏱ 30с выдержано" },
+    { id: "food", label: language === "uk" ? "🍕 Збив режим їжі" : language === "en" ? "🍕 Diet skipped" : "🍕 Сбил режим еды" },
   ];
 
   const toggleTag = (tagLabel: string) => {
@@ -117,7 +118,8 @@ export function FinishModal({ open, onOpenChange, onFinished, workoutId }: Finis
 
   const buildFullNotes = () => {
     const fatigueObj = fatigueOptions.find((f) => f.level === fatigueLevel);
-    const fatigueText = fatigueObj ? `Втома: ${fatigueObj.level}/5 (${fatigueObj.label}, ${fatigueObj.rpe})` : "";
+    const fatiguePrefix = language === "uk" ? "Втома" : language === "en" ? "Fatigue" : "Усталость";
+    const fatigueText = fatigueObj ? `${fatiguePrefix}: ${fatigueObj.level}/5 (${fatigueObj.label}, ${fatigueObj.rpe})` : "";
     const tagsText = selectedTags.length > 0 ? selectedTags.join(" ") : "";
     return [fatigueText, tagsText, customNote.trim()].filter(Boolean).join(" • ");
   };
@@ -167,6 +169,17 @@ export function FinishModal({ open, onOpenChange, onFinished, workoutId }: Finis
     ? calculateWorkoutTonnage(currentWorkout.supersets)
     : 0;
   const power = calculateWorkoutPower(tonnage, effectiveDuration);
+  const totalCompletedSets = currentWorkout
+    ? currentWorkout.supersets.reduce(
+        (acc, ss) =>
+          acc +
+          ss.exercises.reduce(
+            (exAcc, ex) => exAcc + ex.sets.filter((s) => s.completed).length,
+            0
+          ),
+        0
+      )
+    : 0;
 
   // Check if current workout is the last one in the microcycle (e.g. 9, 18, 27, 36)
   const isEndOfMicrocycle = currentWorkout ? currentWorkout.workoutNumber % 9 === 0 : false;
@@ -404,6 +417,29 @@ export function FinishModal({ open, onOpenChange, onFinished, workoutId }: Finis
 
       {/* Scrollable Body with flex-1 min-h-0 so footer NEVER gets cut off */}
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain space-y-3.5 pr-1 py-1">
+        {/* Warning if 0 sets completed */}
+        {totalCompletedSets === 0 && (
+          <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-2.5 text-amber-200">
+            <AlertTriangle className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
+            <div className="text-xs">
+              <p className="font-bold text-amber-300">
+                {language === "uk"
+                  ? "Жодного підходу не зараховано"
+                  : language === "en"
+                  ? "No sets marked as completed"
+                  : "Ни одного подхода не отмечено"}
+              </p>
+              <p className="text-amber-200/80 mt-0.5">
+                {language === "uk"
+                  ? "Ви завершуєте тренування з 0 зарахованих підходів. Тоннаж та потужність будуть 0."
+                  : language === "en"
+                  ? "You are finishing the workout with 0 completed sets. Tonnage and power will be 0."
+                  : "Вы завершаете тренировку с 0 выполненных подходов. Тоннаж и мощность будут 0."}
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Athletic Score Hero Banner */}
         <div
           className={`p-3 sm:p-4 rounded-2xl border ${tierColor.border} ${tierColor.bg} flex items-center justify-between gap-3 shadow-lg ${tierColor.glow} transition-all`}

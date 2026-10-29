@@ -154,9 +154,19 @@ export function WarmupModal() {
         <div className="flex-1 min-h-0 flex flex-col animate-in fade-in duration-200">
           <div className="shrink-0 space-y-1.5 px-0.5 mb-2">
             <div className="flex items-center justify-between text-xs text-slate-300">
-              <span className="font-medium text-slate-400">Прогрес суглобової підготовки:</span>
+              <span className="font-medium text-slate-400">
+                {language === "uk"
+                  ? "Прогрес суглобової підготовки:"
+                  : language === "en"
+                  ? "Joint mobility progress:"
+                  : "Прогресс суставной разминки:"}
+              </span>
               <span className="font-mono font-bold text-emerald-400">
-                {completedMobilityCount} з {totalMobilityCount} вправ
+                {language === "uk"
+                  ? `${completedMobilityCount} з ${totalMobilityCount} вправ`
+                  : language === "en"
+                  ? `${completedMobilityCount} of ${totalMobilityCount} exercises`
+                  : `${completedMobilityCount} из ${totalMobilityCount} упражнений`}
               </span>
             </div>
             <Progress value={completedMobilityCount} max={totalMobilityCount} className="h-2" />
@@ -228,14 +238,22 @@ export function WarmupModal() {
               <Info className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
               <div className="text-[11px] text-amber-200/90 leading-snug">
                 <strong className="text-amber-300 block mb-0.5">
-                  Правило безпеки та чистоти таймінгу СМТ:
+                  {language === "uk"
+                    ? "Правило безпеки та чистоти таймінгу СМТ:"
+                    : language === "en"
+                    ? "SMT Safety & Timing Rule:"
+                    : "Правило безопасности и чистоты тайминга СМТ:"}
                 </strong>
                 {t.workout.rampUpRule}
               </div>
             </div>
             {rampUpPlans.length === 0 ? (
               <div className="p-6 text-center text-xs text-slate-400 rounded-2xl bg-white/5 border border-white/10">
-                Немає запланованих вправ для розрахунку.
+                {language === "uk"
+                  ? "Немає запланованих вправ для розрахунку."
+                  : language === "en"
+                  ? "No planned exercises for calculation."
+                  : "Нет запланированных упражнений для расчета."}
               </div>
             ) : (
               rampUpPlans.map((plan) => {
@@ -274,7 +292,7 @@ export function WarmupModal() {
                       {/* Working Weight Badge */}
                       <div className="flex items-center gap-1.5 shrink-0">
                         <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-mono">
-                          Робоча: {plan.workingWeight} {t.common.kg} ({plan.workingSets}×{plan.workingReps})
+                          {language === "uk" ? "Робоча" : language === "en" ? "Working" : "Рабочий"}: {plan.workingWeight} {t.common.kg} ({plan.workingSets}×{plan.workingReps})
                         </span>
                       </div>
                     </div>

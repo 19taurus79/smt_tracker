@@ -173,7 +173,7 @@ export const useWorkoutStore = create<WorkoutState>()(
       setViewingWorkoutId: (workoutId) => set({ viewingWorkoutId: workoutId }),
 
       startWorkout: (workoutId) => {
-        const { workouts, workoutElapsedSeconds, workoutAccumulatedSeconds } = get();
+        const { workouts, activeWorkoutId, workoutElapsedSeconds, workoutAccumulatedSeconds } = get();
         const workout = workouts.find((w) => w.id === workoutId);
         if (!workout) return;
 
@@ -187,12 +187,13 @@ export const useWorkoutStore = create<WorkoutState>()(
         }
 
         const now = Date.now();
+        const isSameActiveWorkout = activeWorkoutId === workoutId;
         const baseSeconds =
           workout.durationSeconds && workout.durationSeconds > 0
             ? workout.durationSeconds
-            : workoutElapsedSeconds > 0
+            : isSameActiveWorkout && workoutElapsedSeconds > 0
             ? workoutElapsedSeconds
-            : workoutAccumulatedSeconds > 0
+            : isSameActiveWorkout && workoutAccumulatedSeconds > 0
             ? workoutAccumulatedSeconds
             : 0;
 

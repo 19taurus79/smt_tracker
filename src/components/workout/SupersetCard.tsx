@@ -82,8 +82,8 @@ export function SupersetCard({ workoutId, superset }: SupersetCardProps) {
     : `Суперсет ${supersetNumberMatch}`;
 
   const restSubtitleText = isSingle
-    ? `${language === "en" ? "Rest" : "Відпочинок"} ${defaultRestSeconds}с`
-    : `${language === "en" ? "Rest" : "Відпочинок"} ${defaultRestSeconds}с ${language === "en" ? "after round" : "після кола"}`;
+    ? `${language === "en" ? "Rest" : language === "ru" ? "Отдых" : "Відпочинок"} ${defaultRestSeconds}с`
+    : `${language === "en" ? "Rest" : language === "ru" ? "Отдых" : "Відпочинок"} ${defaultRestSeconds}с ${language === "en" ? "after round" : language === "ru" ? "после раунда" : "після кола"}`;
 
   const transitionText =
     language === "uk"
@@ -260,13 +260,13 @@ export function SupersetCard({ workoutId, superset }: SupersetCardProps) {
                     ? "bg-cyan-500 text-slate-950 border-cyan-400"
                     : "border-white/10 text-slate-400 hover:text-white"
                 )}
-                title="Режим пакетного редактирования"
+                title={language === "en" ? "Batch editing mode" : language === "uk" ? "Режим пакетного редагування" : "Режим пакетного редактирования"}
               >
                 <CheckSquare className="h-3 w-3 mr-1" />
                 <span>
                   {isBatchMode
-                    ? language === "en" ? "Done" : "Готово"
-                    : language === "en" ? "Select" : "Выбрать"}
+                    ? language === "en" ? "Done" : language === "uk" ? "Готово" : "Готово"
+                    : language === "en" ? "Select" : language === "uk" ? "Вибрати" : "Выбрать"}
                 </span>
               </Button>
             )}
@@ -294,7 +294,7 @@ export function SupersetCard({ workoutId, superset }: SupersetCardProps) {
           <div className="flex items-center justify-between gap-1.5 pt-1.5 border-t border-white/5 text-[11px] animate-in fade-in">
             <div className="flex items-center gap-1 text-slate-400">
               <span className="font-semibold text-cyan-300">
-                {language === "en" ? "Selected" : "Выбрано"}: {selectedSetKeys.size}
+                {language === "en" ? "Selected" : language === "uk" ? "Вибрано" : "Выбрано"}: {selectedSetKeys.size}
               </span>
               <span>•</span>
               <button
@@ -303,8 +303,8 @@ export function SupersetCard({ workoutId, superset }: SupersetCardProps) {
                 className="text-cyan-400 hover:underline font-bold"
               >
                 {selectedSetKeys.size === totalSets
-                  ? language === "en" ? "Deselect All" : "Снять все"
-                  : language === "en" ? "Select All" : "Выбрать все"}
+                  ? language === "en" ? "Deselect All" : language === "uk" ? "Зняти всі" : "Снять все"
+                  : language === "en" ? "Select All" : language === "uk" ? "Вибрати всі" : "Выбрать все"}
               </button>
             </div>
 
@@ -318,10 +318,10 @@ export function SupersetCard({ workoutId, superset }: SupersetCardProps) {
                 }
               }}
               className="flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white/5 border border-white/10 text-slate-300 hover:text-white hover:bg-white/10 transition-colors"
-              title="Скопировать вес 1-го подхода на все остальные"
+              title={language === "en" ? "Copy 1st set weight to all" : language === "uk" ? "Скопіювати вагу 1-го підходу на всі інші" : "Скопировать вес 1-го подхода на все остальные"}
             >
               <Copy className="h-3 w-3 text-cyan-400" />
-              <span>{language === "uk" ? "Вага 1-го у всі" : "Вес 1-го во все"}</span>
+              <span>{language === "en" ? "1st set wt to all" : language === "uk" ? "Вага 1-го у всі" : "Вес 1-го во все"}</span>
             </button>
           </div>
         )}
@@ -590,7 +590,7 @@ export function SupersetCard({ workoutId, superset }: SupersetCardProps) {
                 className="h-8 px-2 text-xs border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/10 font-bold"
               >
                 <Sliders className="h-3 w-3 mr-1" />
-                <span>{language === "en" ? "Set Weight" : "Задать вес"}</span>
+                <span>{language === "en" ? "Set Weight" : language === "uk" ? "Задати вагу" : "Задать вес"}</span>
               </Button>
 
               <Button
@@ -600,14 +600,14 @@ export function SupersetCard({ workoutId, superset }: SupersetCardProps) {
                 className="h-8 px-2 text-xs bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold"
               >
                 <Check className="h-3.5 w-3.5 mr-0.5" />
-                <span>{language === "en" ? "Check" : "Зачесть"}</span>
+                <span>{language === "en" ? "Check" : language === "uk" ? "Зарахувати" : "Зачесть"}</span>
               </Button>
 
               <button
                 type="button"
                 onClick={handleClearSelection}
                 className="h-8 w-7 rounded-lg hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-white"
-                title="Снять выбор"
+                title={language === "en" ? "Clear selection" : language === "uk" ? "Зняти вибір" : "Снять выбор"}
               >
                 <X className="h-4 w-4" />
               </button>
@@ -621,7 +621,7 @@ export function SupersetCard({ workoutId, superset }: SupersetCardProps) {
         open={isBatchNumpadOpen}
         onOpenChange={setIsBatchNumpadOpen}
         initialWeight={initialNumpadWeight}
-        exerciseName={`${cardTitleText} (${selectedSetKeys.size} подходов)`}
+        exerciseName={`${cardTitleText} (${selectedSetKeys.size} ${language === "en" ? "sets" : language === "uk" ? "підходів" : "подходов"})`}
         setNumber={1}
         totalSets={1}
         onSave={(newWeight) => {

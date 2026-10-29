@@ -74,6 +74,14 @@ export function SetRow({
     });
   };
 
+  const handleStepReps = (delta: number) => {
+    triggerHaptic("selection");
+    const nextVal = Math.max(1, currentReps + delta);
+    updateSet(workoutId, supersetId, exerciseId, set.setNumber, {
+      actualReps: nextVal,
+    });
+  };
+
   const handleSaveNumpadWeight = (newWeight: number, applyToRemaining: boolean) => {
     if (!applyToRemaining) {
       updateSet(workoutId, supersetId, exerciseId, set.setNumber, {
@@ -219,23 +227,43 @@ export function SetRow({
               </button>
             </div>
 
-            {/* Reps Input */}
-            <div className="flex items-center gap-1 bg-slate-900 rounded-lg border border-white/10 px-1 py-0.5">
-              <input
-                type="text"
-                inputMode="numeric"
-                value={currentReps}
-                onChange={(e) => {
-                  const val = parseInt(e.target.value, 10);
-                  updateSet(workoutId, supersetId, exerciseId, set.setNumber, {
-                    actualReps: !isNaN(val) ? val : 0,
-                  });
-                }}
-                onFocus={(e) => e.target.select()}
-                className="w-7 h-6 sm:h-7 bg-transparent text-center font-bold text-xs text-white focus:outline-none"
-                title={t.workout.actual}
-              />
-              <span className="text-[9px] text-slate-500 pr-0.5">{t.common.reps}</span>
+            {/* Reps Input with Steppers */}
+            <div className="flex items-center gap-0.5 bg-slate-900 rounded-lg border border-white/10 p-0.5">
+              <button
+                type="button"
+                onClick={() => handleStepReps(-1)}
+                className="h-6 w-5 sm:h-7 sm:w-6 flex items-center justify-center rounded text-slate-400 hover:text-white hover:bg-white/10 active:scale-95 transition-all"
+                title="-1 повторение"
+              >
+                <Minus className="h-3 w-3" />
+              </button>
+
+              <div className="flex items-baseline gap-0.5 px-0.5">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={currentReps}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value, 10);
+                    updateSet(workoutId, supersetId, exerciseId, set.setNumber, {
+                      actualReps: !isNaN(val) ? val : 0,
+                    });
+                  }}
+                  onFocus={(e) => e.target.select()}
+                  className="w-5 sm:w-6 h-6 sm:h-7 bg-transparent text-center font-bold text-xs text-white focus:outline-none"
+                  title={t.workout.actual}
+                />
+                <span className="text-[9px] text-slate-500 font-normal">{t.common.reps}</span>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => handleStepReps(1)}
+                className="h-6 w-5 sm:h-7 sm:w-6 flex items-center justify-center rounded text-slate-400 hover:text-white hover:bg-white/10 active:scale-95 transition-all"
+                title="+1 повторение"
+              >
+                <Plus className="h-3 w-3" />
+              </button>
             </div>
 
             {/* Action Done Button */}

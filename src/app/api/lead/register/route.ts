@@ -22,10 +22,12 @@ export async function POST(req: Request) {
       weightKg,
       totalTonnageKg,
       workoutHistory,
+      silent,
     } = body;
 
     const cleanUsername = (username || "").replace(/^@/, "").trim();
     const isTransferBool = Boolean(isTransfer);
+    const isSilent = Boolean(silent);
     const workoutsCount = Number(totalWorkouts) || 0;
     const microcycleNum = Number(currentMicrocycle) || 1;
     const weightNum = Number(weightKg) || 80;
@@ -48,13 +50,28 @@ export async function POST(req: Request) {
       workoutHistory: Array.isArray(workoutHistory) ? workoutHistory : undefined,
     });
 
+    // If silent sync requested, don't ping Telegram bot
+    if (isSilent) {
+      return NextResponse.json({ ok: true, silent: true, trainee });
+    }
+
     // Skip Telegram notification if the user is the coach himself
     if (isCoachAccount(cleanUsername, telegramUserId)) {
       return NextResponse.json({ ok: true, isCoach: true, trainee });
     }
 
+    // Persistent deduplication: if athlete already had transfer notified, never send transfer message again!
+    if (isTransferBool && trainee.transferNotified) {
+      return NextResponse.json({
+        ok: true,
+        duplicate: true,
+        message: "Athlete transfer already notified previously",
+        trainee,
+      });
+    }
+
     const dedupeKey = isTransferBool
-      ? `transfer:${telegramUserId || cleanUsername}_w${workoutsCount}`
+      ? `transfer:${telegramUserId || cleanUsername.toLowerCase()}`
       : (telegramUserId ? `id:${telegramUserId}` : `u:${cleanUsername.toLowerCase()}`) || `name:${name}`;
     const now = Date.now();
 
@@ -135,6 +152,14 @@ export async function POST(req: Request) {
     });
 
     const data = await res.json();
+    if (data?.ok && isTransferBool) {
+      registerOrUpdateLead({
+        name,
+        username: cleanUsername,
+        telegramUserId,
+        transferNotified: true,
+      });
+    }
     return NextResponse.json({ ok: Boolean(data?.ok), deliveredTo: targetChatId, trainee });
   } catch (error) {
     console.error("[Lead Register API] Error:", error);

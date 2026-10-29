@@ -18,6 +18,7 @@
     "tierKey": "power_master",
     "tierLabel": "Майстер Потужності 💥",
     "status": "active",
+    "transferNotified": true,
     "coachNotes": "Атлет успішно переніс 3 тренування з PWA-версії. Загальний тоннаж: 9,050 кг. Поточний МКЦ-1.",
     "workoutHistory": [
       {

@@ -2,7 +2,7 @@ import { api, db } from 'sdk';
 import { trainees, workoutLogs } from 'schema';
 import { eq, sql } from 'sdk/db';
 
-const COACH_CHAT_ID = '548019148';
+const COACH_CHAT_ID = (typeof process !== 'undefined' && process.env?.COACH_CHAT_ID) || '548019148';
 
 export default async function (input, context) {
   const userId = context?.userId || input?.telegramId;

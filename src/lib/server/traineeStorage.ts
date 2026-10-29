@@ -42,6 +42,7 @@ export interface TraineeProfile {
   tierLabel: string;
   status: "active" | "resting" | "needs_attention" | "new_lead" | "blocked";
   coachNotes: string;
+  transferNotified?: boolean;
   workoutHistory: TraineeWorkoutRecord[];
   measurementHistory: Array<{
     id: string;
@@ -159,6 +160,7 @@ export function autoDeduplicateTrainees(trainees: TraineeProfile[]): TraineeProf
         tierKey: (primary.tierKey !== "lead" ? primary.tierKey : secondary.tierKey) || "active",
         tierLabel: (primary.tierKey !== "lead" ? primary.tierLabel : secondary.tierLabel) || "Активний Атлет",
         coachNotes: primary.coachNotes ? `${primary.coachNotes}` : secondary.coachNotes,
+        transferNotified: Boolean(primary.transferNotified || secondary.transferNotified),
         workoutHistory: dedupedWorkouts,
         measurementHistory: combinedMeasurements,
       };
@@ -261,6 +263,7 @@ export function registerOrUpdateLead(lead: {
   tierKey?: TraineeProfile["tierKey"];
   tierLabel?: string;
   coachNotes?: string;
+  transferNotified?: boolean;
   workoutHistory?: TraineeWorkoutRecord[];
 }): TraineeProfile {
   const trainees = ensureDataFile();
@@ -309,6 +312,7 @@ export function registerOrUpdateLead(lead: {
       tierKey: lead.tierKey || target.tierKey,
       tierLabel: lead.tierLabel || target.tierLabel,
       coachNotes: lead.coachNotes || target.coachNotes,
+      transferNotified: lead.transferNotified !== undefined ? lead.transferNotified : target.transferNotified,
       lastWorkoutDate: target.lastWorkoutDate || now,
       workoutHistory: updatedWorkoutHistory,
     };
@@ -337,6 +341,7 @@ export function registerOrUpdateLead(lead: {
     tierLabel: lead.tierLabel || (initialTotal > 0 ? "Активний Атлет 🏋️‍♂️" : "НОВИЙ ЛІД 🔥"),
     status: lead.status || (initialTotal > 0 ? "active" : "new_lead"),
     coachNotes: lead.coachNotes || "Підписався на канал і запустив трекер.",
+    transferNotified: lead.transferNotified ?? false,
     workoutHistory: lead.workoutHistory || [],
     measurementHistory: [],
   };

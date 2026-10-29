@@ -42,68 +42,9 @@ export function TopHeader() {
             }).catch(() => {});
           });
         }
-
-        // 2. Auto-sync transferred workouts if athlete has imported completed workouts
-        const completedWorkouts = workouts.filter(
-          (w) =>
-            w.status === "completed" ||
-            Boolean(w.completedAt) ||
-            (typeof w.durationSeconds === "number" && w.durationSeconds > 0) ||
-            (w.supersets && w.supersets.some((ss) => ss.exercises?.some((ex) => ex.sets?.some((s) => s.completed))))
-        );
-
-        if (completedWorkouts.length > 0) {
-          const transferKey = `smt_transfer_synced_${effectiveUser.id || effectiveUser.username}_c${completedWorkouts.length}`;
-          if (!localStorage.getItem(transferKey)) {
-            localStorage.setItem(transferKey, "1");
-            const totalTonnage = completedWorkouts.reduce((sum, w) => sum + (w.tonnageKg || 0), 0);
-            const lastCompleted = completedWorkouts.reduce(
-              (max, w) => (w.workoutNumber > (max?.workoutNumber || 0) ? w : max),
-              completedWorkouts[0]
-            );
-
-            const serializedWorkouts = completedWorkouts.map((w) => {
-              const exercisesList = (w.supersets || []).flatMap((ss) =>
-                (ss.exercises || []).map((ex) => ({
-                  name: ex.name,
-                  weight: ex.sets?.[0]?.actualWeight ?? ex.sets?.[0]?.targetWeight ?? 0,
-                  reps: ex.sets?.[0]?.actualReps ?? ex.sets?.[0]?.targetReps ?? 10,
-                  setsCount: ex.sets?.filter((s) => s.completed).length || ex.sets?.length || 4,
-                  supersetLabel: ss.label,
-                }))
-              );
-              return {
-                id: w.id || `w-${w.workoutNumber}-${Date.now()}`,
-                workoutNumber: w.workoutNumber,
-                microcycle: w.microcycle,
-                date: w.completedAt || w.startedAt || new Date().toISOString(),
-                durationSeconds: w.durationSeconds || 0,
-                tonnageKg: w.tonnageKg || 0,
-                powerKgPerMin: w.powerKgPerMin || 0,
-                athleticScore: 80,
-                tierKey: "power_master" as const,
-                tierLabel: "Майстер Потужності 💥",
-                notes: w.notes || "Перенесено з PWA без втрати даних",
-                exercises: exercisesList,
-              };
-            });
-
-            import("@/lib/tma/sync").then(({ syncTraineeTransfer }) => {
-              syncTraineeTransfer({
-                name: athleteDisplayName,
-                username: effectiveUser.username || "",
-                telegramUserId: effectiveUser.id,
-                totalWorkouts: completedWorkouts.length,
-                currentMicrocycle: lastCompleted?.microcycle || 1,
-                totalTonnageKg: totalTonnage,
-                workoutHistory: serializedWorkouts,
-              }).catch(() => {});
-            });
-          }
-        }
       }
     }
-  }, [linkedTelegramUser, userRole, workouts, traineeName]);
+  }, [linkedTelegramUser, userRole, traineeName]);
 
   const activeWorkout = workouts.find((w) => w.id === activeWorkoutId);
 
