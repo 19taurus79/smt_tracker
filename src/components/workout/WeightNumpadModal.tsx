@@ -107,14 +107,17 @@ export function WeightNumpadModal({
       </div>
 
       {/* Scrollable Body: Content never clips even on compact screens */}
-      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain py-2 space-y-2.5 pr-0.5">
+      <div
+        className="flex-1 min-h-0 overflow-y-auto overscroll-contain py-2 space-y-2 pr-0.5 touch-pan-y"
+        style={{ WebkitOverflowScrolling: "touch" }}
+      >
         {/* Main Display */}
-        <div className="flex items-center justify-between rounded-2xl bg-slate-950/80 border border-white/10 p-2.5 sm:p-3 shadow-inner">
+        <div className="flex items-center justify-between rounded-2xl bg-slate-950/80 border border-white/10 p-2 sm:p-2.5 shadow-inner">
           <div className="flex items-baseline gap-1.5 min-w-0">
-            <span className="font-mono text-3xl font-black text-emerald-300 tracking-tight truncate">
+            <span className="font-mono text-2xl sm:text-3xl font-black text-emerald-300 tracking-tight truncate">
               {valStr || "0"}
             </span>
-            <span className="text-sm font-semibold text-slate-400 shrink-0">{t.common.kg}</span>
+            <span className="text-xs sm:text-sm font-semibold text-slate-400 shrink-0">{t.common.kg}</span>
           </div>
           <Button
             size="sm"
@@ -136,7 +139,7 @@ export function WeightNumpadModal({
                 type="button"
                 onClick={() => handleDelta(delta)}
                 className={cn(
-                  "h-8 rounded-lg text-xs font-bold transition-all border",
+                  "h-7 sm:h-8 rounded-lg text-[11px] sm:text-xs font-bold transition-all border touch-manipulation",
                   isPlus
                     ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/25 active:scale-95"
                     : "bg-slate-800 border-white/10 text-slate-300 hover:bg-slate-700 active:scale-95"
@@ -149,13 +152,13 @@ export function WeightNumpadModal({
         </div>
 
         {/* Custom Keypad Grid */}
-        <div className="grid grid-cols-3 gap-1.5 select-none">
+        <div className="grid grid-cols-3 gap-1.5 select-none touch-pan-y">
           {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((digit) => (
             <button
               key={digit}
               type="button"
               onClick={() => handleDigit(digit)}
-              className="h-11 sm:h-12 rounded-xl bg-slate-800/80 hover:bg-slate-700 active:bg-slate-600 border border-white/5 font-mono text-lg font-bold text-white transition-all active:scale-95 shadow-sm"
+              className="h-10 sm:h-11 rounded-xl bg-slate-800/80 hover:bg-slate-700 active:bg-slate-600 border border-white/5 font-mono text-lg font-bold text-white transition-all active:scale-95 shadow-sm touch-manipulation"
             >
               {digit}
             </button>
@@ -165,7 +168,7 @@ export function WeightNumpadModal({
           <button
             type="button"
             onClick={() => handleDigit(".")}
-            className="h-11 sm:h-12 rounded-xl bg-slate-800/80 hover:bg-slate-700 active:bg-slate-600 border border-white/5 font-mono text-xl font-black text-cyan-400 transition-all active:scale-95"
+            className="h-10 sm:h-11 rounded-xl bg-slate-800/80 hover:bg-slate-700 active:bg-slate-600 border border-white/5 font-mono text-xl font-black text-cyan-400 transition-all active:scale-95 touch-manipulation"
             title="Десятичная точка"
           >
             •
@@ -175,7 +178,7 @@ export function WeightNumpadModal({
           <button
             type="button"
             onClick={() => handleDigit("0")}
-            className="h-11 sm:h-12 rounded-xl bg-slate-800/80 hover:bg-slate-700 active:bg-slate-600 border border-white/5 font-mono text-lg font-bold text-white transition-all active:scale-95"
+            className="h-10 sm:h-11 rounded-xl bg-slate-800/80 hover:bg-slate-700 active:bg-slate-600 border border-white/5 font-mono text-lg font-bold text-white transition-all active:scale-95 touch-manipulation"
           >
             0
           </button>
@@ -184,7 +187,7 @@ export function WeightNumpadModal({
           <button
             type="button"
             onClick={handleBackspace}
-            className="h-11 sm:h-12 rounded-xl bg-slate-800/80 hover:bg-rose-950/40 active:bg-rose-900/60 border border-white/5 flex items-center justify-center text-slate-300 hover:text-rose-300 transition-all active:scale-95"
+            className="h-10 sm:h-11 rounded-xl bg-slate-800/80 hover:bg-rose-950/40 active:bg-rose-900/60 border border-white/5 flex items-center justify-center text-slate-300 hover:text-rose-300 transition-all active:scale-95 touch-manipulation"
             title="Стереть"
           >
             <Delete className="h-5 w-5" />
@@ -193,7 +196,7 @@ export function WeightNumpadModal({
 
         {/* Apply to remaining sets toggle */}
         {remainingSetsCount > 1 && (
-          <label className="flex items-center gap-2 p-2 rounded-xl bg-white/[0.03] border border-white/5 cursor-pointer select-none hover:bg-white/[0.06] transition-colors">
+          <label className="flex items-center gap-2 p-1.5 sm:p-2 rounded-xl bg-white/[0.03] border border-white/5 cursor-pointer select-none hover:bg-white/[0.06] transition-colors">
             <input
               type="checkbox"
               checked={applyToRemaining}
@@ -216,16 +219,30 @@ export function WeightNumpadModal({
         )}
       </div>
 
-      {/* Save Button - Fixed / shrink-0 at bottom */}
-      <div className="pt-2 border-t border-white/5 shrink-0">
+      {/* Footer Actions: Cancel & Save Buttons */}
+      <div className="pt-2 border-t border-white/5 shrink-0 grid grid-cols-2 gap-2">
         <Button
+          type="button"
+          variant="outline"
+          size="lg"
+          onClick={() => {
+            triggerHaptic("light");
+            onOpenChange(false);
+          }}
+          className="h-10 sm:h-11 border-white/10 bg-slate-800/80 hover:bg-slate-800 text-slate-300 hover:text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 active:scale-95 transition-all"
+        >
+          <X className="h-4 w-4" />
+          <span>{t.common.cancel}</span>
+        </Button>
+        <Button
+          type="button"
           variant="accent"
           size="lg"
           onClick={handleConfirm}
-          className="w-full h-11 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2"
+          className="h-10 sm:h-11 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs sm:text-sm shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-1.5 active:scale-95 transition-all"
         >
           <Check className="h-4 w-4 stroke-[3]" />
-          <span>{language === "uk" ? "Зберегти вагу" : language === "en" ? "Save Weight" : "Сохранить вес"}</span>
+          <span>{t.common.save}</span>
         </Button>
       </div>
     </Dialog>

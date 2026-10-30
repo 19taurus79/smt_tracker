@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import { X } from "lucide-react";
 
@@ -12,6 +13,12 @@ interface DialogProps {
 }
 
 export function Dialog({ open, onOpenChange, children, className }: DialogProps) {
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
   React.useEffect(() => {
     if (open) {
       document.body.style.overflow = "hidden";
@@ -23,11 +30,11 @@ export function Dialog({ open, onOpenChange, children, className }: DialogProps)
     };
   }, [open]);
 
-  if (!open) return null;
+  if (!open || !mounted) return null;
 
-  return (
+  const dialogElement = (
     <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto overscroll-contain"
+      className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-0 sm:p-4"
       style={{
         paddingTop: "max(8px, var(--tma-top-padding, 0px))",
       }}
@@ -40,13 +47,17 @@ export function Dialog({ open, onOpenChange, children, className }: DialogProps)
       {/* Content Container: Native Bottom Sheet on Mobile, Centered Modal on Desktop */}
       <div
         className={cn(
-          "relative z-50 w-full max-w-lg max-h-[calc(100dvh-max(8px,var(--tma-top-padding,0px))-8px)]",
+          "relative z-10 w-full max-w-lg max-h-[calc(100dvh-max(8px,var(--tma-top-padding,0px))-8px)]",
           "flex flex-col rounded-t-[28px] sm:rounded-3xl border-t sm:border border-white/10",
           "bg-slate-900/98 shadow-2xl backdrop-blur-2xl",
           "animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-250",
-          "p-3 sm:p-4 pb-[max(16px,var(--tma-bottom-padding,0px))] overflow-hidden",
+          "p-3 sm:p-4 overflow-hidden",
           className
         )}
+        style={{
+          paddingBottom: "max(16px, var(--tma-bottom-padding, 0px))",
+        }}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Native Mobile Drag Handle Pill */}
         <div className="w-10 h-1.5 rounded-full bg-white/25 mx-auto mt-0.5 mb-2 shrink-0 sm:hidden" />
@@ -54,6 +65,8 @@ export function Dialog({ open, onOpenChange, children, className }: DialogProps)
       </div>
     </div>
   );
+
+  return createPortal(dialogElement, document.body);
 }
 
 export function DialogBody({
