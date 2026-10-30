@@ -407,11 +407,11 @@ export function InitialSetupModal({
 
   return (
     <>
-      <Dialog open={isModalOpen} onOpenChange={handleClose}>
-        <DialogHeader>
+      <Dialog open={isModalOpen} onOpenChange={handleClose} className="max-w-lg">
+        <DialogHeader className="shrink-0 mb-1">
           <DialogTitle onClose={handleClose}>
             <div className="flex items-center gap-2">
-              <Dumbbell className="h-5 w-5 text-emerald-400" />
+              <Dumbbell className="h-5 w-5 text-emerald-400 shrink-0" />
               <span>{t.dashboard.setup1pm}</span>
             </div>
           </DialogTitle>
@@ -421,7 +421,7 @@ export function InitialSetupModal({
         </DialogHeader>
 
         {/* Scrollable list with fixed footer */}
-        <div className="space-y-3 my-1 overflow-y-auto pr-1 flex-1 max-h-[58vh]">
+        <div className="space-y-3 my-1 overflow-y-auto overscroll-contain pr-1 flex-1 min-h-0">
           {localExercises.map((ex, idx) => (
             <ExerciseCardRow
               key={ex.id}

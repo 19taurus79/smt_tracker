@@ -147,11 +147,11 @@ export function PrepCalculatorModal({
   ];
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogHeader>
+    <Dialog open={open} onOpenChange={onOpenChange} className="max-w-xl">
+      <DialogHeader className="shrink-0 mb-1">
         <DialogTitle onClose={() => onOpenChange(false)}>
           <div className="flex items-center gap-2">
-            <Calculator className="h-5 w-5 text-emerald-400" />
+            <Calculator className="h-5 w-5 text-emerald-400 shrink-0" />
             <span>
               {language === "uk"
                 ? "Калькулятор стартових ваг СМТ-1"
@@ -170,7 +170,7 @@ export function PrepCalculatorModal({
         </DialogDescription>
       </DialogHeader>
 
-      <div className="space-y-4 my-2 max-h-[70vh] overflow-y-auto pr-1">
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain space-y-4 my-1.5 pr-1">
         {/* Input Cards: 3 Compound Prep Exercises */}
         <div className="rounded-xl border border-white/10 bg-slate-900/60 p-3.5 space-y-3">
           <div className="text-xs font-bold text-slate-300 flex items-center justify-between">
@@ -291,7 +291,7 @@ export function PrepCalculatorModal({
         </div>
       </div>
 
-      <div className="pt-2 border-t border-white/10 flex flex-col sm:flex-row gap-2">
+      <div className="pt-2.5 border-t border-white/10 flex flex-col sm:flex-row gap-2 shrink-0">
         <Button
           variant="accent"
           size="lg"

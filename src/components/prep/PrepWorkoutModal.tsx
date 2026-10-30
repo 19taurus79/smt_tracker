@@ -457,11 +457,11 @@ export function PrepWorkoutModal({
   // =========================================================================
   if (step === "briefing") {
     return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogHeader>
+      <Dialog open={open} onOpenChange={onOpenChange} className="max-w-xl">
+        <DialogHeader className="shrink-0 mb-1">
           <DialogTitle onClose={() => onOpenChange(false)}>
             <div className="flex items-center gap-2 text-cyan-400">
-              <Flame className="h-5 w-5" />
+              <Flame className="h-5 w-5 shrink-0" />
               <span>
                 {language === "uk"
                   ? `Вводне тренування #${selectedNum} із 6`
@@ -480,7 +480,7 @@ export function PrepWorkoutModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 my-2 max-h-[72vh] overflow-y-auto pr-1">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain space-y-4 my-1.5 pr-1">
           {/* Workout Switcher Pill Tabs (1..6) */}
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
             {sessions.map((sess) => {
@@ -667,11 +667,11 @@ export function PrepWorkoutModal({
   // =========================================================================
   if (step === "calibrate") {
     return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogHeader>
+      <Dialog open={open} onOpenChange={onOpenChange} className="max-w-xl">
+        <DialogHeader className="shrink-0 mb-1">
           <DialogTitle onClose={() => onOpenChange(false)}>
             <div className="flex items-center gap-2 text-emerald-400">
-              <CheckCircle2 className="h-5 w-5" />
+              <CheckCircle2 className="h-5 w-5 shrink-0" />
               <span>
                 {language === "uk"
                   ? `Тренування #${selectedNum} виконано!`
@@ -690,7 +690,7 @@ export function PrepWorkoutModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 my-2 max-h-[70vh] overflow-y-auto pr-1">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain space-y-4 my-1.5 pr-1">
           {calibrateSaved ? (
             <div className="rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-6 text-center space-y-2">
               <CheckCircle2 className="h-10 w-10 text-emerald-400 mx-auto" />
@@ -894,11 +894,11 @@ export function PrepWorkoutModal({
   // =========================================================================
   if (step === "all_completed") {
     return (
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogHeader>
+      <Dialog open={open} onOpenChange={onOpenChange} className="max-w-xl">
+        <DialogHeader className="shrink-0 mb-1">
           <DialogTitle onClose={() => onOpenChange(false)}>
             <div className="flex items-center gap-2 text-emerald-400">
-              <Trophy className="h-5 w-5 text-amber-400" />
+              <Trophy className="h-5 w-5 text-amber-400 shrink-0" />
               <span>
                 {language === "uk"
                   ? "🎉 Вводний цикл успішно пройдено!"
@@ -915,7 +915,7 @@ export function PrepWorkoutModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 my-2 max-h-[70vh] overflow-y-auto pr-1">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain space-y-4 my-1.5 pr-1">
           <div className="rounded-2xl border border-cyan-500/40 bg-gradient-to-br from-slate-900 via-slate-900 to-cyan-950/40 p-4 space-y-3 shadow-xl">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -1092,11 +1092,11 @@ export function PrepWorkoutModal({
   // SCREEN 2: ACTIVE PREP WORKOUT
   // =========================================================================
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogHeader>
+    <Dialog open={open} onOpenChange={onOpenChange} className="max-w-xl">
+      <DialogHeader className="shrink-0 mb-1">
         <DialogTitle onClose={() => onOpenChange(false)}>
           <div className="flex items-center gap-2">
-            <Flame className="h-5 w-5 text-cyan-400" />
+            <Flame className="h-5 w-5 text-cyan-400 shrink-0" />
             <span>
               {language === "uk"
                 ? `Вводне тренування #${selectedNum} (Адаптація)`
@@ -1115,7 +1115,7 @@ export function PrepWorkoutModal({
         </DialogDescription>
       </DialogHeader>
 
-      <div className="space-y-4 my-2 max-h-[72vh] overflow-y-auto pr-1">
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain space-y-4 my-1.5 pr-1">
         {/* Dashboard Bar: Stopwatch & Active Rest Timer */}
         <div className="grid grid-cols-2 gap-2">
           {/* Workout Elapsed Time */}

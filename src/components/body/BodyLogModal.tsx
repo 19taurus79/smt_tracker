@@ -81,11 +81,11 @@ export function BodyLogModal({
 
   return (
     <Dialog open={isModalOpen} onOpenChange={(val) => { if (!val) handleClose(); else onOpenChange?.(true); }}>
-      <DialogHeader>
+      <DialogHeader className="shrink-0 mb-1">
         <DialogTitle onClose={handleClose}>
           <div className="flex items-center gap-2">
-            <Ruler className="h-6 w-6 text-emerald-400" />
-            <span>{initialData ? t.body.editRecord : t.body.addRecord}</span>
+            <Ruler className="h-6 w-6 text-emerald-400 shrink-0" />
+            <span className="truncate">{initialData ? t.body.editRecord : t.body.addRecord}</span>
           </div>
         </DialogTitle>
         <DialogDescription>
@@ -93,100 +93,104 @@ export function BodyLogModal({
         </DialogDescription>
       </DialogHeader>
 
-      <form onSubmit={handleSubmit} className="space-y-3.5 my-2">
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1">
-            <label className="text-xs font-semibold text-slate-300">{t.body.date}</label>
-            <Input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              required
-            />
+      <form onSubmit={handleSubmit} className="flex-1 min-h-0 flex flex-col">
+        {/* Scrollable Fields */}
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain space-y-3 pr-1 py-1">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-300">{t.body.date}</label>
+              <Input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-300">
+                {t.body.weight} ({t.common.kg}) <span className="text-emerald-400">*</span>
+              </label>
+              <Input
+                type="number"
+                step="0.1"
+                value={weightKg}
+                onChange={(e) => setWeightKg(e.target.value)}
+                placeholder="80.0"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+            <div className="space-y-1">
+              <label className="text-[11px] text-slate-400">{t.body.waist} (см)</label>
+              <Input
+                type="number"
+                step="0.5"
+                value={waistCm}
+                onChange={(e) => setWaistCm(e.target.value)}
+                placeholder="84"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[11px] text-slate-400">{t.body.chest} (см)</label>
+              <Input
+                type="number"
+                step="0.5"
+                value={chestCm}
+                onChange={(e) => setChestCm(e.target.value)}
+                placeholder="104"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[11px] text-slate-400">{t.body.biceps} (см)</label>
+              <Input
+                type="number"
+                step="0.5"
+                value={bicepsCm}
+                onChange={(e) => setBicepsCm(e.target.value)}
+                placeholder="38"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[11px] text-slate-400">{t.body.hips} (см)</label>
+              <Input
+                type="number"
+                step="0.5"
+                value={hipsCm}
+                onChange={(e) => setHipsCm(e.target.value)}
+                placeholder="98"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[11px] text-slate-400">{t.body.thigh} (см)</label>
+              <Input
+                type="number"
+                step="0.5"
+                value={thighCm}
+                onChange={(e) => setThighCm(e.target.value)}
+                placeholder="59"
+              />
+            </div>
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs font-semibold text-slate-300">
-              {t.body.weight} ({t.common.kg}) <span className="text-emerald-400">*</span>
-            </label>
+            <label className="text-xs font-semibold text-slate-300">{t.body.notes}</label>
             <Input
-              type="number"
-              step="0.1"
-              value={weightKg}
-              onChange={(e) => setWeightKg(e.target.value)}
-              placeholder="80.0"
-              required
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="..."
             />
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-          <div className="space-y-1">
-            <label className="text-[11px] text-slate-400">{t.body.waist} (см)</label>
-            <Input
-              type="number"
-              step="0.5"
-              value={waistCm}
-              onChange={(e) => setWaistCm(e.target.value)}
-              placeholder="84"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-[11px] text-slate-400">{t.body.chest} (см)</label>
-            <Input
-              type="number"
-              step="0.5"
-              value={chestCm}
-              onChange={(e) => setChestCm(e.target.value)}
-              placeholder="104"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-[11px] text-slate-400">{t.body.biceps} (см)</label>
-            <Input
-              type="number"
-              step="0.5"
-              value={bicepsCm}
-              onChange={(e) => setBicepsCm(e.target.value)}
-              placeholder="38"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-[11px] text-slate-400">{t.body.hips} (см)</label>
-            <Input
-              type="number"
-              step="0.5"
-              value={hipsCm}
-              onChange={(e) => setHipsCm(e.target.value)}
-              placeholder="98"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-[11px] text-slate-400">{t.body.thigh} (см)</label>
-            <Input
-              type="number"
-              step="0.5"
-              value={thighCm}
-              onChange={(e) => setThighCm(e.target.value)}
-              placeholder="59"
-            />
-          </div>
-        </div>
-
-        <div className="space-y-1">
-          <label className="text-xs font-semibold text-slate-300">{t.body.notes}</label>
-          <Input
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="..."
-          />
-        </div>
-
-        <div className="pt-3">
+        {/* Fixed Action Footer */}
+        <div className="pt-2.5 border-t border-white/10 shrink-0">
           <Button variant="accent" size="lg" type="submit" className="w-full font-bold">
             <Save className="h-4 w-4 mr-2" />
             <span>{t.common.save}</span>

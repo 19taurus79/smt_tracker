@@ -107,10 +107,10 @@ export function AddTraineeModal({ open, onOpenChange }: AddTraineeModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange} className="max-w-lg">
-      <DialogHeader>
+      <DialogHeader className="shrink-0 mb-1">
         <DialogTitle onClose={() => onOpenChange(false)}>
           <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+            <div className="h-8 w-8 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
               <UserPlus className="h-4 w-4" />
             </div>
             <div>
@@ -125,9 +125,10 @@ export function AddTraineeModal({ open, onOpenChange }: AddTraineeModalProps) {
         </DialogTitle>
       </DialogHeader>
 
-      <form onSubmit={handleSubmit} className="space-y-3.5 my-1 max-h-[75vh] overflow-y-auto scrollbar-none no-scrollbar pr-1">
-        {/* Name & Alias Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <form onSubmit={handleSubmit} className="flex-1 min-h-0 flex flex-col">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain space-y-3.5 pr-1 py-1">
+          {/* Name & Alias Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="space-y-1">
             <label className="text-xs font-bold text-slate-200 flex items-center gap-1.5">
               <User className="h-3.5 w-3.5 text-emerald-400" />
@@ -243,9 +244,10 @@ export function AddTraineeModal({ open, onOpenChange }: AddTraineeModalProps) {
             className="w-full rounded-2xl border border-white/10 bg-slate-950/80 p-2.5 text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-emerald-500 transition-colors resize-none"
           />
         </div>
+      </div>
 
-        {/* Footer Actions */}
-        <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/10">
+      {/* Footer Actions */}
+      <div className="flex items-center justify-end gap-2 pt-2.5 border-t border-white/10 shrink-0">
           <Button
             type="button"
             variant="ghost"

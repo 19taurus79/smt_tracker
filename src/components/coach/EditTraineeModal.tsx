@@ -103,10 +103,10 @@ export function EditTraineeModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange} className="max-w-md">
-      <DialogHeader>
+      <DialogHeader className="shrink-0 mb-1">
         <DialogTitle onClose={() => onOpenChange(false)}>
           <div className="flex items-center gap-2.5">
-            <div className="h-8 w-8 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400">
+            <div className="h-8 w-8 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
               <Tag className="h-4 w-4" />
             </div>
             <div>
@@ -121,7 +121,8 @@ export function EditTraineeModal({
         </DialogTitle>
       </DialogHeader>
 
-      <form onSubmit={handleSave} className="space-y-4 my-1">
+      <form onSubmit={handleSave} className="flex-1 min-h-0 flex flex-col">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain space-y-3.5 pr-1 py-1">
         {/* Live Preview Card */}
         <div className="p-3 rounded-2xl bg-gradient-to-br from-slate-950 to-slate-900/90 border border-white/10 shadow-inner">
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
@@ -255,9 +256,10 @@ export function EditTraineeModal({
             Основне ім&apos;я атлета з профілю Telegram або анкети.
           </p>
         </div>
+      </div>
 
-        {/* Actions Footer */}
-        <div className="flex items-center justify-end gap-2 pt-3 border-t border-white/10">
+      {/* Actions Footer */}
+      <div className="flex items-center justify-end gap-2 pt-2.5 border-t border-white/10 shrink-0">
           <Button
             type="button"
             variant="ghost"

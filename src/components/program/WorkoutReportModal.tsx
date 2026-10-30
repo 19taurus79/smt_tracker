@@ -200,11 +200,12 @@ export function WorkoutReportModal({
     <Dialog
       open={open}
       onOpenChange={onOpenChange}
+      className="max-w-xl"
     >
-      <DialogHeader>
+      <DialogHeader className="shrink-0 mb-1">
         <DialogTitle onClose={() => onOpenChange(false)}>
           <div className="flex items-center gap-2">
-            <FileText className="h-5 w-5 text-emerald-400" />
+            <FileText className="h-5 w-5 text-emerald-400 shrink-0" />
             <span className="truncate">{reportTitle}</span>
           </div>
         </DialogTitle>
@@ -219,7 +220,7 @@ export function WorkoutReportModal({
         </DialogDescription>
       </DialogHeader>
 
-      <div className="space-y-4 my-2 max-h-[68vh] overflow-y-auto pr-1">
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain space-y-4 my-1.5 pr-1">
         {/* Athletic Score Hero Banner */}
         <div
           className={`p-3 rounded-2xl border ${tierColor.border} ${tierColor.bg} flex items-center justify-between gap-3 shadow-md ${tierColor.glow}`}

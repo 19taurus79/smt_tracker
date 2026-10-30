@@ -42,11 +42,11 @@ export function OneRepMaxModal({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogHeader>
+    <Dialog open={open} onOpenChange={onOpenChange} className="max-w-md">
+      <DialogHeader className="shrink-0 mb-1">
         <DialogTitle onClose={() => onOpenChange(false)}>
           <div className="flex items-center gap-2">
-            <Calculator className="h-5 w-5 text-emerald-400" />
+            <Calculator className="h-5 w-5 text-emerald-400 shrink-0" />
             <span>Калькулятор 1ПМ</span>
           </div>
         </DialogTitle>
@@ -56,7 +56,7 @@ export function OneRepMaxModal({
         </DialogDescription>
       </DialogHeader>
 
-      <div className="space-y-4 my-2">
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain space-y-3.5 pr-1 py-1">
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
             <label className="text-xs font-medium text-slate-300">Рабочий вес (кг)</label>
@@ -91,7 +91,7 @@ export function OneRepMaxModal({
         </div>
 
         {/* Calculation Result */}
-        <div className="rounded-2xl border border-emerald-500/30 bg-emerald-950/20 p-4 text-center space-y-2">
+        <div className="rounded-2xl border border-emerald-500/30 bg-emerald-950/20 p-3.5 sm:p-4 text-center space-y-2">
           <span className="text-xs text-slate-400">Расчетный 1ПМ (скорректируйте при необходимости):</span>
           <div className="flex items-center justify-center gap-2">
             <Input
@@ -124,7 +124,7 @@ export function OneRepMaxModal({
         </div>
       </div>
 
-      <div className="pt-2 flex flex-col gap-2">
+      <div className="pt-2.5 border-t border-white/10 shrink-0">
         <Button variant="accent" size="lg" className="w-full font-bold" onClick={handleApply}>
           <span>Применить {effective1RM} кг в 1ПМ</span>
           <ArrowRight className="h-4 w-4 ml-2" />

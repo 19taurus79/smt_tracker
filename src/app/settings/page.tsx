@@ -1317,7 +1317,7 @@ export default function SettingsPage() {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-3 my-2">
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain space-y-3 my-1 pr-1">
           <textarea
             rows={4}
             value={transferCodeText}
@@ -1346,8 +1346,9 @@ export default function SettingsPage() {
               {transferCodeText.length > 0 ? `${transferCodeText.length} симв.` : ""}
             </span>
           </div>
+        </div>
 
-          <div className="flex gap-2 pt-2 border-t border-white/10">
+          <div className="flex gap-2 pt-2.5 border-t border-white/10 shrink-0">
             <Button
               type="button"
               variant="outline"
@@ -1367,7 +1368,6 @@ export default function SettingsPage() {
               <span>{language === "uk" ? "Застосувати" : "Применить"}</span>
             </Button>
           </div>
-        </div>
       </Dialog>
 
       {/* Help Modal */}

@@ -1259,7 +1259,7 @@ export function StoryShareModal({
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
+      <Dialog open={open} onOpenChange={onOpenChange} className="max-w-xl">
         <DialogHeader className="shrink-0 mb-1.5">
           <DialogTitle onClose={() => onOpenChange(false)}>
             <div className="flex items-center gap-2">

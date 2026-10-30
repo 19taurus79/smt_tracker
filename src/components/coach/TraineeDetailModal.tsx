@@ -212,7 +212,7 @@ export function TraineeDetailModal({ trainee: initialTrainee, open, onOpenChange
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange} className="max-w-xl">
-      <DialogHeader>
+      <DialogHeader className="shrink-0 mb-1">
         <DialogTitle onClose={() => onOpenChange(false)}>
           <div className="flex items-center gap-3">
             <div
@@ -268,7 +268,7 @@ export function TraineeDetailModal({ trainee: initialTrainee, open, onOpenChange
         </DialogDescription>
       </DialogHeader>
 
-      <div className="space-y-3 my-1 max-h-[75vh] overflow-y-auto scrollbar-none no-scrollbar pb-2">
+      <div className="flex-1 min-h-0 overflow-y-auto scrollbar-none no-scrollbar space-y-3 my-1 pb-2">
         {/* ======================================================== */}
         {/* BENTO GRID: Атлетичний статус та метрики підопічного    */}
         {/* ======================================================== */}

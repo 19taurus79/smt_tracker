@@ -27,27 +27,44 @@ export function Dialog({ open, onOpenChange, children, className }: DialogProps)
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 overflow-y-auto overscroll-contain"
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 overflow-y-auto overscroll-contain"
       style={{
-        paddingTop: "max(12px, var(--tma-top-padding, 0px))",
-        paddingBottom: "max(12px, var(--tma-bottom-padding, 0px))",
+        paddingTop: "max(8px, var(--tma-top-padding, 0px))",
       }}
     >
       {/* Backdrop */}
       <div
-        className="fixed inset-0 bg-black/85 backdrop-blur-md animate-in fade-in transition-opacity"
+        className="fixed inset-0 bg-black/85 backdrop-blur-md animate-in fade-in duration-200 transition-opacity"
         onClick={() => onOpenChange(false)}
       />
-      {/* Content Container: Dynamic dvh and safe-area bounded */}
+      {/* Content Container: Native Bottom Sheet on Mobile, Centered Modal on Desktop */}
       <div
         className={cn(
-          "relative z-50 w-full max-w-lg max-h-[calc(100dvh-max(12px,var(--tma-top-padding,0px))-max(12px,var(--tma-bottom-padding,0px))-16px)] flex flex-col rounded-2xl sm:rounded-3xl border border-white/10 bg-slate-900/98 p-2.5 sm:p-4 shadow-2xl backdrop-blur-2xl animate-in zoom-in-95 overflow-hidden",
+          "relative z-50 w-full max-w-lg max-h-[calc(100dvh-max(8px,var(--tma-top-padding,0px))-8px)]",
+          "flex flex-col rounded-t-[28px] sm:rounded-3xl border-t sm:border border-white/10",
+          "bg-slate-900/98 shadow-2xl backdrop-blur-2xl",
+          "animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-250",
+          "p-3 sm:p-4 pb-[max(16px,var(--tma-bottom-padding,0px))] overflow-hidden",
           className
         )}
       >
+        {/* Native Mobile Drag Handle Pill */}
+        <div className="w-10 h-1.5 rounded-full bg-white/25 mx-auto mt-0.5 mb-2 shrink-0 sm:hidden" />
         {children}
       </div>
     </div>
+  );
+}
+
+export function DialogBody({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      className={cn("flex-1 min-h-0 overflow-y-auto overscroll-contain pr-1 py-1", className)}
+      {...props}
+    />
   );
 }
 
