@@ -38,10 +38,12 @@ interface TelegramUpdate {
   callback_query?: TelegramCallbackQuery;
 }
 
+export const dynamic = "force-static";
+
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const rawChannel = process.env.TELEGRAM_CHALLENGE_CHANNEL_ID || "@smt_challenge";
 const CHANNEL_ID = rawChannel.startsWith("@") || rawChannel.startsWith("-") ? rawChannel : `@${rawChannel}`;
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://smt-tracker.vercel.app";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://app8814128552.tgcloud.ai";
 const COACH_CHAT_ID = process.env.COACH_TELEGRAM_CHAT_ID || MASTER_COACH_CHAT_ID;
 
 // In-memory cache to deduplicate bot lead alerts (e.g. repeated clicks on check_sub)

@@ -15,6 +15,7 @@ interface WeightNumpadModalProps {
   exerciseName?: string;
   setNumber?: number;
   totalSets?: number;
+  isSuperset?: boolean;
   onSave: (newWeight: number, applyToRemaining: boolean) => void;
 }
 
@@ -25,6 +26,7 @@ export function WeightNumpadModal({
   exerciseName,
   setNumber = 1,
   totalSets = 4,
+  isSuperset = false,
   onSave,
 }: WeightNumpadModalProps) {
   const { t, language } = useTranslation();
@@ -207,8 +209,14 @@ export function WeightNumpadModal({
               className="h-4 w-4 rounded accent-emerald-500 cursor-pointer shrink-0"
             />
             <div className="text-xs text-slate-300 min-w-0">
-              <span className="block leading-tight">
-                {language === "uk"
+              <span className="block leading-tight font-medium">
+                {isSuperset
+                  ? language === "uk"
+                    ? `Застосувати до всіх наступних кіл (${remainingSetsCount})`
+                    : language === "en"
+                    ? `Apply to remaining rounds (${remainingSetsCount})`
+                    : `Применить ко всем оставшимся кругам (${remainingSetsCount})`
+                  : language === "uk"
                   ? `Застосувати до всіх наступних підходів (${remainingSetsCount})`
                   : language === "en"
                   ? `Apply to remaining sets (${remainingSetsCount})`

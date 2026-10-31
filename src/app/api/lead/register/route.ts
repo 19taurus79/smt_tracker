@@ -2,6 +2,12 @@ import { NextResponse } from "next/server";
 import { isCoachAccount, MASTER_COACH_CHAT_ID } from "@/lib/auth/roles";
 import { registerOrUpdateLead } from "@/lib/server/traineeStorage";
 
+export const dynamic = "force-static";
+
+export async function GET() {
+  return NextResponse.json({ ok: true, service: "lead-register" });
+}
+
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const COACH_CHAT_ID = process.env.COACH_TELEGRAM_CHAT_ID || MASTER_COACH_CHAT_ID;
 

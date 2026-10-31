@@ -1,12 +1,13 @@
 import { db } from 'sdk';
-import { trainees } from 'schema';
+import { trainees } from '../schema.js';
 import { eq } from 'sdk/db';
 
 export default async function (input, context) {
-  const userId = context?.userId || input?.telegramId;
-  if (!userId) {
+  const rawId = context?.initData?.user?.id || context?.userId || input?.telegramId;
+  if (!rawId) {
     throw new Error('Unauthorized: missing userId');
   }
+  const userId = Number(rawId);
 
   const now = Date.now();
   const existing = await db.select().from(trainees).where(eq(trainees.telegramId, userId)).get();

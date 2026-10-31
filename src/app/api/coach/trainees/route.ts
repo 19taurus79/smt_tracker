@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getAllTrainees, updateTraineeDetails, deleteTraineeProfile } from "@/lib/server/traineeStorage";
 
+export const dynamic = "force-static";
+
 export async function GET() {
   try {
     const trainees = getAllTrainees();

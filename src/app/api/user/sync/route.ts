@@ -3,6 +3,8 @@ import fs from "fs";
 import path from "path";
 import os from "os";
 
+export const dynamic = "force-static";
+
 // Cross-invocation global memory store
 const globalStore: Map<string, { data: any; updatedAt: number }> =
   (globalThis as any).__smtSyncMemoryStore || new Map();
@@ -39,8 +41,11 @@ function saveUserFile(telegramId: string, payload: any) {
   }
 }
 
-export async function GET(req: Request) {
+export async function GET(req?: Request) {
   try {
+    if (!req?.url) {
+      return NextResponse.json({ ok: true, status: "user-sync" });
+    }
     const { searchParams } = new URL(req.url);
     const telegramId = searchParams.get("telegramId");
 

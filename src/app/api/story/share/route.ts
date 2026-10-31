@@ -1,11 +1,17 @@
 import { NextResponse } from "next/server";
 
+export const dynamic = "force-static";
+
+export async function GET() {
+  return NextResponse.json({ ok: true, service: "story-share" });
+}
+
 // Serverless API route to send high-res generated story image directly to athlete's Telegram chat
 // This bypasses Android/iOS WebView download & share restrictions completely!
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const BOT_USERNAME = process.env.TELEGRAM_BOT_USERNAME || process.env.NEXT_PUBLIC_BOT_USERNAME || "athletic_smt_bot";
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://smt-tracker.vercel.app";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://app8814128552.tgcloud.ai";
 
 interface ShareStoryBody {
   chatId?: number | string;

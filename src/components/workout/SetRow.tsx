@@ -92,7 +92,7 @@ export function SetRow({
 
     // Apply to current set and all subsequent sets of this exercise
     const ss = currentWorkout?.supersets.find((s) => s.id === supersetId);
-    const ex = ss?.exercises.find((e) => e.exerciseId === exerciseId);
+    const ex = ss?.exercises.find((e) => e.exerciseId === exerciseId || e.id === exerciseId);
     if (!ex) {
       updateSet(workoutId, supersetId, exerciseId, set.setNumber, {
         actualWeight: newWeight,
@@ -103,7 +103,7 @@ export function SetRow({
     const updates = ex.sets
       .filter((s) => s.setNumber >= set.setNumber)
       .map((s) => ({
-        exerciseId,
+        exerciseId: ex.exerciseId || exerciseId,
         setNumber: s.setNumber,
         data: { actualWeight: newWeight },
       }));
@@ -299,6 +299,7 @@ export function SetRow({
         exerciseName={exerciseName}
         setNumber={set.setNumber}
         totalSets={totalSets}
+        isSuperset={Boolean(isSupersetRow || roundBadge)}
         onSave={handleSaveNumpadWeight}
       />
     </>

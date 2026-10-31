@@ -16,7 +16,7 @@ if (fs.existsSync(envPath)) {
 }
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://smt-tracker.vercel.app";
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://app8814128552.tgcloud.ai";
 
 if (!BOT_TOKEN) {
   console.error("❌ Error: TELEGRAM_BOT_TOKEN is not defined in .env.local");

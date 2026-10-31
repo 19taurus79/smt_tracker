@@ -1,11 +1,11 @@
 import { api, db } from 'sdk';
-import { trainees, workoutLogs } from 'schema';
+import { trainees, workoutLogs } from '../schema.js';
 import { eq, sql } from 'sdk/db';
 
 const COACH_CHAT_ID = (typeof process !== 'undefined' && process.env?.COACH_CHAT_ID) || '548019148';
 
 export default async function (input, context) {
-  const userId = context?.userId || input?.telegramId;
+  const userId = context?.initData?.user?.id || context?.userId || input?.telegramId;
   if (!userId) {
     throw new Error('Unauthorized: missing userId');
   }
@@ -23,44 +23,54 @@ export default async function (input, context) {
     weightKg = 80,
     name = 'Атлет',
     username = '',
-  } = input;
+  } = input || {};
+
+  const cleanTonnage = Math.round(Number(tonnageKg) || 0);
+  const cleanPower = Math.round(Number(powerKgPerMin) || 0);
+  const cleanScore = Math.round(Number(athleticScore) || 70);
 
   // 1. Record workout log in SQLite
   await db.insert(workoutLogs).values({
-    traineeTelegramId: userId,
-    workoutNumber,
-    microcycle,
-    durationSeconds,
-    tonnageKg,
-    powerKgPerMin,
-    athleticScore,
-    exercisesJson: JSON.stringify(exercises),
-    notes,
+    traineeTelegramId: Number(userId),
+    workoutNumber: Number(workoutNumber),
+    microcycle: Number(microcycle),
+    durationSeconds: Number(durationSeconds),
+    tonnageKg: cleanTonnage,
+    powerKgPerMin: cleanPower,
+    athleticScore: cleanScore,
+    exercisesJson: typeof exercises === 'string' ? exercises : JSON.stringify(exercises),
+    notes: String(notes || ''),
     createdAt: now,
   }).run();
 
-  // 2. Upsert trainee profile in SQLite
+  // 2. Count total workouts for this trainee
+  const allLogs = await db.select().from(workoutLogs).where(eq(workoutLogs.traineeTelegramId, Number(userId))).all();
+  const totalCount = allLogs?.length || 1;
+
+  // 3. Upsert trainee profile in SQLite
   await db.insert(trainees).values({
-    telegramId: userId,
-    username: username.replace(/^@/, ''),
+    telegramId: Number(userId),
+    username: (username || '').replace(/^@/, ''),
     firstName: name,
     coachId: COACH_CHAT_ID,
-    currentMicrocycle: microcycle,
-    currentWorkout: workoutNumber,
-    totalWorkouts: 1,
-    weightKg,
-    athleticScore,
+    currentMicrocycle: Number(microcycle),
+    currentWorkout: Number(workoutNumber),
+    totalWorkouts: totalCount,
+    weightKg: Number(weightKg) || 80,
+    athleticScore: cleanScore,
     status: 'active',
     updatedAt: now,
     createdAt: now,
   }).onConflictDoUpdate({
     target: trainees.telegramId,
     set: {
-      currentMicrocycle: microcycle,
-      currentWorkout: workoutNumber,
-      totalWorkouts: sql`${trainees.totalWorkouts} + 1`,
-      weightKg,
-      athleticScore,
+      username: (username || '').replace(/^@/, ''),
+      firstName: name,
+      currentMicrocycle: Number(microcycle),
+      currentWorkout: Number(workoutNumber),
+      totalWorkouts: totalCount,
+      weightKg: Number(weightKg) || 80,
+      athleticScore: cleanScore,
       status: 'active',
       updatedAt: now,
     },

@@ -38,7 +38,7 @@ export default async function (message, ctx) {
             {
               text: "⚡️ Відкрити SMT-1 Трекер",
               web_app: {
-                url: "https://smt-tracker.vercel.app",
+                url: "https://app8814128552.tgcloud.ai",
               },
             },
           ],
@@ -98,7 +98,7 @@ export default async function (message, ctx) {
             {
               text: "⚡️ Відкрити SMT-1 Трекер",
               web_app: {
-                url: "https://smt-tracker.vercel.app",
+                url: "https://app8814128552.tgcloud.ai",
               },
             },
           ],

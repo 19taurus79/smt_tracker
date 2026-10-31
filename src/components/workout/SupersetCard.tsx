@@ -50,6 +50,7 @@ export function SupersetCard({ workoutId, superset }: SupersetCardProps) {
   const [isBatchMode, setIsBatchMode] = useState(false);
   const [selectedSetKeys, setSelectedSetKeys] = useState<Set<string>>(new Set());
   const [isBatchNumpadOpen, setIsBatchNumpadOpen] = useState(false);
+  const [quickEditExercise, setQuickEditExercise] = useState<{ ex: typeof superset.exercises[0]; isA: boolean } | null>(null);
 
   const currentWorkout = workouts.find((w) => w.id === workoutId);
   const isActive = activeWorkoutId === workoutId && currentWorkout?.status === "in_progress";
@@ -212,6 +213,24 @@ export function SupersetCard({ workoutId, superset }: SupersetCardProps) {
     if (initialNumpadWeight > 0) break;
   }
 
+  // Quick Edit 1A / 1B for all rounds
+  const handleQuickEditSave = (newWeight: number, applyToRemaining: boolean) => {
+    if (!quickEditExercise) return;
+    const targetEx = quickEditExercise.ex;
+    if (!applyToRemaining) {
+      updateSet(workoutId, superset.id, targetEx.exerciseId, 1, { actualWeight: newWeight });
+      setQuickEditExercise(null);
+      return;
+    }
+    const updates = targetEx.sets.map((s) => ({
+      exerciseId: targetEx.exerciseId || targetEx.id,
+      setNumber: s.setNumber,
+      data: { actualWeight: newWeight },
+    }));
+    batchUpdateSets(workoutId, superset.id, updates);
+    setQuickEditExercise(null);
+  };
+
   return (
     <Card className="border-white/10 bg-slate-900/75 overflow-hidden shadow-lg">
       {/* Header: Title + Subtitle on Left, Batch mode toggle + Sets Counter on Right */}
@@ -330,13 +349,22 @@ export function SupersetCard({ workoutId, superset }: SupersetCardProps) {
         {!isSingle && ex1 && ex2 && !isBatchMode && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1 border-t border-white/5 text-xs">
             {/* 1A Target Box */}
-            <div className="flex items-center justify-between p-2 rounded-xl bg-emerald-950/25 border border-emerald-500/25">
+            <div
+              onClick={() => {
+                triggerHaptic("selection");
+                setQuickEditExercise({ ex: ex1, isA: true });
+              }}
+              role="button"
+              tabIndex={0}
+              className="flex items-center justify-between p-2 rounded-xl bg-emerald-950/25 border border-emerald-500/25 hover:border-emerald-500/50 hover:bg-emerald-950/40 active:scale-[0.99] transition-all cursor-pointer group select-none"
+              title={language === "uk" ? "Натисніть для зміни ваги 1А для всіх кіл" : language === "en" ? "Click to edit 1A weight for all rounds" : "Нажмите для изменения веса 1А для всех кругов"}
+            >
               <div className="flex items-center gap-2 min-w-0">
                 <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-lg bg-emerald-500/30 text-emerald-300 font-black text-[10px]">
                   1А
                 </span>
                 <div className="min-w-0">
-                  <span className="font-bold text-white text-xs block truncate max-w-[150px] sm:max-w-none">
+                  <span className="font-bold text-white text-xs block truncate max-w-[150px] sm:max-w-none group-hover:text-emerald-200 transition-colors">
                     {getLocalizedExerciseName(ex1.name, language, false)}
                   </span>
                   <span className="text-[10px] text-emerald-400 block font-medium">
@@ -344,24 +372,36 @@ export function SupersetCard({ workoutId, superset }: SupersetCardProps) {
                   </span>
                 </div>
               </div>
-              <div className="text-right shrink-0 pl-2">
-                <span className="text-xs font-black text-emerald-300 font-mono">
-                  {ex1.sets[0]?.targetWeight} {t.common.kg}
-                </span>
-                <span className="text-[10px] text-slate-400 block font-mono">
-                  × {ex1.sets[0]?.targetReps} {t.common.reps}
-                </span>
+              <div className="text-right shrink-0 pl-2 flex items-center gap-1.5">
+                <div>
+                  <span className="text-xs font-black text-emerald-300 font-mono block">
+                    {ex1.sets[0]?.actualWeight ?? ex1.sets[0]?.targetWeight} {t.common.kg}
+                  </span>
+                  <span className="text-[10px] text-slate-400 block font-mono">
+                    × {ex1.sets[0]?.actualReps ?? ex1.sets[0]?.targetReps} {t.common.reps}
+                  </span>
+                </div>
+                <Sliders className="h-3.5 w-3.5 text-emerald-400/60 group-hover:text-emerald-300 transition-colors shrink-0" />
               </div>
             </div>
 
             {/* 1B Target Box */}
-            <div className="flex items-center justify-between p-2 rounded-xl bg-cyan-950/25 border border-cyan-500/25">
+            <div
+              onClick={() => {
+                triggerHaptic("selection");
+                setQuickEditExercise({ ex: ex2, isA: false });
+              }}
+              role="button"
+              tabIndex={0}
+              className="flex items-center justify-between p-2 rounded-xl bg-cyan-950/25 border border-cyan-500/25 hover:border-cyan-500/50 hover:bg-cyan-950/40 active:scale-[0.99] transition-all cursor-pointer group select-none"
+              title={language === "uk" ? "Натисніть для зміни ваги 1Б для всіх кіл" : language === "en" ? "Click to edit 1B weight for all rounds" : "Нажмите для изменения веса 1Б для всех кругов"}
+            >
               <div className="flex items-center gap-2 min-w-0">
                 <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-lg bg-cyan-500/30 text-cyan-300 font-black text-[10px]">
                   1Б
                 </span>
                 <div className="min-w-0">
-                  <span className="font-bold text-white text-xs block truncate max-w-[150px] sm:max-w-none">
+                  <span className="font-bold text-white text-xs block truncate max-w-[150px] sm:max-w-none group-hover:text-cyan-200 transition-colors">
                     {getLocalizedExerciseName(ex2.name, language, false)}
                   </span>
                   <span className="text-[10px] text-cyan-400 block font-medium">
@@ -369,13 +409,16 @@ export function SupersetCard({ workoutId, superset }: SupersetCardProps) {
                   </span>
                 </div>
               </div>
-              <div className="text-right shrink-0 pl-2">
-                <span className="text-xs font-black text-cyan-300 font-mono">
-                  {ex2.sets[0]?.targetWeight} {t.common.kg}
-                </span>
-                <span className="text-[10px] text-slate-400 block font-mono">
-                  × {ex2.sets[0]?.targetReps} {t.common.reps}
-                </span>
+              <div className="text-right shrink-0 pl-2 flex items-center gap-1.5">
+                <div>
+                  <span className="text-xs font-black text-cyan-300 font-mono block">
+                    {ex2.sets[0]?.actualWeight ?? ex2.sets[0]?.targetWeight} {t.common.kg}
+                  </span>
+                  <span className="text-[10px] text-slate-400 block font-mono">
+                    × {ex2.sets[0]?.actualReps ?? ex2.sets[0]?.targetReps} {t.common.reps}
+                  </span>
+                </div>
+                <Sliders className="h-3.5 w-3.5 text-cyan-400/60 group-hover:text-cyan-300 transition-colors shrink-0" />
               </div>
             </div>
           </div>
@@ -629,6 +672,30 @@ export function SupersetCard({ workoutId, superset }: SupersetCardProps) {
           setIsBatchNumpadOpen(false);
         }}
       />
+
+      {/* Quick Edit Exercise Modal for 1A or 1B */}
+      {quickEditExercise && (
+        <WeightNumpadModal
+          open={Boolean(quickEditExercise)}
+          onOpenChange={(isOpen) => {
+            if (!isOpen) setQuickEditExercise(null);
+          }}
+          initialWeight={
+            quickEditExercise.ex.sets[0]?.actualWeight ??
+            quickEditExercise.ex.sets[0]?.targetWeight ??
+            0
+          }
+          exerciseName={`${quickEditExercise.isA ? "1А" : "1Б"}: ${getLocalizedExerciseName(
+            quickEditExercise.ex.name,
+            language,
+            false
+          )}`}
+          setNumber={1}
+          totalSets={quickEditExercise.ex.sets.length}
+          isSuperset={true}
+          onSave={handleQuickEditSave}
+        />
+      )}
     </Card>
   );
 }

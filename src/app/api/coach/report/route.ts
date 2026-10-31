@@ -61,6 +61,12 @@ function resolveTierTitle(scoreObj?: CoachReportBody["athleticScore"]): string {
   }
 }
 
+export const dynamic = "force-static";
+
+export async function GET() {
+  return NextResponse.json({ ok: true, service: "coach-report" });
+}
+
 export async function POST(req: Request) {
   try {
     const body: CoachReportBody = await req.json();

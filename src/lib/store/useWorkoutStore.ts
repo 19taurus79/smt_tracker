@@ -399,7 +399,7 @@ export const useWorkoutStore = create<WorkoutState>()(
                 return {
                   ...ss,
                   exercises: ss.exercises.map((ex) => {
-                    if (ex.exerciseId !== exerciseId) return ex;
+                    if (ex.exerciseId !== exerciseId && ex.id !== exerciseId) return ex;
                     return {
                       ...ex,
                       sets: ex.sets.map((s) => {
@@ -434,7 +434,9 @@ export const useWorkoutStore = create<WorkoutState>()(
                   exercises: ss.exercises.map((ex) => ({
                     ...ex,
                     sets: ex.sets.map((s) => {
-                      const match = updateMap.get(`${ex.exerciseId}:${s.setNumber}`);
+                      const match =
+                        updateMap.get(`${ex.exerciseId}:${s.setNumber}`) ||
+                        updateMap.get(`${ex.id}:${s.setNumber}`);
                       if (!match) return s;
                       return {
                         ...s,
@@ -460,7 +462,7 @@ export const useWorkoutStore = create<WorkoutState>()(
           const workout = state.workouts.find((w) => w.id === workoutId);
           if (!workout) return state;
           const ss = workout.supersets.find((s) => s.id === supersetId);
-          const ex = ss?.exercises.find((e) => e.exerciseId === exerciseId);
+          const ex = ss?.exercises.find((e) => e.exerciseId === exerciseId || e.id === exerciseId);
           if (!ex || ex.sets.length === 0) return state;
 
           const firstWeight = ex.sets[0].actualWeight ?? ex.sets[0].targetWeight;
@@ -475,7 +477,7 @@ export const useWorkoutStore = create<WorkoutState>()(
                   return {
                     ...s,
                     exercises: s.exercises.map((e) => {
-                      if (e.exerciseId !== exerciseId) return e;
+                      if (e.exerciseId !== exerciseId && e.id !== exerciseId) return e;
                       return {
                         ...e,
                         sets: e.sets.map((set) => ({
