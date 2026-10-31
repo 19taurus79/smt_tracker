@@ -618,9 +618,21 @@ function deduplicateLocalTrainees(trainees: TraineeProfile[]): TraineeProfile[] 
       const bestWeight = primary.weightKg && primary.weightKg !== 80 ? primary.weightKg : (secondary.weightKg || primary.weightKg || 80);
       const targetMicrocycle = Math.max(primary.currentMicrocycle || 1, secondary.currentMicrocycle || 1);
       const combinedHistory = [...(primary.workoutHistory || []), ...(secondary.workoutHistory || [])];
-      let finalTotal = Math.max(primary.totalWorkouts || 0, secondary.totalWorkouts || 0);
+      const dedupedWorkouts: TraineeWorkoutRecord[] = [];
+      for (const w of combinedHistory) {
+        const key = `${w.workoutNumber}_${w.microcycle}`;
+        const existingIdx = dedupedWorkouts.findIndex(dw => `${dw.workoutNumber}_${dw.microcycle}` === key);
+        if (existingIdx === -1) {
+          dedupedWorkouts.push(w);
+        } else if ((w.exercises?.length || 0) > (dedupedWorkouts[existingIdx].exercises?.length || 0)) {
+          dedupedWorkouts[existingIdx] = w;
+        }
+      }
+      dedupedWorkouts.sort((a, b) => (b.workoutNumber || 0) - (a.workoutNumber || 0));
+
+      let finalTotal = Math.max(primary.totalWorkouts || 0, secondary.totalWorkouts || 0, dedupedWorkouts.length);
       if (finalTotal >= 36 && targetMicrocycle <= 2) {
-        finalTotal = Math.max(combinedHistory.length, 3);
+        finalTotal = Math.max(dedupedWorkouts.length, 3);
       }
       const finalWorkoutNumber = Math.min(36, finalTotal + 1);
 
@@ -632,12 +644,16 @@ function deduplicateLocalTrainees(trainees: TraineeProfile[]): TraineeProfile[] 
         currentMicrocycle: targetMicrocycle,
         currentWorkoutNumber: finalWorkoutNumber,
         totalWorkouts: finalTotal,
-        workoutHistory: combinedHistory,
+        workoutHistory: dedupedWorkouts,
         measurementHistory: [...(primary.measurementHistory || []), ...(secondary.measurementHistory || [])],
       });
       handledIds.add(current.id);
     } else {
       let sanitized = current;
+      if (Array.isArray(sanitized.workoutHistory)) {
+        const sorted = [...sanitized.workoutHistory].sort((a, b) => (b.workoutNumber || 0) - (a.workoutNumber || 0));
+        sanitized = { ...sanitized, workoutHistory: sorted };
+      }
       if (sanitized.totalWorkouts >= 36 && sanitized.currentMicrocycle <= 2) {
         const realCount = Math.max(sanitized.workoutHistory?.length || 0, 3);
         sanitized = {
@@ -677,8 +693,14 @@ export const useCoachStore = create<CoachStoreState>()(
                   else resolve(data);
                 });
               });
-              if (res && res.ok && Array.isArray(res.trainees) && res.trainees.length > 0) {
-                set({ trainees: deduplicateLocalTrainees(res.trainees) });
+              const rawTrainees =
+                res?.trainees ||
+                res?.result?.trainees ||
+                (Array.isArray(res?.result) ? res.result : null) ||
+                (Array.isArray(res) ? res : null);
+
+              if (Array.isArray(rawTrainees) && rawTrainees.length > 0) {
+                set({ trainees: deduplicateLocalTrainees(rawTrainees) });
                 return;
               }
             } catch (tgErr) {
@@ -686,8 +708,33 @@ export const useCoachStore = create<CoachStoreState>()(
             }
           }
 
-          // 2. HTTP Fallback to Next.js API
-          const res = await fetch("/api/coach/trainees");
+          // 2. Try POST /api/getCoachTrainees (Telegram Serverless HTTP gateway)
+          try {
+            const tgHttpRes = await fetch("/api/getCoachTrainees", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({}),
+            });
+            if (tgHttpRes.ok) {
+              const tgData = await tgHttpRes.json();
+              const rawTrainees =
+                tgData?.trainees ||
+                tgData?.result?.trainees ||
+                (Array.isArray(tgData?.result) ? tgData.result : null) ||
+                (Array.isArray(tgData) ? tgData : null);
+
+              if (Array.isArray(rawTrainees) && rawTrainees.length > 0) {
+                set({ trainees: deduplicateLocalTrainees(rawTrainees) });
+                return;
+              }
+            }
+          } catch {}
+
+          // 3. HTTP Fallback to Next.js API (/api/coach/trainees)
+          const res = await fetch("/api/coach/trainees", {
+            cache: "no-store",
+            headers: { "Cache-Control": "no-cache" },
+          });
           if (!res.ok) return;
           const data = await res.json();
           if (data.ok && Array.isArray(data.trainees)) {
@@ -707,7 +754,24 @@ export const useCoachStore = create<CoachStoreState>()(
                     t.id === serverT.id
                 );
                 if (idx >= 0) {
-                  currentList[idx] = { ...currentList[idx], ...serverT };
+                  // Merge workout history to prevent losing any local/recent workouts
+                  const existingWorkouts = currentList[idx].workoutHistory || [];
+                  const incomingWorkouts = serverT.workoutHistory || [];
+                  const mergedHistory = [...incomingWorkouts];
+                  for (const ew of existingWorkouts) {
+                    if (!mergedHistory.some((mw) => mw.workoutNumber === ew.workoutNumber && mw.microcycle === ew.microcycle)) {
+                      mergedHistory.push(ew);
+                    }
+                  }
+                  mergedHistory.sort((a, b) => (b.workoutNumber || 0) - (a.workoutNumber || 0));
+
+                  currentList[idx] = {
+                    ...currentList[idx],
+                    ...serverT,
+                    workoutHistory: mergedHistory,
+                    totalWorkouts: Math.max(serverT.totalWorkouts || 0, mergedHistory.length),
+                    currentWorkoutNumber: Math.min(36, Math.max(serverT.currentWorkoutNumber || 1, mergedHistory.length + 1)),
+                  };
                 } else {
                   currentList.unshift(serverT);
                 }

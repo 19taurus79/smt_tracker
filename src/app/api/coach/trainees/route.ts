@@ -6,7 +6,14 @@ export const dynamic = "force-static";
 export async function GET() {
   try {
     const trainees = getAllTrainees();
-    return NextResponse.json({ ok: true, trainees });
+    return NextResponse.json(
+      { ok: true, trainees },
+      {
+        headers: {
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+        },
+      }
+    );
   } catch (error) {
     console.error("[Coach Trainees API] Error:", error);
     return NextResponse.json({ ok: false, error: "Internal Server Error" }, { status: 500 });
@@ -15,8 +22,13 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const { action, id, updates } = body;
+    const body = await req.json().catch(() => ({}));
+    const { action, id, updates } = body || {};
+
+    if (!action || action === "list") {
+      const trainees = getAllTrainees();
+      return NextResponse.json({ ok: true, trainees });
+    }
 
     if (action === "update" && id && updates) {
       const updated = updateTraineeDetails(id, updates);

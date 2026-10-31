@@ -243,6 +243,14 @@ function saveDataFile(trainees: TraineeProfile[]): void {
     const tmpFile = `${DATA_FILE}.tmp.${Date.now()}`;
     fs.writeFileSync(tmpFile, JSON.stringify(deduped, null, 2), "utf8");
     fs.renameSync(tmpFile, DATA_FILE);
+
+    // Also keep local data/trainees.json in sync for builds & persistence
+    const baselinePath = path.resolve(process.cwd(), "data", "trainees.json");
+    if (baselinePath !== DATA_FILE) {
+      try {
+        fs.writeFileSync(baselinePath, JSON.stringify(deduped, null, 2), "utf8");
+      } catch {}
+    }
   } catch (err) {
     console.warn("[traineeStorage] Warning saving data file (cached in memory):", err);
   }
