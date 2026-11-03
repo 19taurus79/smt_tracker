@@ -27,3 +27,4 @@
 - Тестирование эндпоинтов в облаке: `npx @tgcloud/cli run endpoints/<name> '<payload_json5>'`
 - Применение миграций схемы БД: `npx @tgcloud/cli migrate`
 - Деплой бэкенда и статического фронтенда: `npx @tgcloud/cli push` (требуется `$env:TGCLOUD_TOKEN`).
+
