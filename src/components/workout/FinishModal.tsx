@@ -328,42 +328,43 @@ export function FinishModal({ open, onOpenChange, onFinished, workoutId }: Finis
         }, 50);
       }
 
-      let didSendToCoach = false;
-      if (sendToCoach && !isCoach) {
-        didSendToCoach = true;
-        const exercisesSummary = currentWorkout.supersets.flatMap((ss) =>
-          ss.exercises.map((ex) => ({
-            name: getLocalizedExerciseName(ex.exerciseId || ex.name, language, false),
-            weight: ex.sets[0]?.actualWeight ?? ex.sets[0]?.targetWeight ?? 0,
-            reps: ex.sets[0]?.actualReps ?? ex.sets[0]?.targetReps ?? 10,
-            setsCount: ex.sets.filter((s) => s.completed).length || ex.sets.length,
-            supersetLabel: ss.label,
-          }))
-        );
+      const exercisesSummary = currentWorkout.supersets.flatMap((ss) =>
+        ss.exercises.map((ex) => ({
+          name: getLocalizedExerciseName(ex.exerciseId || ex.name, language, false),
+          weight: ex.sets[0]?.actualWeight ?? ex.sets[0]?.targetWeight ?? 0,
+          reps: ex.sets[0]?.actualReps ?? ex.sets[0]?.targetReps ?? 10,
+          setsCount: ex.sets.filter((s) => s.completed).length || ex.sets.length,
+          supersetLabel: ss.label,
+        }))
+      );
 
-        sendDirectCoachReport({
-          traineeName: traineeName || linkedTelegramUser?.firstName || (typeof window !== "undefined" && window.Telegram?.WebApp?.initDataUnsafe?.user?.first_name) || "Атлет",
-          traineeUsername: linkedTelegramUser?.username || (typeof window !== "undefined" && window.Telegram?.WebApp?.initDataUnsafe?.user?.username) || "",
-          telegramUserId: linkedTelegramUser?.id || (typeof window !== "undefined" ? window.Telegram?.WebApp?.initDataUnsafe?.user?.id : undefined),
-          workoutNumber: currentWorkout.workoutNumber || 1,
-          microcycle: currentWorkout.microcycle || 1,
-          durationSeconds: effectiveDuration,
-          tonnageKg: tonnage,
-          powerKgPerMin: power,
-          athleticScore: {
-            score: athleticScore.score,
-            tierKey: athleticScore.tierKey,
-            tierLabel,
-          },
-          latestMeasurement: measurements[0] ? {
-            weightKg: measurements[0].weightKg,
-            waistCm: measurements[0].waistCm,
-            bicepsCm: measurements[0].bicepsCm,
-          } : undefined,
-          exercises: exercisesSummary,
-          notes: fullNotes,
-        }).catch((err) => console.error("Direct coach send failed:", err));
-      }
+      // Always record workout into Telegram Serverless dedicated SQLite
+      const workoutReportPayload = {
+        traineeName: traineeName || linkedTelegramUser?.firstName || (typeof window !== "undefined" && window.Telegram?.WebApp?.initDataUnsafe?.user?.first_name) || "Атлет",
+        traineeUsername: linkedTelegramUser?.username || (typeof window !== "undefined" && window.Telegram?.WebApp?.initDataUnsafe?.user?.username) || "",
+        telegramUserId: linkedTelegramUser?.id || (typeof window !== "undefined" ? window.Telegram?.WebApp?.initDataUnsafe?.user?.id : undefined),
+        workoutNumber: currentWorkout.workoutNumber || 1,
+        microcycle: currentWorkout.microcycle || 1,
+        durationSeconds: effectiveDuration,
+        tonnageKg: tonnage,
+        powerKgPerMin: power,
+        athleticScore: {
+          score: athleticScore.score,
+          tierKey: athleticScore.tierKey,
+          tierLabel,
+        },
+        latestMeasurement: measurements[0] ? {
+          weightKg: measurements[0].weightKg,
+          waistCm: measurements[0].waistCm,
+          bicepsCm: measurements[0].bicepsCm,
+        } : undefined,
+        exercises: exercisesSummary,
+        notes: fullNotes,
+      };
+
+      sendDirectCoachReport(workoutReportPayload).catch((err) => console.error("Direct coach send failed:", err));
+
+      const didSendToCoach = Boolean(sendToCoach && !isCoach);
 
       onOpenChange(false);
       onFinished(didSendToCoach);

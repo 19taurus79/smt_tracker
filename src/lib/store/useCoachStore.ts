@@ -700,7 +700,10 @@ export const useCoachStore = create<CoachStoreState>()(
                 (Array.isArray(res) ? res : null);
 
               if (Array.isArray(rawTrainees) && rawTrainees.length > 0) {
-                set({ trainees: deduplicateLocalTrainees(rawTrainees) });
+                const cleaned = rawTrainees.filter(
+                  (t: any) => !["trainee-1", "trainee-2", "trainee-3", "trainee-4", "trainee-5"].includes(t.id)
+                );
+                set({ trainees: deduplicateLocalTrainees(cleaned.length > 0 ? cleaned : rawTrainees) });
                 return;
               }
             } catch (tgErr) {
@@ -708,11 +711,16 @@ export const useCoachStore = create<CoachStoreState>()(
             }
           }
 
-          // 2. Try POST /api/getCoachTrainees (Telegram Serverless HTTP gateway)
+          // 2. Try POST /api/getCoachTrainees with TMA auth if initData available
+          const initData = tg?.initData;
           try {
+            const headers: Record<string, string> = { "Content-Type": "application/json" };
+            if (initData) {
+              headers["Authorization"] = "TMA " + window.btoa(initData);
+            }
             const tgHttpRes = await fetch("/api/getCoachTrainees", {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers,
               body: JSON.stringify({}),
             });
             if (tgHttpRes.ok) {
@@ -724,11 +732,16 @@ export const useCoachStore = create<CoachStoreState>()(
                 (Array.isArray(tgData) ? tgData : null);
 
               if (Array.isArray(rawTrainees) && rawTrainees.length > 0) {
-                set({ trainees: deduplicateLocalTrainees(rawTrainees) });
+                const cleaned = rawTrainees.filter(
+                  (t: any) => !["trainee-1", "trainee-2", "trainee-3", "trainee-4", "trainee-5"].includes(t.id)
+                );
+                set({ trainees: deduplicateLocalTrainees(cleaned.length > 0 ? cleaned : rawTrainees) });
                 return;
               }
             }
-          } catch {}
+          } catch (httpErr) {
+            console.warn("[useCoachStore] fetch /api/getCoachTrainees error:", httpErr);
+          }
 
           // 3. HTTP Fallback to Next.js API (/api/coach/trainees)
           const res = await fetch("/api/coach/trainees", {

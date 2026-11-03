@@ -41,20 +41,59 @@ export function queueOfflineSync(type: "workout" | "trainee", payload: any) {
 }
 
 /**
- * Invokes Telegram Serverless Endpoint if available
+ * Invokes Telegram Serverless Endpoint if available (with fallback to TMA fetch)
  */
 export async function callTelegramServerless(endpoint: string, payload: unknown): Promise<any> {
   if (typeof window === "undefined") return null;
   const tg = window.Telegram?.WebApp as any;
 
+  // 1. Try official Serverless.call if available
   if (tg?.Serverless && typeof tg.Serverless.call === "function") {
-    return new Promise((resolve, reject) => {
-      tg.Serverless.call(endpoint, payload, (err: unknown, res: unknown) => {
-        if (err) reject(err);
-        else resolve(res);
+    try {
+      return await new Promise((resolve, reject) => {
+        tg.Serverless.call(endpoint, payload, (err: unknown, res: unknown) => {
+          if (err) reject(err);
+          else resolve(res);
+        });
       });
-    });
+    } catch (err) {
+      console.warn(`[TMA Serverless] call ${endpoint} error:`, err);
+    }
   }
+
+  // 2. Direct fetch with TMA Authorization header if initData is present
+  const initData = tg?.initData;
+  if (initData) {
+    try {
+      const res = await fetch(`/api/${endpoint}`, {
+        method: "POST",
+        headers: {
+          Authorization: "TMA " + window.btoa(initData),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        return data?.result ?? data;
+      }
+    } catch (err) {
+      console.warn(`[TMA Serverless] fetch /api/${endpoint} with TMA auth error:`, err);
+    }
+  }
+
+  // 3. Fallback direct POST to /api/<endpoint> without TMA header
+  try {
+    const res = await fetch(`/api/${endpoint}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return data?.result ?? data;
+    }
+  } catch {}
 
   return null;
 }
@@ -107,44 +146,52 @@ export async function syncWorkout(payload: SyncWorkoutPayload): Promise<boolean>
       : { score: scoreNum, tierKey: "titan", tierLabel: "ТИТАН СИЛИ ⚡" };
 
   try {
-    // 1. Try Telegram Serverless first
+    // 1. Try Telegram Serverless saveWorkout (via SDK or direct TMA fetch)
+    const serverlessPayload = {
+      ...payload,
+      name: athleteName,
+      username: athleteUsername,
+      athleticScore: scoreNum,
+      weightKg: payload.latestMeasurement?.weightKg || 80,
+    };
+
     try {
-      const res = await callTelegramServerless("saveWorkout", {
-        ...payload,
-        name: athleteName,
-        username: athleteUsername,
-        athleticScore: scoreNum,
-        weightKg: payload.latestMeasurement?.weightKg || 80,
-      });
-      if (res && res.ok) {
+      const res = await callTelegramServerless("saveWorkout", serverlessPayload);
+      if (res && (res.ok || res.savedAt || res.success)) {
         return true;
       }
-    } catch {
-      // serverless call not active, fallback to HTTP
-    }
+    } catch {}
 
-    // 2. HTTP Fallback to Next.js API
-    const res = await fetch("/api/coach/report", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        traineeName: athleteName,
-        traineeUsername: athleteUsername,
-        telegramUserId: payload.telegramId,
-        workoutNumber: payload.workoutNumber,
-        microcycle: payload.microcycle,
-        durationSeconds: payload.durationSeconds,
-        tonnageKg: payload.tonnageKg,
-        powerKgPerMin: payload.powerKgPerMin,
-        athleticScore: scoreObj,
-        latestMeasurement: payload.latestMeasurement,
-        exercises: payload.exercises,
-        notes: payload.notes,
-      }),
-    });
+    // 2. HTTP Fallback to Next.js API (/api/coach/report) if running in hybrid Next.js
+    try {
+      const res = await fetch("/api/coach/report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          traineeName: athleteName,
+          traineeUsername: athleteUsername,
+          telegramUserId: payload.telegramId,
+          workoutNumber: payload.workoutNumber,
+          microcycle: payload.microcycle,
+          durationSeconds: payload.durationSeconds,
+          tonnageKg: payload.tonnageKg,
+          powerKgPerMin: payload.powerKgPerMin,
+          athleticScore: scoreObj,
+          latestMeasurement: payload.latestMeasurement,
+          exercises: payload.exercises,
+          notes: payload.notes,
+        }),
+      });
 
-    const data = await res.json();
-    return Boolean(data.ok);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.ok) return true;
+      }
+    } catch {}
+
+    // If both serverless and Next.js HTTP failed, queue offline
+    queueOfflineSync("workout", payload);
+    return true;
   } catch (err) {
     console.warn("[TMA Sync] Offline / Network issue, queueing workout:", err);
     queueOfflineSync("workout", payload);
@@ -166,24 +213,31 @@ export async function syncTrainee(payload: {
   }
 
   try {
-    // 1. Try Telegram Serverless
+    // 1. Try Telegram Serverless syncTrainee
     try {
       const res = await callTelegramServerless("syncTrainee", {
         telegramId: payload.telegramUserId,
         username: payload.username,
         firstName: payload.name,
       });
-      if (res && res.ok) return true;
+      if (res && (res.ok || res.success)) return true;
     } catch {}
 
     // 2. HTTP Fallback to Next.js API
-    const res = await fetch("/api/lead/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    const data = await res.json();
-    return Boolean(data.ok);
+    try {
+      const res = await fetch("/api/lead/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.ok) return true;
+      }
+    } catch {}
+
+    queueOfflineSync("trainee", payload);
+    return true;
   } catch {
     queueOfflineSync("trainee", payload);
     return true;

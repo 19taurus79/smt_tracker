@@ -48,13 +48,14 @@ export default async function (input, context) {
   const totalCount = allLogs?.length || 1;
 
   // 3. Upsert trainee profile in SQLite
+  const nextWorkoutNumber = Math.min(36, Math.max(Number(workoutNumber) + 1, totalCount + 1));
   await db.insert(trainees).values({
     telegramId: Number(userId),
     username: (username || '').replace(/^@/, ''),
     firstName: name,
     coachId: COACH_CHAT_ID,
     currentMicrocycle: Number(microcycle),
-    currentWorkout: Number(workoutNumber),
+    currentWorkout: nextWorkoutNumber,
     totalWorkouts: totalCount,
     weightKg: Number(weightKg) || 80,
     athleticScore: cleanScore,
@@ -67,7 +68,7 @@ export default async function (input, context) {
       username: (username || '').replace(/^@/, ''),
       firstName: name,
       currentMicrocycle: Number(microcycle),
-      currentWorkout: Number(workoutNumber),
+      currentWorkout: nextWorkoutNumber,
       totalWorkouts: totalCount,
       weightKg: Number(weightKg) || 80,
       athleticScore: cleanScore,
