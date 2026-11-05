@@ -1,6 +1,6 @@
 import { api, db } from 'sdk';
 import { trainees, workoutLogs } from '../schema.js';
-import { eq } from 'sdk/db';
+import { eq, and } from 'sdk/db';
 
 const COACH_CHAT_ID = (typeof process !== 'undefined' && process.env?.COACH_CHAT_ID) || '548019148';
 
@@ -41,25 +41,67 @@ export default async function (input, context) {
   const rawUsername = username || context?.initData?.user?.username || existingTrainee?.username || '';
   const effectiveUsername = rawUsername.replace(/^@/, '');
 
-  // 3. Record workout log in SQLite table `workout_logs`
+  // 3. Record or update workout log in SQLite table `workout_logs` (Idempotent Upsert)
   const exercisesJsonStr = typeof exercises === 'string' ? exercises : JSON.stringify(exercises || []);
-  await db.insert(workoutLogs).values({
-    traineeTelegramId: userId,
-    workoutNumber: Number(workoutNumber),
-    microcycle: Number(microcycle),
-    durationSeconds: Number(durationSeconds),
-    tonnageKg: cleanTonnage,
-    powerKgPerMin: cleanPower,
-    athleticScore: cleanScore,
-    exercisesJson: exercisesJsonStr,
-    notes: String(notes || ''),
-    createdAt: now,
-  }).run();
 
-  // 4. Count total recorded workouts for this trainee
+  const existingLog = await db
+    .select()
+    .from(workoutLogs)
+    .where(
+      and(
+        eq(workoutLogs.traineeTelegramId, userId),
+        eq(workoutLogs.workoutNumber, Number(workoutNumber)),
+        eq(workoutLogs.microcycle, Number(microcycle))
+      )
+    )
+    .get();
+
+  if (existingLog) {
+    // Preserve existing exercises if incoming payload has an empty array
+    let finalExercisesJson = exercisesJsonStr;
+    const incomingEmpty = !exercises || (Array.isArray(exercises) && exercises.length === 0) || exercisesJsonStr === '[]';
+    if (incomingEmpty && existingLog.exercisesJson && existingLog.exercisesJson !== '[]') {
+      finalExercisesJson = existingLog.exercisesJson;
+    }
+
+    await db
+      .update(workoutLogs)
+      .set({
+        durationSeconds: Number(durationSeconds) || existingLog.durationSeconds,
+        tonnageKg: cleanTonnage || existingLog.tonnageKg,
+        powerKgPerMin: cleanPower || existingLog.powerKgPerMin,
+        athleticScore: cleanScore || existingLog.athleticScore,
+        exercisesJson: finalExercisesJson,
+        notes: String(notes || existingLog.notes || ''),
+        createdAt: now,
+      })
+      .where(eq(workoutLogs.id, existingLog.id))
+      .run();
+  } else {
+    await db.insert(workoutLogs).values({
+      traineeTelegramId: userId,
+      workoutNumber: Number(workoutNumber),
+      microcycle: Number(microcycle),
+      durationSeconds: Number(durationSeconds),
+      tonnageKg: cleanTonnage,
+      powerKgPerMin: cleanPower,
+      athleticScore: cleanScore,
+      exercisesJson: exercisesJsonStr,
+      notes: String(notes || ''),
+      createdAt: now,
+    }).run();
+  }
+
+  // 4. Count unique completed workouts for this trainee
   const allLogs = await db.select().from(workoutLogs).where(eq(workoutLogs.traineeTelegramId, userId)).all();
-  const totalCount = allLogs?.length || 1;
-  const nextWorkoutNumber = Math.min(36, Math.max(Number(workoutNumber) + 1, totalCount + 1));
+  const uniqueWorkoutNumbers = new Set(
+    (allLogs || [])
+      .map((l) => Number(l.workoutNumber))
+      .filter((n) => !isNaN(n) && n > 0)
+  );
+  const totalCount = uniqueWorkoutNumbers.size || 1;
+  const maxWorkoutNumber = Math.max(0, ...Array.from(uniqueWorkoutNumbers));
+  const nextWorkoutNumber = Math.min(36, Math.max(Number(workoutNumber) + 1, maxWorkoutNumber + 1));
 
   // 5. Upsert trainee profile in SQLite table `trainees`
   await db.insert(trainees).values({
@@ -106,6 +148,7 @@ export default async function (input, context) {
       `📦 <b>Тоннаж:</b> ${cleanTonnage.toLocaleString()} кг`,
       `⚡ <b>Потужність:</b> ${cleanPower} кг/хв`,
       `🏆 <b>Індекс:</b> ${cleanScore} / 100`,
+      `⚖ <b>Вага атлета:</b> ${Number(weightKg) || existingTrainee?.weightKg || 80} кг`,
     ];
 
     let parsedExercisesList = [];

@@ -83,15 +83,35 @@ function WorkoutContent() {
     }
   }, [queryId, viewingWorkoutId, setViewingWorkoutId]);
 
-  // Global stopwatch tick
+  // Global stopwatch tick with instant wake & background resume protection
   useEffect(() => {
     if (!isStopwatchRunning) return;
+
+    // Immediately sync elapsed seconds from timestamp on start or resume
+    tickStopwatch();
 
     const interval = setInterval(() => {
       tickStopwatch();
     }, 1000);
 
-    return () => clearInterval(interval);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        tickStopwatch();
+      }
+    };
+
+    const handleFocus = () => {
+      tickStopwatch();
+    };
+
+    window.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleFocus);
+    };
   }, [isStopwatchRunning, tickStopwatch]);
 
   // Strict & Robust workout resolution
