@@ -362,7 +362,11 @@ export function FinishModal({ open, onOpenChange, onFinished, workoutId }: Finis
         notes: fullNotes,
       };
 
-      sendDirectCoachReport(workoutReportPayload).catch((err) => console.error("Direct coach send failed:", err));
+      try {
+        await sendDirectCoachReport(workoutReportPayload);
+      } catch (err) {
+        console.error("Direct coach send failed:", err);
+      }
 
       const didSendToCoach = Boolean(sendToCoach && !isCoach);
 

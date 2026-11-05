@@ -701,7 +701,7 @@ export const useCoachStore = create<CoachStoreState>()(
 
               if (Array.isArray(rawTrainees) && rawTrainees.length > 0) {
                 const cleaned = rawTrainees.filter(
-                  (t: any) => !["trainee-1", "trainee-2", "trainee-3", "trainee-4", "trainee-5"].includes(t.id)
+                  (t: any) => !["trainee-1", "trainee-2", "trainee-3", "trainee-4", "trainee-5", "trainee-6"].includes(t.id)
                 );
                 set({ trainees: deduplicateLocalTrainees(cleaned.length > 0 ? cleaned : rawTrainees) });
                 return;
@@ -733,7 +733,7 @@ export const useCoachStore = create<CoachStoreState>()(
 
               if (Array.isArray(rawTrainees) && rawTrainees.length > 0) {
                 const cleaned = rawTrainees.filter(
-                  (t: any) => !["trainee-1", "trainee-2", "trainee-3", "trainee-4", "trainee-5"].includes(t.id)
+                  (t: any) => !["trainee-1", "trainee-2", "trainee-3", "trainee-4", "trainee-5", "trainee-6"].includes(t.id)
                 );
                 set({ trainees: deduplicateLocalTrainees(cleaned.length > 0 ? cleaned : rawTrainees) });
                 return;
@@ -756,7 +756,7 @@ export const useCoachStore = create<CoachStoreState>()(
               if (data.trainees.length > 0) {
                 // Drop initial mock demo athletes when real trainees are loaded from server
                 currentList = currentList.filter(
-                  (t) => !["trainee-1", "trainee-2", "trainee-3", "trainee-4", "trainee-5"].includes(t.id)
+                  (t) => !["trainee-1", "trainee-2", "trainee-3", "trainee-4", "trainee-5", "trainee-6"].includes(t.id)
                 );
               }
               for (const serverT of data.trainees) {
@@ -974,12 +974,12 @@ export const useCoachStore = create<CoachStoreState>()(
       onRehydrateStorage: () => (state) => {
         if (state && Array.isArray(state.trainees)) {
           const hasRealTrainee = state.trainees.some(
-            (t) => !["trainee-1", "trainee-2", "trainee-3", "trainee-4", "trainee-5"].includes(t.id)
+            (t) => !["trainee-1", "trainee-2", "trainee-3", "trainee-4", "trainee-5", "trainee-6"].includes(t.id)
           );
           let list = state.trainees;
           if (hasRealTrainee) {
             list = list.filter(
-              (t) => !["trainee-1", "trainee-2", "trainee-3", "trainee-4", "trainee-5"].includes(t.id)
+              (t) => !["trainee-1", "trainee-2", "trainee-3", "trainee-4", "trainee-5", "trainee-6"].includes(t.id)
             );
           }
           list = list.map((t) => {

@@ -139,6 +139,7 @@ export function WorkoutReportModal({
       const success = await sendDirectCoachReport({
         traineeName: traineeName || linkedTelegramUser?.firstName || (typeof window !== "undefined" && window.Telegram?.WebApp?.initDataUnsafe?.user?.first_name) || "Атлет",
         traineeUsername: linkedTelegramUser?.username || (typeof window !== "undefined" && window.Telegram?.WebApp?.initDataUnsafe?.user?.username) || "",
+        telegramUserId: linkedTelegramUser?.id || (typeof window !== "undefined" ? window.Telegram?.WebApp?.initDataUnsafe?.user?.id : undefined),
         workoutNumber: workout.workoutNumber || 1,
         microcycle: workout.microcycle || 1,
         durationSeconds: effectiveDuration,

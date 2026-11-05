@@ -1,6 +1,6 @@
 import { db } from 'sdk';
 import { trainees, workoutLogs } from '../schema.js';
-import { desc, eq, and } from 'sdk/db';
+import { desc, eq } from 'sdk/db';
 
 function getTierKey(score) {
   if (score >= 90) return 'titan';
@@ -17,6 +17,7 @@ function getTierLabel(score) {
 }
 
 export default async function (input, context) {
+  // 1. Fetch all trainees and workout logs from SQLite
   const traineeRows = await db.select()
     .from(trainees)
     .orderBy(desc(trainees.updatedAt))
@@ -27,7 +28,7 @@ export default async function (input, context) {
     .orderBy(desc(workoutLogs.createdAt))
     .all();
 
-  // Group workout logs by traineeTelegramId
+  // 2. Group workout logs by traineeTelegramId
   const logsByTrainee = new Map();
   for (const log of (allLogs || [])) {
     const key = Number(log.traineeTelegramId);
@@ -63,146 +64,7 @@ export default async function (input, context) {
     });
   }
 
-  // Auto-heal: Ensure Andrey's workouts #6 and #7 are present in logs & database
-  const andreyId = 487406242;
-  const andreyLogs = logsByTrainee.get(andreyId) || [];
-
-  const w6 = {
-    id: `w-6-${andreyId}`,
-    workoutNumber: 6,
-    microcycle: 1,
-    date: new Date('2026-10-31T12:46:00.000Z').toISOString(),
-    durationSeconds: 1726,
-    tonnageKg: 9230,
-    powerKgPerMin: 321,
-    athleticScore: 69,
-    tierKey: 'active',
-    tierLabel: 'Активний Атлет 🏋️‍♂️',
-    notes: 'Втома: 2/5 (Норм, RPE 7) • Розгиб ног 35х15',
-    exercises: [
-      { name: 'Жим штанги лежачи', weight: 37.5, reps: 10, setsCount: 4, supersetLabel: 'Блок 1' },
-      { name: 'Жим лежачи вузьким хватом', weight: 22.5, reps: 15, setsCount: 4, supersetLabel: 'Блок 2' },
-      { name: 'Підтягування (або тяга)', weight: 40, reps: 10, setsCount: 4, supersetLabel: 'Суперсет 1' },
-      { name: 'Штанга на біцепс', weight: 15.5, reps: 15, setsCount: 4, supersetLabel: 'Суперсет 1' },
-      { name: 'Присідання зі штангою', weight: 70, reps: 10, setsCount: 4, supersetLabel: 'Суперсет 2' },
-      { name: 'Армійський жим (стоячи)', weight: 17.5, reps: 15, setsCount: 4, supersetLabel: 'Суперсет 2' },
-    ],
-  };
-
-  const w7 = {
-    id: `w-7-${andreyId}`,
-    workoutNumber: 7,
-    microcycle: 1,
-    date: new Date('2026-11-02T12:00:00.000Z').toISOString(),
-    durationSeconds: 1740,
-    tonnageKg: 9950,
-    powerKgPerMin: 343,
-    athleticScore: 78,
-    tierKey: 'iron_pro',
-    tierLabel: 'Залізний Профі 🦾',
-    notes: 'Тренування #7 циклу СМТ-1. Прогресія +2.5 кг зафіксована у всіх блоках. Паузи 30с витримано.',
-    exercises: [
-      { name: 'Жим штанги лежачи', weight: 40, reps: 10, setsCount: 4, supersetLabel: 'Блок 1' },
-      { name: 'Жим лежачи вузьким хватом', weight: 25, reps: 15, setsCount: 4, supersetLabel: 'Блок 2' },
-      { name: 'Підтягування (або тяга)', weight: 42.5, reps: 10, setsCount: 4, supersetLabel: 'Суперсет 1' },
-      { name: 'Штанга на біцепс', weight: 17.5, reps: 15, setsCount: 4, supersetLabel: 'Суперсет 1' },
-      { name: 'Присідання зі штангою', weight: 72.5, reps: 10, setsCount: 4, supersetLabel: 'Суперсет 2' },
-      { name: 'Армійський жим (стоячи)', weight: 20, reps: 15, setsCount: 4, supersetLabel: 'Суперсет 2' },
-    ],
-  };
-
-  if (!andreyLogs.some((l) => l.workoutNumber === 6)) {
-    if (!logsByTrainee.has(andreyId)) {
-      logsByTrainee.set(andreyId, [w6]);
-    } else {
-      logsByTrainee.get(andreyId).push(w6);
-    }
-    try {
-      await db.insert(workoutLogs).values({
-        traineeTelegramId: andreyId,
-        workoutNumber: 6,
-        microcycle: 1,
-        durationSeconds: 1726,
-        tonnageKg: 9230,
-        powerKgPerMin: 321,
-        athleticScore: 69,
-        exercisesJson: JSON.stringify(w6.exercises),
-        notes: w6.notes,
-        createdAt: new Date('2026-10-31T12:46:00.000Z').getTime(),
-      }).run();
-    } catch (e) {}
-  }
-
-  const existingW7 = andreyLogs.find((l) => l.workoutNumber === 7);
-  if (!existingW7) {
-    if (!logsByTrainee.has(andreyId)) {
-      logsByTrainee.set(andreyId, [w7]);
-    } else {
-      logsByTrainee.get(andreyId).push(w7);
-    }
-    try {
-      await db.insert(workoutLogs).values({
-        traineeTelegramId: andreyId,
-        workoutNumber: 7,
-        microcycle: 1,
-        durationSeconds: 1740,
-        tonnageKg: 9950,
-        powerKgPerMin: 343,
-        athleticScore: 78,
-        exercisesJson: JSON.stringify(w7.exercises),
-        notes: w7.notes,
-        createdAt: new Date('2026-11-02T12:00:00.000Z').getTime(),
-      }).run();
-    } catch (e) {}
-  } else if (!existingW7.exercises || existingW7.exercises.length === 0) {
-    // Populate exercises and correct metrics if previously stored empty
-    existingW7.exercises = w7.exercises;
-    existingW7.notes = existingW7.notes || w7.notes;
-    existingW7.tonnageKg = w7.tonnageKg;
-    existingW7.powerKgPerMin = w7.powerKgPerMin;
-    existingW7.athleticScore = w7.athleticScore;
-    existingW7.tierKey = w7.tierKey;
-    existingW7.tierLabel = w7.tierLabel;
-    try {
-      await db.update(workoutLogs)
-        .set({
-          tonnageKg: w7.tonnageKg,
-          powerKgPerMin: w7.powerKgPerMin,
-          athleticScore: w7.athleticScore,
-          exercisesJson: JSON.stringify(w7.exercises),
-          notes: w7.notes,
-        })
-        .where(and(eq(workoutLogs.traineeTelegramId, andreyId), eq(workoutLogs.workoutNumber, 7)))
-        .run();
-    } catch (e) {}
-  }
-
-  try {
-    const totalAndreyCount = Math.max(7, (logsByTrainee.get(andreyId) || []).length);
-    await db.insert(trainees).values({
-      telegramId: andreyId,
-      username: 'serebankhic',
-      firstName: 'Андрей',
-      coachId: '548019148',
-      currentMicrocycle: 1,
-      currentWorkout: totalAndreyCount + 1,
-      totalWorkouts: totalAndreyCount,
-      weightKg: 76.0,
-      athleticScore: 78,
-      status: 'active',
-      updatedAt: Date.now(),
-      createdAt: new Date('2026-10-19T12:00:00.000Z').getTime(),
-    }).onConflictDoUpdate({
-      target: trainees.telegramId,
-      set: {
-        currentWorkout: totalAndreyCount + 1,
-        totalWorkouts: totalAndreyCount,
-        athleticScore: 78,
-        updatedAt: Date.now(),
-      },
-    }).run();
-  } catch (e) {}
-
+  // 3. Format trainee profiles with actual workout history
   const handledTgIds = new Set();
   const formattedTrainees = (traineeRows || []).map((t) => {
     const tgId = Number(t.telegramId);
@@ -216,17 +78,18 @@ export default async function (input, context) {
     const tierLabel = getTierLabel(latestScore);
     const totalCount = Math.max(t.totalWorkouts || 0, history.length);
     const totalTonnage = history.reduce((sum, h) => sum + (h.tonnageKg || 0), 0);
+    const currentMc = history.length > 0 ? history[0].microcycle : (t.currentMicrocycle || 1);
 
     return {
       id: `trainee-${t.telegramId}`,
       name: t.firstName || 'Атлет',
-      alias: t.username || undefined,
+      alias: t.username ? `@${t.username.replace(/^@/, '')}` : (t.firstName || 'Атлет'),
       username: (t.username || '').replace(/^@/, ''),
       telegramChatId: String(t.telegramId),
       avatarColor: 'from-blue-500 to-indigo-600',
       gender: 'male',
       age: 28,
-      currentMicrocycle: t.currentMicrocycle || 1,
+      currentMicrocycle: currentMc,
       currentWorkoutNumber: Math.min(36, totalCount + 1),
       totalWorkouts: totalCount,
       weightKg: t.weightKg || 76,
@@ -253,7 +116,7 @@ export default async function (input, context) {
     };
   });
 
-  // Include any trainees found in logs but missing from trainees table
+  // 4. Include any trainees found in logs but missing from trainees table
   for (const [tgId, history] of logsByTrainee.entries()) {
     if (!handledTgIds.has(tgId)) {
       history.sort((a, b) => (b.workoutNumber || 0) - (a.workoutNumber || 0));
@@ -263,6 +126,7 @@ export default async function (input, context) {
       formattedTrainees.push({
         id: `trainee-${tgId}`,
         name: 'Атлет',
+        alias: 'Атлет',
         username: '',
         telegramChatId: String(tgId),
         avatarColor: 'from-blue-500 to-indigo-600',

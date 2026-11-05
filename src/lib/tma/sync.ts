@@ -149,6 +149,8 @@ export async function syncWorkout(payload: SyncWorkoutPayload): Promise<boolean>
     // 1. Try Telegram Serverless saveWorkout (via SDK or direct TMA fetch)
     const serverlessPayload = {
       ...payload,
+      telegramId: payload.telegramId,
+      telegramUserId: payload.telegramId,
       name: athleteName,
       username: athleteUsername,
       athleticScore: scoreNum,
@@ -157,10 +159,12 @@ export async function syncWorkout(payload: SyncWorkoutPayload): Promise<boolean>
 
     try {
       const res = await callTelegramServerless("saveWorkout", serverlessPayload);
-      if (res && (res.ok || res.savedAt || res.success)) {
+      if (res && (res.ok || res.savedAt || res.success || res.totalWorkouts)) {
         return true;
       }
-    } catch {}
+    } catch (err) {
+      console.warn("[TMA Sync] Serverless saveWorkout error:", err);
+    }
 
     // 2. HTTP Fallback to Next.js API (/api/coach/report) if running in hybrid Next.js
     try {

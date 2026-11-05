@@ -105,6 +105,24 @@ export default function CoachDashboardPage() {
 
   useEffect(() => {
     fetchServerTrainees();
+
+    const handleFocus = () => {
+      fetchServerTrainees();
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchServerTrainees();
+      }
+    };
+
+    window.addEventListener("focus", handleFocus);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, [fetchServerTrainees]);
 
   // Delete Trainee Modal
