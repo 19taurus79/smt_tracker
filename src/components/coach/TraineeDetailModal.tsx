@@ -301,11 +301,11 @@ export function TraineeDetailModal({ trainee: initialTrainee, open, onOpenChange
             </div>
             <div>
               <div className="flex items-baseline gap-1">
-                <span className="text-xl font-black text-white font-mono">#{trainee.currentWorkoutNumber}</span>
-                <span className="text-[10px] text-slate-500 font-mono">/ 36</span>
+                <span className="text-xl font-black text-emerald-400 font-mono">{trainee.totalWorkouts}</span>
+                <span className="text-[10px] text-slate-400 font-mono">/ 36 завершено</span>
               </div>
-              <span className="text-[10px] text-emerald-400 font-bold block mt-0.5">
-                МКЦ-{trainee.currentMicrocycle} ({progressPercent}%)
+              <span className="text-[10px] text-slate-300 font-medium block mt-0.5">
+                Наступне: <b className="text-white font-mono">#{trainee.currentWorkoutNumber}</b> (МКЦ-{trainee.currentMicrocycle})
               </span>
               <div className="h-1.5 w-full rounded-full bg-slate-900 mt-1.5 overflow-hidden border border-white/5">
                 <div

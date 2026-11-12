@@ -320,6 +320,62 @@ export async function flushOfflineQueue(): Promise<void> {
   saveOfflineQueue(remaining);
 }
 
+/**
+ * Auto-syncs all completed workouts from the local store with Telegram Serverless SQLite.
+ * Runs in background on app start to ensure no finished workout is ever lost.
+ */
+export async function syncCompletedWorkoutsFromStore(): Promise<void> {
+  if (typeof window === "undefined") return;
+  try {
+    const { useWorkoutStore } = await import("@/lib/store/useWorkoutStore");
+    const { useSettingsStore } = await import("@/lib/store/useSettingsStore");
+    const { useBodyStore } = await import("@/lib/store/useBodyStore");
+
+    const workouts = useWorkoutStore.getState().workouts || [];
+    const completedWorkouts = workouts.filter((w) => w.status === "completed" && (w.tonnageKg || 0) > 0);
+    if (completedWorkouts.length === 0) return;
+
+    const settings = useSettingsStore.getState();
+    const body = useBodyStore.getState();
+    const telegramId = settings.linkedTelegramUser?.id || (window as any).Telegram?.WebApp?.initDataUnsafe?.user?.id;
+    const name = settings.traineeName || settings.linkedTelegramUser?.firstName || (window as any).Telegram?.WebApp?.initDataUnsafe?.user?.first_name || "Атлет";
+    const username = settings.linkedTelegramUser?.username || (window as any).Telegram?.WebApp?.initDataUnsafe?.user?.username || "";
+
+    for (const w of completedWorkouts) {
+      const exercisesSummary = w.supersets.flatMap((ss) =>
+        ss.exercises.map((ex) => ({
+          name: ex.name,
+          weight: ex.sets[0]?.actualWeight ?? ex.sets[0]?.targetWeight ?? 0,
+          reps: ex.sets[0]?.actualReps ?? ex.sets[0]?.targetReps ?? 10,
+          setsCount: ex.sets.filter((s) => s.completed).length || ex.sets.length,
+          supersetLabel: ss.label,
+        }))
+      );
+
+      await syncWorkout({
+        workoutNumber: w.workoutNumber,
+        microcycle: w.microcycle,
+        durationSeconds: w.durationSeconds || 1600,
+        tonnageKg: w.tonnageKg || 0,
+        powerKgPerMin: w.powerKgPerMin || 0,
+        athleticScore: 78,
+        latestMeasurement: body.measurements[0] ? {
+          weightKg: body.measurements[0].weightKg,
+          waistCm: body.measurements[0].waistCm,
+          bicepsCm: body.measurements[0].bicepsCm,
+        } : undefined,
+        exercises: exercisesSummary,
+        notes: w.notes,
+        traineeName: name,
+        traineeUsername: username,
+        telegramId: telegramId ? Number(telegramId) : undefined,
+      });
+    }
+  } catch (err) {
+    console.warn("[TMA Sync] syncCompletedWorkoutsFromStore warning:", err);
+  }
+}
+
 // Auto-flush when device reconnects to Wi-Fi / LTE
 if (typeof window !== "undefined") {
   window.addEventListener("online", () => {

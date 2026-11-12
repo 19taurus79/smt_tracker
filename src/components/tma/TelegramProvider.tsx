@@ -3,7 +3,7 @@
 import React, { useEffect } from "react";
 import { initTelegramWebApp, getTelegramUser, isTelegramWebApp } from "@/lib/tma/telegram";
 import { initCloudSync } from "@/lib/tma/cloudStorage";
-import { flushOfflineQueue } from "@/lib/tma/sync";
+import { flushOfflineQueue, syncCompletedWorkoutsFromStore } from "@/lib/tma/sync";
 import { useSettingsStore } from "@/lib/store/useSettingsStore";
 import { isCoachAccount, MASTER_COACH_USERNAME } from "@/lib/auth/roles";
 
@@ -39,6 +39,9 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
 
       // 4. Auto-flush pending offline workouts if any
       void flushOfflineQueue();
+
+      // 5. Auto-sync any completed workouts to server
+      void syncCompletedWorkoutsFromStore();
     }
   }, [linkedTelegramUser, linkTelegramAccount, setCoachTelegramUsername]);
 

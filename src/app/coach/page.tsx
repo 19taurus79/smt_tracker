@@ -755,15 +755,15 @@ export default function CoachDashboardPage() {
                     </div>
                     <div className="flex items-center gap-1.5 text-[11px] text-slate-400 font-medium">
                       <span>
-                        Тренування: <strong className="text-white font-mono">#{trainee.currentWorkoutNumber}</strong>/36
+                        Виконано: <strong className="text-emerald-400 font-mono font-bold">{trainee.totalWorkouts}</strong>/36
                       </span>
                       <span className="text-slate-600">•</span>
-                      <span className="text-slate-300 font-mono">
+                      <span>
+                        Наступне: <strong className="text-white font-mono">#{trainee.currentWorkoutNumber}</strong>
+                      </span>
+                      <span className="text-slate-600">•</span>
+                      <span className="text-cyan-300 font-mono font-semibold">
                         МКЦ-{trainee.currentMicrocycle}
-                      </span>
-                      <span className="text-slate-600">•</span>
-                      <span className="text-emerald-400 font-bold font-mono">
-                        {progressPercent}%
                       </span>
                     </div>
                   </div>
