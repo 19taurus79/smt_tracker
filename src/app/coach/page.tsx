@@ -98,7 +98,7 @@ export default function CoachDashboardPage() {
 
   const [selectedTrainee, setSelectedTrainee] = useState<TraineeProfile | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
-  const [viewMode, setViewMode] = useState<"roster" | "analytics">("analytics");
+  const [viewMode, setViewMode] = useState<"roster" | "analytics">("roster");
 
   // Link copy state
   const [copiedLink, setCopiedLink] = useState(false);
@@ -116,10 +116,18 @@ export default function CoachDashboardPage() {
       }
     };
 
+    // Auto-refresh interval (every 15s while page is visible)
+    const interval = setInterval(() => {
+      if (document.visibilityState === "visible") {
+        fetchServerTrainees();
+      }
+    }, 15000);
+
     window.addEventListener("focus", handleFocus);
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
+      clearInterval(interval);
       window.removeEventListener("focus", handleFocus);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
@@ -306,6 +314,17 @@ export default function CoachDashboardPage() {
 
           {/* Action Buttons: Unified height h-9.5 */}
           <div className="flex items-center gap-2 shrink-0 flex-wrap sm:flex-nowrap">
+            <button
+              type="button"
+              onClick={() => fetchServerTrainees()}
+              disabled={isLoadingServer}
+              className="h-9 px-3 rounded-xl border border-white/10 bg-slate-900/80 hover:bg-slate-800 text-xs font-bold text-slate-200 hover:text-white transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+              title="Оновити дані з сервера"
+            >
+              <RefreshCw className={"h-4 w-4 text-emerald-400 " + (isLoadingServer ? "animate-spin" : "")} />
+              <span>{isLoadingServer ? "Оновлення..." : "Оновити"}</span>
+            </button>
+
             <button
               type="button"
               onClick={() => setIsAddModalOpen(true)}

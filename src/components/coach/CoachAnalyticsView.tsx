@@ -76,6 +76,12 @@ export function CoachAnalyticsView({ onOpenDetail }: CoachAnalyticsViewProps) {
     trainees.length > 0 ? trainees[0].id : null
   );
 
+  React.useEffect(() => {
+    if (trainees.length > 0 && (!selectedTraineeId || !trainees.some(t => t.id === selectedTraineeId))) {
+      setSelectedTraineeId(trainees[0].id);
+    }
+  }, [trainees, selectedTraineeId]);
+
   // Trainee edit modal state
   const [traineeToEdit, setTraineeToEdit] = useState<TraineeProfile | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);

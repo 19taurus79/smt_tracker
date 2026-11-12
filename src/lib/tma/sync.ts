@@ -40,6 +40,18 @@ export function queueOfflineSync(type: "workout" | "trainee", payload: any) {
   saveOfflineQueue(queue);
 }
 
+function safeBtoa(str: string): string {
+  try {
+    return window.btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (_, p1) => String.fromCharCode(parseInt(p1, 16))));
+  } catch {
+    try {
+      return window.btoa(str);
+    } catch {
+      return "";
+    }
+  }
+}
+
 /**
  * Invokes Telegram Serverless Endpoint if available (with fallback to TMA fetch)
  */
@@ -65,12 +77,14 @@ export async function callTelegramServerless(endpoint: string, payload: unknown)
   const initData = tg?.initData;
   if (initData) {
     try {
+      const authHeader = safeBtoa(initData);
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (authHeader) {
+        headers["Authorization"] = "TMA " + authHeader;
+      }
       const res = await fetch(`/api/${endpoint}`, {
         method: "POST",
-        headers: {
-          Authorization: "TMA " + window.btoa(initData),
-          "Content-Type": "application/json",
-        },
+        headers,
         body: JSON.stringify(payload),
       });
       if (res.ok) {

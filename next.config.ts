@@ -1,8 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // Enables hybrid deployment: pre-renders static pages and enables serverless API routes
-  output: process.env.STATIC_EXPORT === "true" ? "export" : undefined,
+  // Always export to out/ for Telegram Serverless static hosting
+  output: "export",
   turbopack: {
     rules: {
       "*.css": {

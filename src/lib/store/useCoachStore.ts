@@ -716,7 +716,17 @@ export const useCoachStore = create<CoachStoreState>()(
           try {
             const headers: Record<string, string> = { "Content-Type": "application/json" };
             if (initData) {
-              headers["Authorization"] = "TMA " + window.btoa(initData);
+              let authHeader = "";
+              try {
+                authHeader = window.btoa(encodeURIComponent(initData).replace(/%([0-9A-F]{2})/g, (_, p1) => String.fromCharCode(parseInt(p1, 16))));
+              } catch {
+                try {
+                  authHeader = window.btoa(initData);
+                } catch {}
+              }
+              if (authHeader) {
+                headers["Authorization"] = "TMA " + authHeader;
+              }
             }
             const tgHttpRes = await fetch("/api/getCoachTrainees", {
               method: "POST",
