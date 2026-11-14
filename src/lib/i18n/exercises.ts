@@ -50,6 +50,8 @@ export function getLocalizedExerciseName(
   lang: AppLanguage = "uk",
   isShort = false
 ): string {
+  if (!idOrName) return "";
+
   // Поиск по точному ID
   if (EXERCISE_TRANSLATIONS[idOrName]) {
     return isShort

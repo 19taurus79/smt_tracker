@@ -14,6 +14,7 @@ import {
   Camera,
   Sparkles,
   Flame,
+  Share2,
 } from "lucide-react";
 import { WorkoutSession } from "@/types/smt";
 import { formatTime, formatDate } from "@/lib/utils";
@@ -123,7 +124,7 @@ export function WorkoutReportModal({
   };
 
   const handleSendToCoach = async () => {
-    if (!workout || isSendingToCoach || sentToCoach) return;
+    if (!workout || isSendingToCoach) return;
     setIsSendingToCoach(true);
     try {
       const exercisesSummary = workout.supersets.flatMap((ss) =>
@@ -157,6 +158,7 @@ export function WorkoutReportModal({
         } : undefined,
         exercises: exercisesSummary,
         notes: workout.notes,
+        forceNotify: true,
       });
 
       if (success) {
@@ -167,6 +169,19 @@ export function WorkoutReportModal({
     } finally {
       setIsSendingToCoach(false);
     }
+  };
+
+  const handleShareToCoachDirect = () => {
+    if (!workout) return;
+    const msg = generateWorkoutCoachMessage({
+      workout,
+      traineeName: traineeName || linkedTelegramUser?.firstName || "Атлет",
+      latestMeasurement: measurements[0],
+      language,
+      gender,
+      userAge,
+    });
+    shareToTelegramCoach(msg, coachTelegramUsername || "OnyshchenkoSergey");
   };
 
   const reportTitle =
@@ -377,26 +392,42 @@ export function WorkoutReportModal({
         </Button>
 
         {!isCoach && (
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={isSendingToCoach || sentToCoach}
-            className={`text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
-              sentToCoach
-                ? "border-emerald-500/40 text-emerald-300 bg-emerald-500/10"
-                : "border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/10"
-            }`}
-            onClick={handleSendToCoach}
-          >
-            <Send className="h-3.5 w-3.5" />
-            <span>
-              {sentToCoach
-                ? (language === "uk" ? "✓ Надіслано тренеру!" : language === "en" ? "✓ Sent to Coach!" : "✓ Отправлено тренеру!")
-                : isSendingToCoach
-                ? (language === "uk" ? "Надсилання..." : language === "en" ? "Sending..." : "Отправка...")
-                : t.workout.sendCoachButton}
-            </span>
-          </Button>
+          <div className="flex items-center gap-1.5 flex-wrap sm:flex-nowrap">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={isSendingToCoach}
+              className={`text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+                sentToCoach
+                  ? "border-emerald-500/40 text-emerald-300 bg-emerald-500/10"
+                  : "border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/10"
+              }`}
+              onClick={handleSendToCoach}
+              title={sentToCoach ? "Звіт надіслано ботом. Натисніть для повторної відправки." : "Надіслати звіт тренеру ботом"}
+            >
+              <Send className="h-3.5 w-3.5" />
+              <span>
+                {isSendingToCoach
+                  ? (language === "uk" ? "Надсилання..." : language === "en" ? "Sending..." : "Отправка...")
+                  : sentToCoach
+                  ? (language === "uk" ? "✓ Звіт у боті (повторити)" : language === "en" ? "✓ Sent to bot (resend)" : "✓ Отчет в боте (повторить)")
+                  : t.workout.sendCoachButton}
+              </span>
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs font-semibold border-cyan-500/30 text-cyan-300 hover:bg-cyan-500/10 flex items-center justify-center gap-1.5"
+              onClick={handleShareToCoachDirect}
+              title="Відкрити чат з тренером в Telegram з готовим текстом звіту"
+            >
+              <Share2 className="h-3.5 w-3.5 text-cyan-400" />
+              <span>
+                {language === "uk" ? "В чат тренера" : language === "en" ? "To Coach Chat" : "В чат тренера"}
+              </span>
+            </Button>
+          </div>
         )}
 
         <Button

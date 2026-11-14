@@ -287,6 +287,8 @@ export async function sendDirectCoachReport(payload: {
   latestMeasurement?: any;
   exercises?: any[];
   notes?: string;
+  silent?: boolean;
+  forceNotify?: boolean;
 }): Promise<boolean> {
   const { syncWorkout } = await import("@/lib/tma/sync");
   return syncWorkout({

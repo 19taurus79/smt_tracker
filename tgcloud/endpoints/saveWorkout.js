@@ -2,7 +2,16 @@ import { api, db } from 'sdk';
 import { trainees, workoutLogs } from '../schema.js';
 import { eq, and } from 'sdk/db';
 
-const COACH_CHAT_ID = (typeof process !== 'undefined' && process.env?.COACH_CHAT_ID) || '548019148';
+const COACH_CHAT_ID = Number((typeof process !== 'undefined' && process.env?.COACH_CHAT_ID) || 548019148);
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
 
 export default async function (input, context) {
   // 1. Resolve Telegram User ID from context or input
@@ -25,6 +34,8 @@ export default async function (input, context) {
     weightKg = 80,
     name = '',
     username = '',
+    silent = false,
+    forceNotify = false,
   } = input || {};
 
   const cleanTonnage = Math.round(Number(tonnageKg) || 0);
@@ -133,53 +144,61 @@ export default async function (input, context) {
   }).run();
 
   // 6. Send instant Telegram report to Coach PM via Bot API
-  try {
-    const athleteTag = effectiveUsername ? `@${effectiveUsername}` : effectiveName;
-    const minutes = Math.floor(durationSeconds / 60);
-    const seconds = durationSeconds % 60;
-    const timeFormatted = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
-
-    const lines = [
-      `👑 <b>НОВИЙ ЗВІТ ДЛЯ ТРЕНЕРА!</b>`,
-      ``,
-      `👤 <b>Підопічний:</b> ${athleteTag}`,
-      `📅 <b>Тренування:</b> #${workoutNumber} (МКЦ-${microcycle})`,
-      `⏱ <b>Час:</b> ${timeFormatted} (паузи суворо 30с)`,
-      `📦 <b>Тоннаж:</b> ${cleanTonnage.toLocaleString()} кг`,
-      `⚡ <b>Потужність:</b> ${cleanPower} кг/хв`,
-      `🏆 <b>Індекс:</b> ${cleanScore} / 100`,
-      `⚖ <b>Вага атлета:</b> ${Number(weightKg) || existingTrainee?.weightKg || 80} кг`,
-    ];
-
-    let parsedExercisesList = [];
+  // Only send notification if not in silent mode AND (it is a fresh new workout log OR forceNotify is explicitly requested)
+  const shouldNotifyCoach = !silent && (!existingLog || Boolean(forceNotify));
+  if (shouldNotifyCoach) {
     try {
-      parsedExercisesList = Array.isArray(exercises) ? exercises : JSON.parse(exercisesJsonStr);
-    } catch {}
+      const athleteTag = effectiveUsername ? `@${escapeHtml(effectiveUsername)}` : escapeHtml(effectiveName);
+      const minutes = Math.floor(durationSeconds / 60);
+      const seconds = durationSeconds % 60;
+      const timeFormatted = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
 
-    if (parsedExercisesList.length > 0) {
-      lines.push(``, `📋 <b>Виконані ваги:</b>`);
-      for (const ex of parsedExercisesList) {
-        lines.push(`• <b>${ex.name}:</b> ${ex.weight} кг × ${ex.reps} (${ex.setsCount || 4} підх)`);
+      const lines = [
+        `👑 <b>НОВИЙ ЗВІТ ДЛЯ ТРЕНЕРА!</b>`,
+        ``,
+        `👤 <b>Підопічний:</b> ${athleteTag}`,
+        `📅 <b>Тренування:</b> #${workoutNumber} (МКЦ-${microcycle})`,
+        `⏱ <b>Час:</b> ${timeFormatted} (паузи суворо 30с)`,
+        `📦 <b>Тоннаж:</b> ${cleanTonnage.toLocaleString()} кг`,
+        `⚡ <b>Потужність:</b> ${cleanPower} кг/хв`,
+        `🏆 <b>Індекс:</b> ${cleanScore} / 100`,
+        `⚖ <b>Вага атлета:</b> ${Number(weightKg) || existingTrainee?.weightKg || 80} кг`,
+      ];
+
+      let parsedExercisesList = [];
+      try {
+        parsedExercisesList = Array.isArray(exercises) ? exercises : JSON.parse(exercisesJsonStr);
+      } catch {}
+
+      if (parsedExercisesList.length > 0) {
+        lines.push(``, `📋 <b>Виконані ваги:</b>`);
+        for (const ex of parsedExercisesList) {
+          const safeName = escapeHtml(ex.name || 'Вправа');
+          const safeWeight = Number(ex.weight) || 0;
+          const safeReps = Number(ex.reps) || 0;
+          const safeSets = Number(ex.setsCount) || 4;
+          lines.push(`• <b>${safeName}:</b> ${safeWeight} кг × ${safeReps} (${safeSets} підх)`);
+        }
       }
-    }
 
-    if (notes) {
-      lines.push(``, `💬 <i>"${notes}"</i>`);
-    }
+      if (notes) {
+        lines.push(``, `💬 <i>"${escapeHtml(notes)}"</i>`);
+      }
 
-    lines.push(``, `━━━━━━━━━━━━━━━━━━`);
-    if (effectiveUsername) {
-      lines.push(`💬 <i>Написати:</i> https://t.me/${effectiveUsername}`);
-    }
+      lines.push(``, `━━━━━━━━━━━━━━━━━━`);
+      if (effectiveUsername) {
+        lines.push(`💬 <i>Написати:</i> https://t.me/${escapeHtml(effectiveUsername)}`);
+      }
 
-    await api.sendMessage({
-      chat_id: COACH_CHAT_ID,
-      text: lines.join('\n'),
-      parse_mode: 'HTML',
-      disable_web_page_preview: true,
-    });
-  } catch (e) {
-    console.warn('Coach notification warning:', e);
+      await api.sendMessage({
+        chat_id: COACH_CHAT_ID,
+        text: lines.join('\n'),
+        parse_mode: 'HTML',
+        disable_web_page_preview: true,
+      });
+    } catch (e) {
+      console.error('Coach notification error:', e);
+    }
   }
 
   return { ok: true, savedAt: now, totalWorkouts: totalCount };

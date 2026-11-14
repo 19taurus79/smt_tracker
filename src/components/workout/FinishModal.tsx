@@ -362,16 +362,19 @@ export function FinishModal({ open, onOpenChange, onFinished, workoutId }: Finis
         notes: fullNotes,
       };
 
+      let reportSent = false;
       try {
-        await sendDirectCoachReport(workoutReportPayload);
+        const res = await sendDirectCoachReport({
+          ...workoutReportPayload,
+          forceNotify: Boolean(sendToCoach && !isCoach),
+        });
+        reportSent = Boolean(res && sendToCoach && !isCoach);
       } catch (err) {
         console.error("Direct coach send failed:", err);
       }
 
-      const didSendToCoach = Boolean(sendToCoach && !isCoach);
-
       onOpenChange(false);
-      onFinished(didSendToCoach);
+      onFinished(reportSent);
     } finally {
       setIsFinishing(false);
     }
@@ -389,6 +392,12 @@ export function FinishModal({ open, onOpenChange, onFinished, workoutId }: Finis
         effectiveDuration,
         currentWorkout.id
       );
+
+      if (typeof window !== "undefined") {
+        setTimeout(() => {
+          void syncAllStoresWithCloud({ forceUpload: true });
+        }, 50);
+      }
     }
     onOpenChange(false);
   };

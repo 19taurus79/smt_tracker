@@ -42,10 +42,10 @@ export function queueOfflineSync(type: "workout" | "trainee", payload: any) {
 
 function safeBtoa(str: string): string {
   try {
-    return window.btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (_, p1) => String.fromCharCode(parseInt(p1, 16))));
+    return window.btoa(str);
   } catch {
     try {
-      return window.btoa(str);
+      return window.btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, (_, p1) => String.fromCharCode(parseInt(p1, 16))));
     } catch {
       return "";
     }
@@ -135,6 +135,8 @@ export interface SyncWorkoutPayload {
   username?: string;
   traineeUsername?: string;
   telegramId?: number;
+  silent?: boolean;
+  forceNotify?: boolean;
 }
 
 /**
@@ -169,6 +171,8 @@ export async function syncWorkout(payload: SyncWorkoutPayload): Promise<boolean>
       username: athleteUsername,
       athleticScore: scoreNum,
       weightKg: payload.latestMeasurement?.weightKg || 80,
+      silent: Boolean(payload.silent),
+      forceNotify: Boolean(payload.forceNotify),
     };
 
     try {
@@ -369,6 +373,7 @@ export async function syncCompletedWorkoutsFromStore(): Promise<void> {
         traineeName: name,
         traineeUsername: username,
         telegramId: telegramId ? Number(telegramId) : undefined,
+        silent: true,
       });
     }
   } catch (err) {
